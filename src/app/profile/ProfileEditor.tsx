@@ -111,12 +111,121 @@ export const ProfileEditor: React.FC = () => {
     }
   };
 
+  const handleFormSubmit = (e: React.FormEvent) => {
+    void handleSubmit(e);
+  };
+
   if (userProfile === undefined || loggedInUser === undefined) {
     return <div className="text-center p-4">Loading profile editor...</div>;
   }
 
+  // Desktop version
+  const DesktopProfileEditor = () => (
+    <div className="hidden md:block h-full">
+      <Card className="h-full bg-card/95 border shadow-xl">
+        <CardHeader>
+          <CardTitle className="text-2xl">Edit Profile</CardTitle>
+          <CardDescription>
+            This information will be visible to others on the map.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleFormSubmit} className="space-y-6">
+            {/* Avatar Section */}
+            <div className="flex flex-col items-center space-y-4">
+              {avatarPreview ||
+              userProfile?.avatarUrl ||
+              loggedInUser?.image ? (
+                <img
+                  src={
+                    avatarPreview ||
+                    userProfile?.avatarUrl ||
+                    loggedInUser?.image
+                  }
+                  alt="Avatar Preview"
+                  className="w-24 h-24 rounded-full object-cover border-2 border-primary shadow"
+                />
+              ) : (
+                <div className="w-24 h-24 rounded-full bg-muted flex items-center justify-center text-4xl text-muted-foreground">
+                  ?
+                </div>
+              )}
+              <div className="space-y-2 w-full max-w-xs">
+                <Label htmlFor="avatar-desktop">Profile Picture</Label>
+                <Input
+                  type="file"
+                  id="avatar-desktop"
+                  accept="image/*"
+                  ref={avatarInputRef}
+                  onChange={handleAvatarChange}
+                  className="w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-muted file:text-primary hover:file:bg-muted-foreground/10"
+                />
+              </div>
+            </div>
+
+            {/* Form Fields */}
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="displayName-desktop">Display Name</Label>
+                <Input
+                  type="text"
+                  id="displayName-desktop"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder="Your public name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="description-desktop">Description / Bio</Label>
+                <Textarea
+                  id="description-desktop"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Tell us a bit about yourself"
+                  rows={4}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="status-desktop">Status Message</Label>
+                <Input
+                  type="text"
+                  id="status-desktop"
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value)}
+                  placeholder="e.g., Looking to chat, Around for a bit"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="isVisible-desktop"
+                  checked={isVisible}
+                  onChange={(e) => setIsVisible(e.target.checked)}
+                  className="h-4 w-4 text-primary border-border rounded focus:ring-primary"
+                />
+                <Label htmlFor="isVisible-desktop" className="font-medium">
+                  Visible on map
+                </Label>
+              </div>
+            </div>
+
+            {/* Save Button */}
+            <Button
+              type="submit"
+              className="w-full font-bold"
+              variant="default"
+              disabled={isLoading}
+            >
+              {isLoading ? "Saving..." : "Save Profile"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+
   // Mobile sheet version
-  return (
+  const MobileProfileEditor = () => (
     <div className="md:hidden">
       <Card className="bg-card/95 border shadow-xl rounded-t-2xl pt-2 pb-4 px-4 relative">
         {/* Drag handle */}
@@ -144,7 +253,7 @@ export const ProfileEditor: React.FC = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <form onSubmit={() => {}} className="space-y-4">
+          <form onSubmit={handleFormSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="avatar">Profile Picture</Label>
               <Input
@@ -152,7 +261,7 @@ export const ProfileEditor: React.FC = () => {
                 id="avatar"
                 accept="image/*"
                 ref={avatarInputRef}
-                onChange={() => {}}
+                onChange={handleAvatarChange}
                 className="w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-muted file:text-primary hover:file:bg-muted-foreground/10"
               />
             </div>
@@ -213,5 +322,12 @@ export const ProfileEditor: React.FC = () => {
         </div>
       </Card>
     </div>
+  );
+
+  return (
+    <>
+      <DesktopProfileEditor />
+      <MobileProfileEditor />
+    </>
   );
 };
