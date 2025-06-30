@@ -1,46 +1,45 @@
-# Sniffies Backend Setup
+# Piggies (Next.js Edition)
 
-This is a project built with [Chef](https://chef.convex.dev) using [Convex](https://convex.dev) as its backend.
+This project is now built with **Next.js 14+ (App Router)**, using file-based routing for all main pages. It features:
 
-This project is connected to the Convex deployment named [`sincere-crow-526`](https://dashboard.convex.dev/d/sincere-crow-526).
+- **Next.js 14+** (App Router, `/app` directory)
+- **Tailwind CSS** for styling
+- **Convex** for backend/database
+- **URL-based routing** for all main pages (refresh and deep linking supported)
 
-## Features
+## Main Pages
 
-- **Map View**: Interactive map showing nearby users with their locations
-- **Tile View**: Grid layout displaying user profiles in cards for those who prefer a list view
-- **Real-time Chat**: Direct messaging between users
-- **Profile Management**: Edit your profile, upload avatar, and control visibility
-- **Location Sharing**: Share your location to connect with others nearby
+- `/map` — Map view
+- `/people` — People nearby
+- `/profile` — Profile editor
+- `/chat` — Chat
+- `/user/[userId]` — User profile page
 
-## View Modes
+## Directory Structure
 
-The app offers two different ways to browse nearby users:
+- `/app` — Next.js App Router pages
+- `/components` — UI and common components
+- `/convex` — Convex backend functions
+- `/styles` — Tailwind CSS and global styles
 
-1. **Map View** (🗺️): Traditional map interface showing user locations with markers
-2. **Tile View** (🏠): Card-based grid layout showing user profiles with photos, descriptions, and status
+## Getting Started
 
-You can switch between views using the toggle buttons in the sidebar.
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
+2. Run the development server:
+   ```bash
+   npm run dev
+   ```
+3. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-## Project structure
+## Notes
 
-The frontend code is in the `app` directory and is built with [Vite](https://vitejs.dev/).
+- All navigation is URL-based. You can refresh or share any page.
+- Vite is no longer used. This project is now fully Next.js.
+- Tailwind CSS and Convex are fully supported.
 
-The backend code is in the `convex` directory.
+---
 
-`npm run dev` will start the frontend and backend servers.
-
-## App authentication
-
-Chef apps use [Convex Auth](https://auth.convex.dev/) with Anonymous auth for easy sign in. You may wish to change this before deploying your app.
-
-## Developing and deploying your app
-
-Check out the [Convex docs](https://docs.convex.dev/) for more information on how to develop with Convex.
-
-- If you're new to Convex, the [Overview](https://docs.convex.dev/understanding/) is a good place to start
-- Check out the [Hosting and Deployment](https://docs.convex.dev/production/) docs for how to deploy your app
-- Read the [Best Practices](https://docs.convex.dev/understanding/best-practices/) guide for tips on how to improve you app further
-
-## HTTP API
-
-User-defined http routes are defined in the `convex/router.ts` file. We split these routes into a separate file from `convex/http.ts` to allow us to prevent the LLM from modifying the authentication routes.
+For more details, see the code in the `/app` directory.

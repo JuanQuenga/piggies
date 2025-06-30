@@ -1,0 +1,385 @@
+"use client";
+
+import React, { useState, useEffect, useMemo } from "react";
+import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import L, { LatLngTuple } from "leaflet";
+import { useMutation, useQuery } from "convex/react";
+import { api } from "../../../convex/_generated/api";
+import { Id } from "../../../convex/_generated/dataModel";
+import { toast } from "sonner";
+import { Button } from "../../components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../../components/ui/card";
+import { Badge } from "../../components/ui/badge";
+import { useAuth } from "@clerk/nextjs";
+
+// Fix for default Leaflet marker icon issue
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl:
+    "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png",
+  iconUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png",
+});
+
+interface UserMarkerDisplayData {
+  _id: Id<"profiles">;
+  latitude?: number;
+  longitude?: number;
+  status?: string | null;
+  avatarUrl?: string | null;
+  displayName?: string | null;
+  description?: string | null;
+  userName?: string | null;
+  userEmail?: string | null;
+  lastSeen?: number | null;
+  isVisible?: boolean;
+  userId: Id<"users">;
+}
+
+interface MapComponentClientProps {
+  currentUserProfileForMap: UserMarkerDisplayData | null | undefined;
+  currentUserId: Id<"users"> | null | undefined;
+  onStartChat: (otherParticipantUserId: Id<"users">) => void;
+  onProfileClick: (userId: Id<"users">) => void;
+}
+
+const UserMarker: React.FC<{
+  user: UserMarkerDisplayData;
+  currentUserId?: Id<"users"> | null;
+  onStartChat: (userId: Id<"users">) => void;
+  onProfileClick: (userId: Id<"users">) => void;
+}> = ({ user, currentUserId, onStartChat, onProfileClick }) => {
+  if (!user.latitude || !user.longitude) return null;
+
+  const finalAvatarUrl =
+    user.avatarUrl ||
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || user.userName || user.userEmail || "U")}&background=8b5cf6&color=fff&size=32`;
+
+  const icon = L.divIcon({
+    className: "custom-user-marker",
+    html: `<img src="${finalAvatarUrl}" alt="${user.displayName || user.userName || "User"}" style="width: 32px; height: 32px; border-radius: 50%; border: 2px solid #8b5cf6; box-shadow: 0 0 5px rgba(0,0,0,0.5);" />`,
+    iconSize: [32, 32],
+    iconAnchor: [16, 32],
+    popupAnchor: [0, -32],
+  });
+
+  return (
+    <Marker position={[user.latitude, user.longitude]} icon={icon}>
+      <Popup>
+        <Card
+          className="w-56 bg-card border shadow-lg cursor-pointer hover:shadow-xl transition-shadow"
+          onClick={() => onProfileClick(user.userId)}
+        >
+          <CardHeader className="pb-2 flex flex-col items-center">
+            <img
+              src={finalAvatarUrl}
+              alt="Avatar"
+              className="w-16 h-16 rounded-full object-cover border-2 border-primary shadow mb-2"
+            />
+            <CardTitle className="text-base text-center text-primary">
+              {user.displayName || user.userName || "Anonymous User"}
+            </CardTitle>
+            {user.status && (
+              <Badge variant="secondary" className="text-xs mt-1">
+                {user.status}
+              </Badge>
+            )}
+          </CardHeader>
+          <CardContent className="pt-0">
+            {user.description && (
+              <p className="text-sm text-muted-foreground mb-2 text-center line-clamp-2">
+                {user.description}
+              </p>
+            )}
+            {user.lastSeen && (
+              <p className="text-xs text-muted-foreground text-center mb-1">
+                Last seen: {new Date(user.lastSeen).toLocaleString()}
+              </p>
+            )}
+            {currentUserId && user.userId !== currentUserId && (
+              <Button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onStartChat(user.userId);
+                }}
+                className="w-full mt-2 font-semibold"
+                variant="outline"
+                aria-label={`Start chat with ${user.displayName || user.userName || "Anonymous User"}`}
+              >
+                Message
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      </Popup>
+    </Marker>
+  );
+};
+
+const CenterMapToUser: React.FC<{ position: LatLngTuple | null }> = ({
+  position,
+}) => {
+  const map = useMap();
+  useEffect(() => {
+    if (position) {
+      map.setView(position, map.getZoom() < 13 ? 13 : map.getZoom());
+    }
+  }, [position, map]);
+  return null;
+};
+
+const DarkTileLayer = () => {
+  const map = useMap();
+  useEffect(() => {
+    const darkLayer = L.tileLayer(
+      "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+      {
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      }
+    );
+
+    const lightLayer = L.tileLayer(
+      "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+      {
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      }
+    );
+
+    const updateLayer = () => {
+      const isDark = document.documentElement.classList.contains("dark");
+      if (isDark) {
+        if (!map.hasLayer(darkLayer)) {
+          map.addLayer(darkLayer);
+        }
+        if (map.hasLayer(lightLayer)) {
+          map.removeLayer(lightLayer);
+        }
+      } else {
+        if (!map.hasLayer(lightLayer)) {
+          map.addLayer(lightLayer);
+        }
+        if (map.hasLayer(darkLayer)) {
+          map.removeLayer(darkLayer);
+        }
+      }
+    };
+
+    updateLayer();
+
+    const observer = new MutationObserver(updateLayer);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+
+    return () => {
+      observer.disconnect();
+      if (map.hasLayer(darkLayer)) map.removeLayer(darkLayer);
+      if (map.hasLayer(lightLayer)) map.removeLayer(lightLayer);
+    };
+  }, [map]);
+
+  return null;
+};
+
+const MapComponentClient: React.FC<MapComponentClientProps> = ({
+  currentUserProfileForMap,
+  currentUserId,
+  onStartChat,
+  onProfileClick,
+}) => {
+  const { isSignedIn, isLoaded } = useAuth();
+  if (!isLoaded) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+      </div>
+    );
+  }
+  if (!isSignedIn) {
+    return (
+      <div className="flex flex-col items-center justify-center h-96">
+        <p className="text-muted-foreground mb-4">
+          Please sign in to use the map features.
+        </p>
+      </div>
+    );
+  }
+
+  const visibleUsers = useQuery(api.profiles.listVisibleUsers) || [];
+  const updateProfile = useMutation(api.profiles.updateMyProfile);
+
+  const [currentPosition, setCurrentPosition] = useState<LatLngTuple | null>(
+    null
+  );
+  const [isVisible, setIsVisible] = useState(
+    currentUserProfileForMap?.isVisible ?? true
+  );
+
+  const mapCenter: LatLngTuple = useMemo(() => {
+    if (currentPosition) return currentPosition;
+    if (
+      currentUserProfileForMap?.latitude &&
+      currentUserProfileForMap?.longitude
+    ) {
+      return [
+        currentUserProfileForMap.latitude,
+        currentUserProfileForMap.longitude,
+      ];
+    }
+    return [20, 0]; // Default center
+  }, [currentPosition, currentUserProfileForMap]);
+
+  const mapInitialZoom =
+    currentUserProfileForMap?.latitude && currentUserProfileForMap?.longitude
+      ? 13
+      : 3;
+
+  const allMarkersToDisplay = useMemo(() => {
+    const markerMap = new Map<Id<"users">, UserMarkerDisplayData>();
+    visibleUsers.forEach((user) => {
+      if (user.latitude && user.longitude) {
+        markerMap.set(user.userId, user as UserMarkerDisplayData);
+      }
+    });
+    if (
+      currentUserProfileForMap?.latitude &&
+      currentUserProfileForMap?.longitude
+    ) {
+      markerMap.set(currentUserProfileForMap.userId, currentUserProfileForMap);
+    }
+    return Array.from(markerMap.values());
+  }, [visibleUsers, currentUserProfileForMap]);
+
+  useEffect(() => {
+    if (
+      currentUserProfileForMap?.latitude &&
+      currentUserProfileForMap?.longitude
+    ) {
+      const userPos: LatLngTuple = [
+        currentUserProfileForMap.latitude,
+        currentUserProfileForMap.longitude,
+      ];
+      setCurrentPosition(userPos);
+    }
+  }, [currentUserProfileForMap]);
+
+  useEffect(() => {
+    if (currentUserProfileForMap?.isVisible !== undefined) {
+      setIsVisible(currentUserProfileForMap.isVisible);
+    }
+  }, [currentUserProfileForMap?.isVisible]);
+
+  // Auto-update location every 60 seconds if visible
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout | null = null;
+    const updateLocation = () => {
+      if (!isVisible) return;
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setCurrentPosition([latitude, longitude]);
+          void (async () => {
+            try {
+              await updateProfile({ latitude, longitude });
+            } catch (error) {
+              toast.error("Failed to auto-update location.");
+            }
+          })();
+        },
+        (error) => {
+          toast.error("Could not get your location for auto-update.");
+        },
+        { enableHighAccuracy: true }
+      );
+    };
+    if (isVisible) {
+      updateLocation(); // Update immediately on mount/visibility
+      intervalId = setInterval(updateLocation, 60000); // 60 seconds
+    }
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [isVisible, updateProfile]);
+
+  const handleToggleVisibility = async () => {
+    try {
+      await updateProfile({ isVisible: !isVisible });
+      setIsVisible((prev) => !prev);
+      toast.success(
+        `You are now ${!isVisible ? "visible" : "hidden"} on the map.`
+      );
+      // If turning on visibility, update location immediately
+      if (!isVisible) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const { latitude, longitude } = position.coords;
+            setCurrentPosition([latitude, longitude]);
+            void (async () => {
+              try {
+                await updateProfile({ latitude, longitude });
+              } catch (error) {
+                toast.error("Failed to update location.");
+              }
+            })();
+          },
+          (error) => {
+            toast.error("Could not get your location.");
+          },
+          { enableHighAccuracy: true }
+        );
+      }
+    } catch (error) {
+      toast.error("Failed to update visibility.");
+    }
+  };
+
+  return (
+    <div className="h-[calc(100vh-200px)] w-full relative md:h-[calc(100vh-120px)]">
+      <MapContainer
+        center={mapCenter}
+        zoom={mapInitialZoom}
+        scrollWheelZoom={true}
+        style={{ height: "100%", width: "100%" }}
+      >
+        <DarkTileLayer />
+        {allMarkersToDisplay.map((user) => (
+          <UserMarker
+            key={user.userId}
+            user={user}
+            currentUserId={currentUserId}
+            onStartChat={onStartChat}
+            onProfileClick={onProfileClick}
+          />
+        ))}
+        <CenterMapToUser position={currentPosition} />
+      </MapContainer>
+      <div className="absolute bottom-4 right-4 z-[1000] flex flex-col items-end space-y-2">
+        <label className="flex items-center gap-2 bg-card border border-border rounded-lg px-4 py-2 shadow-lg cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={isVisible}
+            onChange={() => {
+              void handleToggleVisibility();
+            }}
+            className="h-4 w-4 text-primary border-border rounded focus:ring-primary"
+            aria-label="Toggle visibility on map"
+          />
+          <span className="text-sm text-foreground">
+            {isVisible ? "Visible on map" : "Hidden from map"}
+          </span>
+        </label>
+      </div>
+    </div>
+  );
+};
+
+export default MapComponentClient;

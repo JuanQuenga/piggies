@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
@@ -10,6 +12,14 @@ import {
   CardTitle,
 } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
+import { Separator } from "../../components/ui/separator";
+import {
+  MapPin,
+  Clock,
+  MessageCircle,
+  MoreVertical,
+  ShieldCheck,
+} from "lucide-react";
 
 interface UserMarkerDisplayData {
   _id: Id<"profiles">;
@@ -29,6 +39,7 @@ interface UserMarkerDisplayData {
 interface TileViewProps {
   currentUserId: Id<"users"> | null | undefined;
   onStartChat: (userId: Id<"users">) => void;
+  onProfileClick: (userId: Id<"users">) => void;
   currentUserProfileForMap?: UserMarkerDisplayData | null;
 }
 
@@ -56,6 +67,7 @@ function haversineDistance(
 export const TileView: React.FC<TileViewProps> = ({
   currentUserId,
   onStartChat,
+  onProfileClick,
   currentUserProfileForMap,
 }) => {
   const visibleUsers = useQuery(api.profiles.listVisibleUsers) || [];
@@ -72,10 +84,10 @@ export const TileView: React.FC<TileViewProps> = ({
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="text-center">
           <div className="text-6xl mb-4">🌍</div>
-          <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-200 mb-2">
+          <h3 className="text-xl font-semibold text-primary mb-2">
             No profiles visible
           </h3>
-          <p className="text-gray-500 dark:text-gray-400">
+          <p className="text-muted-foreground">
             Be the first to share your location and become visible to others!
           </p>
         </div>
@@ -88,10 +100,10 @@ export const TileView: React.FC<TileViewProps> = ({
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="text-center">
           <div className="text-6xl mb-4">👋</div>
-          <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-200 mb-2">
+          <h3 className="text-xl font-semibold text-primary mb-2">
             You're the only one here
           </h3>
-          <p className="text-gray-500 dark:text-gray-400">
+          <p className="text-muted-foreground">
             Share your location to connect with others nearby!
           </p>
         </div>
@@ -130,10 +142,8 @@ export const TileView: React.FC<TileViewProps> = ({
   return (
     <div className="flex-1 p-4">
       <div className="mb-4">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-          People Nearby
-        </h2>
-        <p className="text-gray-600 dark:text-gray-400">
+        <h2 className="text-2xl font-bold text-primary mb-1">People Nearby</h2>
+        <p className="text-muted-foreground">
           {filteredUsers.length}{" "}
           {filteredUsers.length === 1 ? "person" : "people"} visible
         </p>
@@ -145,7 +155,7 @@ export const TileView: React.FC<TileViewProps> = ({
             user.avatarUrl ||
             `https://ui-avatars.com/api/?name=${encodeURIComponent(
               user.displayName || user.userName || user.userEmail || "U"
-            )}&background=random&size=128`;
+            )}&background=8b5cf6&color=fff&size=128`;
 
           const lastSeenText = user.lastSeen
             ? new Date(user.lastSeen).toLocaleString()
@@ -178,52 +188,55 @@ export const TileView: React.FC<TileViewProps> = ({
           return (
             <Card
               key={user._id}
-              className="hover:shadow-lg transition-shadow duration-200 cursor-pointer group"
+              className="hover:shadow-lg transition-shadow duration-200 cursor-pointer group bg-card border border-border rounded-xl"
+              tabIndex={0}
+              aria-label={`Profile of ${user.displayName || user.userName || "Anonymous User"}`}
+              onClick={() => onProfileClick(user.userId)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onProfileClick(user.userId);
+                }
+              }}
             >
-              <CardHeader className="pb-3">
-                <div className="flex items-center space-x-3">
-                  <img
-                    src={finalAvatarUrl}
-                    alt={user.displayName || user.userName || "User"}
-                    className="w-12 h-12 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <CardTitle className="text-lg truncate">
-                      {user.displayName || user.userName || "Anonymous User"}
-                    </CardTitle>
-                    {user.status && (
-                      <Badge variant="secondary" className="text-xs mt-1">
-                        {user.status}
-                      </Badge>
-                    )}
-                  </div>
+              <CardHeader className="pb-3 flex flex-row items-center gap-3">
+                <img
+                  src={finalAvatarUrl}
+                  alt={user.displayName || user.userName || "User"}
+                  className="w-14 h-14 rounded-full object-cover border-2 border-primary shadow"
+                />
+                <div className="flex-1 min-w-0">
+                  <CardTitle className="text-lg truncate text-primary">
+                    {user.displayName || user.userName || "Anonymous User"}
+                  </CardTitle>
+                  {user.status && (
+                    <Badge variant="secondary" className="text-xs mt-1">
+                      {user.status}
+                    </Badge>
+                  )}
                 </div>
               </CardHeader>
-
-              <CardContent className="pt-0">
+              <CardContent className="pt-0 pb-4">
                 {user.description && (
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">
-                    "{user.description}"
+                  <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
+                    {user.description}
                   </p>
                 )}
-
-                <div className="space-y-2 text-xs text-gray-500 dark:text-gray-400">
-                  <div className="flex items-center">
-                    <span className="mr-2">📍</span>
-                    <span>Distance: {distanceDisplay}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <span className="mr-2">🕒</span>
-                    <span>Last seen: {lastSeenText}</span>
-                  </div>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+                  <span>Last seen:</span>
+                  <span>{lastSeenText}</span>
                 </div>
-
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+                  <span>Distance:</span>
+                  <span>{distanceDisplay}</span>
+                </div>
                 <Button
+                  variant="outline"
+                  className="w-full mt-2 font-semibold"
                   onClick={() => onStartChat(user.userId)}
-                  className="w-full mt-3 group-hover:bg-primary/90 transition-colors"
-                  size="sm"
+                  aria-label={`Start chat with ${user.displayName || user.userName || "Anonymous User"}`}
                 >
-                  💬 Start Chat
+                  Message
                 </Button>
               </CardContent>
             </Card>

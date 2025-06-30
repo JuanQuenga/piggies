@@ -10,444 +10,229 @@ import { api } from "../convex/_generated/api";
 import { SignInForm, SignOutButton } from "./app/auth";
 import { Toaster } from "sonner";
 import { MapComponent } from "./app/map";
-import { ProfileEditor, TileView, PeopleNearby } from "./app/profile";
-import { Id, Doc } from "../convex/_generated/dataModel";
-import { MessagingArea } from "./app/chat";
-import { toast } from "sonner";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  CardFooter,
-} from "./components/ui/card";
-import { Button } from "./components/ui/button";
+  ProfileEditor,
+  TileView,
+  PeopleNearby,
+  ProfilePage,
+  ProfileDrawer,
+  ProfileModal,
+} from "./app/profile";
+import { Id } from "../convex/_generated/dataModel";
+import { MessagingArea } from "./app/chat";
 import { ThemeToggleButton } from "./components/common";
-import { LogOut, Map, LayoutGrid } from "lucide-react";
-import { Sheet, SheetContent } from "./components/ui/sheet";
 import { BottomNav } from "./components/common/BottomNav";
+import { Sheet, SheetContent } from "./components/ui/sheet";
+import { Button } from "./components/ui/button";
+import { User, Map, MessageCircle, Users, Pencil } from "lucide-react";
 
-interface UserMarkerDisplayData {
-  _id: Id<"profiles">;
-  latitude?: number;
-  longitude?: number;
-  status?: string | null;
-  avatarUrl?: string | null;
-  displayName?: string | null;
-  description?: string | null;
-  userName?: string | null;
-  userEmail?: string | null;
-  lastSeen?: number | null;
-  isVisible?: boolean;
-  userId: Id<"users">;
-}
+// Unified navigation items
+const NAV_ITEMS = [
+  { key: "map", label: "Map", icon: <Map className="w-5 h-5" /> },
+  { key: "people", label: "People", icon: <Users className="w-5 h-5" /> },
+  { key: "profile", label: "Profile", icon: <User className="w-5 h-5" /> },
+  { key: "chat", label: "Chats", icon: <MessageCircle className="w-5 h-5" /> },
+];
 
-interface OtherParticipant {
-  _id: Id<"users">;
-  displayName?: string | null;
-  avatarUrl?: string | null;
-}
+type NavTab = "map" | "people" | "profile" | "chat";
 
-interface SelectedConversationDetails {
-  conversationId: Id<"conversations">;
-  otherParticipant: OtherParticipant;
-}
-
-interface AuthenticatedContentProps {
-  isLoading: boolean;
-  currentUserProfile: any;
-  currentUserId: Id<"users"> | null | undefined;
-  loggedInUser: any;
-  activeTab: "profile" | "chat" | "people";
-  setActiveTab: React.Dispatch<
-    React.SetStateAction<"profile" | "chat" | "people">
-  >;
-  viewMode: "map" | "tiles";
-  setViewMode: React.Dispatch<React.SetStateAction<"map" | "tiles">>;
-  selectedConversationDetails: SelectedConversationDetails | null;
-  setSelectedConversationDetails: React.Dispatch<
-    React.SetStateAction<SelectedConversationDetails | null>
-  >;
-  handleStartOrSelectConversation: (
-    details:
-      | {
-          conversationId: Id<"conversations">;
-          otherParticipant: OtherParticipant;
-        }
-      | { otherParticipantUserId: Id<"users"> }
-  ) => Promise<void>;
-  handleViewChatList: () => void;
-  handleBackToConversationList: () => void;
-  currentUserProfileForMap: UserMarkerDisplayData | null;
-}
-
-interface MobileMapContentProps {
-  currentUserProfileForMap: UserMarkerDisplayData | null;
-  currentUserId: Id<"users"> | null | undefined;
-  onStartChat: (otherParticipantUserId: Id<"users">) => void;
+// Add a responsive hook for mobile detection
+function useIsMobile() {
+  const [isMobile, setIsMobile] = React.useState(false);
+  React.useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+  return isMobile;
 }
 
 export default function App() {
   const { isLoading } = useConvexAuth();
-  const currentUserProfile = useQuery(api.profiles.getMyProfile);
+  const currentUserProfile = useQuery(api.profiles.getMyProfileWithAvatarUrl);
   const currentUserId = useQuery(api.users.getMyId);
   const loggedInUser = useQuery(api.auth.loggedInUser);
 
-  const [activeTab, setActiveTab] = React.useState<
-    "profile" | "chat" | "people"
-  >("people");
-  const [viewMode, setViewMode] = React.useState<"map" | "tiles">("map");
-  const [selectedConversationDetails, setSelectedConversationDetails] =
-    React.useState<SelectedConversationDetails | null>(null);
-  const [mobileActiveTab, setMobileActiveTab] = React.useState<
-    "map" | "profile" | "chat"
-  >("map");
-  const [sheetOpen, setSheetOpen] = React.useState(false);
-
-  const getOrCreateConversationMutation = useMutation(
-    api.messages.getOrCreateConversationWithParticipant
+  const [activeTab, setActiveTab] = useState<NavTab>("map");
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [profileDrawerOpen, setProfileDrawerOpen] = useState(false);
+  const [viewingProfileId, setViewingProfileId] = useState<Id<"users"> | null>(
+    null
   );
 
+  // Add a responsive hook for mobile detection
+  const isMobile = useIsMobile();
+
+  // Sheet for mobile overlays
   React.useEffect(() => {
-    if (mobileActiveTab === "profile" || mobileActiveTab === "chat") {
-      setSheetOpen(true);
-    } else {
-      setSheetOpen(false);
-    }
-  }, [mobileActiveTab]);
+    setSheetOpen(activeTab === "profile" || activeTab === "chat");
+  }, [activeTab]);
 
-  const handleMobileTab = (tab: "map" | "profile" | "chat") => {
-    if (tab === "map") {
-      setSheetOpen(false);
-      setMobileActiveTab("map");
-    } else {
-      setMobileActiveTab(tab);
-    }
-  };
+  // Main content for each tab
+  const renderContent = () => {
+    const safeProfile = currentUserProfile ?? null;
+    const safeUserId = currentUserId ?? null;
 
-  const handleStartOrSelectConversation = async (
-    details:
-      | {
-          conversationId: Id<"conversations">;
-          otherParticipant: OtherParticipant;
-        }
-      | { otherParticipantUserId: Id<"users"> }
-  ): Promise<void> => {
-    if ("conversationId" in details) {
-      setSelectedConversationDetails({
-        conversationId: details.conversationId,
-        otherParticipant: details.otherParticipant,
-      });
-      setActiveTab("chat");
-      if (typeof window !== "undefined" && window.innerWidth < 768) {
-        setMobileActiveTab("chat");
-        setSheetOpen(true);
-      }
-    } else {
-      if (!currentUserId) {
-        toast.error("Could not verify user identity to start a chat.");
-        return;
-      }
-      if (currentUserId === details.otherParticipantUserId) {
-        toast.info("You cannot start a chat with yourself.");
-        return;
-      }
-      try {
-        const result = await getOrCreateConversationMutation({
-          otherParticipantUserId: details.otherParticipantUserId,
-        });
-        setSelectedConversationDetails(result as SelectedConversationDetails);
-        setActiveTab("chat");
-        if (typeof window !== "undefined" && window.innerWidth < 768) {
-          setMobileActiveTab("chat");
-          setSheetOpen(true);
-        }
-      } catch (error) {
-        console.error("Failed to start conversation:", error);
-        toast.error(
-          `Failed to start chat: ${error instanceof Error ? error.message : String(error)}`
+    switch (activeTab) {
+      case "map":
+        return (
+          <MapComponent
+            currentUserProfileForMap={currentUserProfile ?? null}
+            currentUserId={safeUserId}
+            onStartChat={() => setActiveTab("chat")}
+            onProfileClick={(userId) => setViewingProfileId(userId)}
+          />
         );
-      }
+      case "people":
+        return (
+          <PeopleNearby
+            currentUserProfileForMap={currentUserProfile ?? null}
+            currentUserId={safeUserId}
+            onStartChat={() => setActiveTab("chat")}
+            onProfileClick={(userId) => setViewingProfileId(userId)}
+          />
+        );
+      case "profile":
+        return <ProfileEditor />;
+      case "chat":
+        return (
+          <MessagingArea
+            currentUserId={safeUserId as Id<"users">}
+            selectedConversationDetails={null}
+            onSelectConversation={() => {}}
+            onBackToConversationList={() => setActiveTab("people")}
+          />
+        );
+      default:
+        return null;
     }
   };
-
-  const handleViewChatList = () => {
-    setSelectedConversationDetails(null);
-    setActiveTab("chat");
-    if (typeof window !== "undefined" && window.innerWidth < 768) {
-      setMobileActiveTab("chat");
-      setSheetOpen(true);
-    }
-  };
-
-  const handleBackToConversationList = () => {
-    setSelectedConversationDetails(null);
-  };
-
-  const currentUserProfileForMap: UserMarkerDisplayData | null =
-    currentUserProfile && currentUserId
-      ? {
-          _id: currentUserProfile._id,
-          userId: currentUserId,
-          latitude: currentUserProfile.latitude,
-          longitude: currentUserProfile.longitude,
-          status: currentUserProfile.status,
-          avatarUrl:
-            currentUserProfile.avatarUrl || loggedInUser?.image || undefined,
-          displayName: currentUserProfile.displayName || loggedInUser?.name,
-          description: currentUserProfile.description,
-          userName: loggedInUser?.name,
-          userEmail: loggedInUser?.email,
-          lastSeen: currentUserProfile.lastSeen,
-          isVisible: currentUserProfile.isVisible,
-        }
-      : null;
 
   return (
-    <div className="min-h-screen flex flex-col font-sans bg-background text-foreground">
-      {/* Accent Bar */}
-      <div className="h-2 bg-gradient-to-r from-accent via-primary to-primary w-full" />
-      {/* Top Bar */}
-      <header className="sticky top-0 z-20 bg-background/80 backdrop-blur-md h-16 flex justify-between items-center border-b border-border shadow-sm px-4 md:px-6">
-        <h2 className="text-xl font-bold text-primary tracking-tight">
-          piggies
-        </h2>
+    <div className="min-h-screen bg-background text-foreground flex flex-col">
+      {/* Header */}
+      <header className="flex items-center justify-between px-4 py-2 border-b bg-card/80 sticky top-0 z-30">
+        <span className="text-xl font-bold text-primary">piggies</span>
         <div className="flex items-center gap-2">
           <ThemeToggleButton />
           <SignOutButton />
         </div>
       </header>
-      <main className="flex-1 flex flex-col bg-muted/50">
-        <Authenticated>
-          {/* Desktop: show full layout. Mobile: show only map and nav. */}
-          <div className="hidden md:block h-full">
-            <AuthenticatedContent
-              isLoading={isLoading}
-              currentUserProfile={currentUserProfile}
-              currentUserId={currentUserId}
-              loggedInUser={loggedInUser}
-              activeTab={activeTab}
-              setActiveTab={setActiveTab}
-              viewMode={viewMode}
-              setViewMode={setViewMode}
-              selectedConversationDetails={selectedConversationDetails}
-              setSelectedConversationDetails={setSelectedConversationDetails}
-              handleStartOrSelectConversation={handleStartOrSelectConversation}
-              handleViewChatList={handleViewChatList}
-              handleBackToConversationList={handleBackToConversationList}
-              currentUserProfileForMap={currentUserProfileForMap}
-            />
-          </div>
-          {/* Mobile only: Sheet for Profile/Chat */}
-          <div className="block md:hidden relative h-full w-full flex-1">
-            {/* Map fullscreen on mobile */}
-            <div className="absolute inset-0 z-0">
-              <MobileMapContent
-                currentUserProfileForMap={currentUserProfileForMap}
-                currentUserId={currentUserId}
-                onStartChat={(otherParticipantUserId: Id<"users">) => {
-                  handleStartOrSelectConversation({
-                    otherParticipantUserId,
-                  }).catch(console.error);
-                }}
-              />
+      <Authenticated>
+        <div className="flex flex-1 min-h-0">
+          {/* Sidebar for desktop */}
+          <nav className="hidden md:flex flex-col w-56 bg-card border-r py-6 px-2 gap-2">
+            {/* Profile section */}
+            <div className="mb-6">
+              <div className="flex flex-col items-center gap-2 p-4 rounded-xl bg-muted/40 border border-border">
+                <img
+                  src={
+                    currentUserProfile?.avatarUrl ||
+                    loggedInUser?.image ||
+                    `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUserProfile?.displayName || loggedInUser?.name || "U")}&background=8b5cf6&color=fff&size=128`
+                  }
+                  alt="Profile Avatar"
+                  className="w-16 h-16 rounded-full object-cover border-2 border-primary shadow"
+                />
+                <div className="text-base font-semibold text-primary text-center truncate w-full">
+                  {currentUserProfile?.displayName ||
+                    loggedInUser?.name ||
+                    "Anonymous"}
+                </div>
+                {currentUserProfile?.status && (
+                  <div className="text-xs text-muted-foreground text-center w-full truncate">
+                    {currentUserProfile.status}
+                  </div>
+                )}
+              </div>
             </div>
-            <Sheet
-              open={sheetOpen}
-              onOpenChange={(open) => {
-                setSheetOpen(open);
-                if (!open) setMobileActiveTab("map");
-              }}
-            >
+            {/* Navigation buttons */}
+            {NAV_ITEMS.map((item) => (
+              <Button
+                key={item.key}
+                variant={activeTab === item.key ? "default" : "ghost"}
+                className="flex items-center gap-3 justify-start w-full"
+                aria-label={item.label}
+                onClick={() => setActiveTab(item.key as NavTab)}
+              >
+                {item.icon}
+                <span>{item.label}</span>
+              </Button>
+            ))}
+          </nav>
+          {/* Main content area */}
+          <main className="flex-1 flex flex-col items-stretch p-0 md:p-6 bg-muted/50">
+            {/* Mobile sheet overlays for chat */}
+            <Sheet open={sheetOpen && isMobile} onOpenChange={setSheetOpen}>
               <SheetContent
                 side="bottom"
-                className="max-h-[80vh] p-0 bg-card/95 backdrop-blur-md shadow-2xl border-t border-border"
+                className="max-h-[80vh] p-0 bg-card/95"
               >
-                {mobileActiveTab === "profile" && <ProfileEditor />}
-                {mobileActiveTab === "chat" && (
+                {activeTab === "chat" && (
                   <MessagingArea
                     currentUserId={currentUserId as Id<"users">}
-                    selectedConversationDetails={selectedConversationDetails}
-                    onSelectConversation={(
-                      convId: Id<"conversations">,
-                      otherP: OtherParticipant
-                    ) => {
-                      handleStartOrSelectConversation({
-                        conversationId: convId,
-                        otherParticipant: otherP,
-                      }).catch(console.error);
-                    }}
-                    onBackToConversationList={handleBackToConversationList}
+                    selectedConversationDetails={null}
+                    onSelectConversation={() => {}}
+                    onBackToConversationList={() => setActiveTab("people")}
                   />
                 )}
+                {activeTab === "profile" && <ProfileEditor />}
               </SheetContent>
             </Sheet>
-            {/* Bottom Navigation */}
-            <BottomNav
-              activeTab={mobileActiveTab}
-              setActiveTab={handleMobileTab}
-            />
-          </div>
-        </Authenticated>
-        <Unauthenticated>
-          <div className="flex-1 flex items-center justify-center p-4 md:p-8">
-            <Card className="w-full max-w-md mx-auto shadow-xl border border-border bg-card/90">
-              <CardHeader className="text-center">
-                <CardTitle className="text-3xl md:text-4xl text-primary">
-                  Welcome!
-                </CardTitle>
-                <CardDescription className="text-muted-foreground">
-                  Sign in to see the map and connect.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <SignInForm />
-              </CardContent>
-            </Card>
-          </div>
-        </Unauthenticated>
-      </main>
-      {/* Toaster for notifications */}
-      <div className="z-50">
-        <Toaster richColors position="top-right" />
-      </div>
-    </div>
-  );
-}
-
-function AuthenticatedContent(
-  props: AuthenticatedContentProps
-): React.JSX.Element {
-  const {
-    isLoading,
-    currentUserProfile,
-    currentUserId,
-    loggedInUser,
-    activeTab,
-    setActiveTab,
-    viewMode,
-    setViewMode,
-    selectedConversationDetails,
-    setSelectedConversationDetails,
-    handleStartOrSelectConversation,
-    handleViewChatList,
-    handleBackToConversationList,
-    currentUserProfileForMap,
-  } = props;
-
-  if (
-    isLoading ||
-    currentUserId === undefined ||
-    currentUserProfile === undefined
-  ) {
-    return (
-      <div className="flex-1 flex justify-center items-center">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-orange-500"></div>
-        <p className="ml-3 text-muted-foreground">Loading your experience...</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex-1 flex flex-col md:flex-row gap-0 md:gap-4 max-h-[calc(100vh-5rem)]">
-      {/* Sidebar */}
-      <aside className="sidebar-custom w-full md:w-1/4 lg:w-1/5 order-2 md:order-1 flex flex-col bg-card/80 border-t md:border-t-0 md:border-l border-border border-r-2 border-r-muted-foreground shadow-xl backdrop-blur-lg z-10 min-h-[400px]">
-        <Card className="bg-card/90 shadow-lg border-none m-4">
-          <CardHeader>
-            <CardTitle className="text-2xl font-extrabold mb-1">
-              Hello,{" "}
-              {currentUserProfile?.displayName ||
-                loggedInUser?.name ||
-                loggedInUser?.email ||
-                "User"}
-              !
-            </CardTitle>
-            <CardDescription className="text-sm text-muted-foreground font-normal mt-0">
-              Share your location and complete your profile to become visible on
-              the map.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {/* Profile/Chats Toggle */}
-            <div className="flex gap-2 mb-4">
-              <Button
-                onClick={() => setActiveTab("people")}
-                variant={activeTab === "people" ? "default" : "outline"}
-                size="sm"
-                className={`flex-1 rounded-l-none sidebar-toggle-btn ${activeTab === "people" ? "active" : ""}`}
-              >
-                People Nearby
-              </Button>
-              <Button
-                onClick={() => setActiveTab("profile")}
-                variant={activeTab === "profile" ? "default" : "outline"}
-                size="sm"
-                className={`flex-1 sidebar-toggle-btn ${activeTab === "profile" ? "active" : ""}`}
-              >
-                Profile
-              </Button>
-              <Button
-                onClick={handleViewChatList}
-                variant={activeTab === "chat" ? "default" : "outline"}
-                size="sm"
-                className={`flex-1 rounded-r-none sidebar-toggle-btn ${activeTab === "chat" ? "active" : ""}`}
-              >
-                Chats
-              </Button>
+            {/* Main content (desktop or mobile map/people) */}
+            <div className="flex-1 w-full h-full">
+              {(!isMobile || activeTab === "map" || activeTab === "people") &&
+                renderContent()}
             </div>
-            {/* Optionally, add a summary or quick profile info here */}
-          </CardContent>
-        </Card>
-      </aside>
-      {/* Main Content (Profile, Chat, or People Nearby) */}
-      <section className="w-full md:w-3/4 lg:w-4/5 order-1 md:order-2 flex flex-col items-stretch justify-stretch p-2 md:p-4">
-        <div className="flex-1 rounded-xl border border-border bg-card/80 shadow-2xl overflow-hidden">
-          {activeTab === "profile" ? (
-            <ProfileEditor />
-          ) : activeTab === "chat" ? (
-            <MessagingArea
-              currentUserId={currentUserId}
-              selectedConversationDetails={selectedConversationDetails}
-              onSelectConversation={(convId, otherP) => {
-                handleStartOrSelectConversation({
-                  conversationId: convId,
-                  otherParticipant: otherP,
-                }).catch(console.error);
-              }}
-              onBackToConversationList={handleBackToConversationList}
-            />
-          ) : (
-            <PeopleNearby
-              viewMode={viewMode}
-              setViewMode={setViewMode}
-              currentUserProfileForMap={currentUserProfileForMap}
-              currentUserId={currentUserId}
-              onStartChat={(otherParticipantUserId: Id<"users">) => {
-                handleStartOrSelectConversation({
-                  otherParticipantUserId,
-                }).catch(console.error);
-              }}
-            />
-          )}
+          </main>
         </div>
-      </section>
+        {/* Bottom nav for mobile */}
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-card/90 border-t flex justify-around items-center h-16 shadow-2xl">
+          {NAV_ITEMS.map((item) => (
+            <Button
+              key={item.key}
+              variant={activeTab === item.key ? "default" : "ghost"}
+              size="icon"
+              aria-label={item.label}
+              onClick={() => setActiveTab(item.key as NavTab)}
+              className="flex flex-col items-center gap-0"
+            >
+              {item.icon}
+              <span className="text-xs">{item.label}</span>
+            </Button>
+          ))}
+        </nav>
+        {/* ProfileModal */}
+        <ProfileModal
+          open={!!viewingProfileId}
+          onOpenChange={(open) => {
+            setProfileDrawerOpen(open);
+            if (!open) setViewingProfileId(null);
+          }}
+          userId={viewingProfileId as Id<"users">}
+          onBack={() => setViewingProfileId(null)}
+          onStartChat={(userId) => {
+            setViewingProfileId(null);
+            setActiveTab("chat");
+          }}
+          currentUserProfileForMap={currentUserProfile ?? null}
+        />
+      </Authenticated>
+      <Unauthenticated>
+        <div className="flex-1 flex items-center justify-center p-4 md:p-8">
+          <div className="w-full max-w-md mx-auto shadow-xl border bg-card/90 p-8 rounded-lg">
+            <h2 className="text-3xl md:text-4xl text-primary font-bold mb-2 text-center">
+              Welcome!
+            </h2>
+            <p className="text-muted-foreground text-center mb-6">
+              Sign in to see the map and connect.
+            </p>
+            <SignInForm />
+          </div>
+        </div>
+      </Unauthenticated>
+      <Toaster richColors position="top-right" />
     </div>
   );
 }
-
-function MobileMapContent({
-  currentUserProfileForMap,
-  currentUserId,
-  onStartChat,
-}: MobileMapContentProps): React.JSX.Element {
-  return (
-    <MapComponent
-      currentUserProfileForMap={currentUserProfileForMap}
-      currentUserId={currentUserId}
-      onStartChat={onStartChat}
-    />
-  );
-}
-
-export {};

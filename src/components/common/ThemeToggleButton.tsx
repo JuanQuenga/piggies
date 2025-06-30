@@ -1,5 +1,8 @@
+"use client";
+
 import React, { useEffect, useState } from "react";
 import { Button } from "../ui/button";
+import { Moon, Sun } from "lucide-react";
 
 const SunIcon = () => (
   <svg

@@ -1,9 +1,20 @@
+"use client";
+
 import React from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import { usePaginatedQuery } from "convex/react";
 import { Button } from "../../components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../../components/ui/card";
+import { Badge } from "../../components/ui/badge";
+import { Separator } from "../../components/ui/separator";
+import { MoreVertical, MessageCircle, ShieldCheck } from "lucide-react";
 
 interface ConversationListProps {
   onSelectConversation: (

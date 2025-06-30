@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useEffect, useRef, FormEvent } from "react";
 import { useMutation, usePaginatedQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
@@ -6,6 +8,16 @@ import { toast } from "sonner";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Popup } from "../../components/ui/popup";
+import {
+  Send,
+  Paperclip,
+  Image as ImageIcon,
+  File,
+  X,
+  ArrowLeft,
+  MoreVertical,
+  ShieldCheck,
+} from "lucide-react";
 
 interface ChatViewProps {
   conversationId: Id<"conversations">;

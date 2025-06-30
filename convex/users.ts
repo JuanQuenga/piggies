@@ -4,31 +4,136 @@
 // the user document from the "users" table, this file might be redundant
 // or could be used for other user-related queries/mutations.
 
-import { query } from "./_generated/server";
-import { getAuthUserId } from "@convex-dev/auth/server";
+import { query, mutation } from "./_generated/server";
+import { Id } from "./_generated/dataModel";
+import { v } from "convex/values";
+import { ConvexError } from "convex/values";
 
 // Query to get the currently logged-in user's full document from the "users" table.
-// This is often provided by the auth setup (e.g., in convex/auth.ts as loggedInUser).
-// If it's not, or you need a specific version, you can define it here.
 export const currentLoggedInUser = query({
   handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      return null; // No user is logged in
-    }
-    const user = await ctx.db.get(userId); // Fetches from the "users" table
-    if (!user) {
-      // This case should ideally not happen if userId is valid
-      // and refers to an entry in the "users" table.
-      console.warn(`User with ID ${userId} not found in 'users' table.`);
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
       return null;
     }
-    return user; // Returns the document from the "users" table (name, email, image, etc.)
+
+    const email = identity.email;
+    if (!email) {
+      return null;
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", email))
+      .unique();
+
+    return user;
   },
 });
 
 export const getMyId = query({
   handler: async (ctx) => {
-    return await getAuthUserId(ctx);
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      return null;
+    }
+
+    const email = identity.email;
+    if (!email) {
+      return null;
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", email))
+      .unique();
+
+    return user?._id || null;
+  },
+});
+
+// Mutation to create or get user from Clerk identity
+export const createOrGetUser = mutation({
+  args: {},
+  returns: v.id("users"),
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new ConvexError("Not authenticated");
+    }
+
+    const email = identity.email;
+    if (!email) {
+      throw new ConvexError("User email not found");
+    }
+
+    // Check if user already exists
+    const existingUser = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", email))
+      .unique();
+
+    if (existingUser) {
+      return existingUser._id;
+    }
+
+    // Create new user from Clerk data
+    return await ctx.db.insert("users", {
+      email: email,
+      name: identity.name,
+      imageUrl: identity.pictureUrl,
+    });
+  },
+});
+
+// Mutation to update user profile
+export const updateUser = mutation({
+  args: {
+    name: v.optional(v.string()),
+    imageUrl: v.optional(v.string()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new ConvexError("Not authenticated");
+    }
+
+    const email = identity.email;
+    if (!email) {
+      throw new ConvexError("User email not found");
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", email))
+      .unique();
+
+    if (!user) {
+      throw new ConvexError("User not found");
+    }
+
+    await ctx.db.patch(user._id, {
+      ...(args.name !== undefined && { name: args.name }),
+      ...(args.imageUrl !== undefined && { imageUrl: args.imageUrl }),
+    });
+
+    return null;
+  },
+});
+
+// Mutation to delete all users without an email field (cleanup for schema migration)
+export const deleteAnonymousUsers = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const allUsers = await ctx.db.query("users").collect();
+    let deleted = 0;
+    for (const user of allUsers) {
+      if (!("email" in user) || typeof user.email !== "string") {
+        await ctx.db.delete(user._id);
+        deleted++;
+      }
+    }
+    return { deleted };
   },
 });
