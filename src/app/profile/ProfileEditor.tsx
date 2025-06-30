@@ -336,7 +336,11 @@ export default function ProfileEditor() {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const { session } = useSession();
-  const userId = session?.user?.id as Id<"users"> | undefined;
+  const clerkUserEmail = session?.user?.primaryEmailAddress?.emailAddress;
+  const convexUser = useQuery(
+    api.users.getUserByClerkId,
+    clerkUserEmail ? { clerkUserId: clerkUserEmail } : "skip"
+  );
 
   // Check if mobile on mount and resize
   useEffect(() => {
@@ -683,11 +687,11 @@ export default function ProfileEditor() {
       </Button>
 
       {/* Use shared ProfileModal for preview, passing current userId */}
-      {userId && (
+      {convexUser?._id && (
         <ProfileModal
           open={isPreviewOpen}
           onOpenChange={setIsPreviewOpen}
-          userId={userId}
+          userId={convexUser._id}
           onBack={() => setIsPreviewOpen(false)}
           onStartChat={() => {}}
         />

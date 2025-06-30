@@ -1,12 +1,13 @@
 "use client";
 
 import React from "react";
-import { Dialog, DialogContent } from "../../components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "../../components/ui/dialog";
 import { ProfilePage } from "./ProfilePage";
 import { Id } from "../../../convex/_generated/dataModel";
 import { Sheet, SheetContent } from "../../components/ui/sheet";
 import { Button } from "../../components/ui/button";
 import { X } from "lucide-react";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = React.useState(false);
@@ -67,6 +68,10 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
         className="fixed right-6 top-8 max-w-md w-full max-h-[90vh] rounded-2xl shadow-2xl p-0 bg-card/95 border border-border flex flex-col z-[9999]"
         style={{ margin: 0 }}
       >
+        {/* Accessible but visually hidden title for screen readers */}
+        <DialogTitle>
+          <VisuallyHidden>Profile Preview</VisuallyHidden>
+        </DialogTitle>
         <ProfilePage
           userId={userId}
           onBack={onBack}

@@ -137,3 +137,19 @@ export const deleteAnonymousUsers = mutation({
     return { deleted };
   },
 });
+
+// Query to get a user by Clerk user ID (string)
+export const getUserByClerkId = query({
+  args: { clerkUserId: v.string() },
+  handler: async (ctx, { clerkUserId }) => {
+    // For now, use email as the mapping since users table only has email
+    // In the future, if you add a clerkId field, use that instead
+    // Try to find by email (assuming clerkUserId is an email for now)
+    // If not, you must add clerkId to users table and index it
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", clerkUserId))
+      .unique();
+    return user ?? null;
+  },
+});
