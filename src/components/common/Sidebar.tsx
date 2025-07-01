@@ -78,7 +78,7 @@ export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
             <Link key={href} href={href} passHref legacyBehavior>
               <a
                 className={cn(
-                  "flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all",
+                  "flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-zinc-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 transition-all",
                   collapsed ? "justify-center" : "justify-start"
                 )}
                 aria-label={label}
@@ -94,7 +94,7 @@ export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
         {/* Collapse/Expand button */}
         <button
           className={cn(
-            "mb-2 mt-auto flex items-center justify-center w-10 h-10 rounded-lg hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all",
+            "mb-2 mt-auto flex items-center justify-center w-10 h-10 rounded-lg hover:bg-zinc-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 transition-all",
             collapsed ? "mx-auto" : "ml-2"
           )}
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
@@ -111,7 +111,7 @@ export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
           <Link href="/settings" passHref legacyBehavior>
             <a
               className={cn(
-                "flex items-center justify-center w-10 h-10 rounded-lg hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                "flex items-center justify-center w-10 h-10 rounded-lg hover:bg-zinc-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500"
               )}
               aria-label="Settings"
             >
@@ -155,7 +155,7 @@ export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
         <Link href="/settings" passHref legacyBehavior>
           <a
             className={cn(
-              "flex items-center justify-center w-10 h-10 rounded-lg hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              "flex items-center justify-center w-10 h-10 rounded-lg hover:bg-zinc-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500"
             )}
             aria-label="Settings"
           >
@@ -170,7 +170,7 @@ export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
           <Link key={href} href={href} passHref legacyBehavior>
             <a
               className={cn(
-                "flex flex-col items-center justify-center w-10 h-10 rounded-lg hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                "flex flex-col items-center justify-center w-10 h-10 rounded-lg hover:bg-zinc-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500"
               )}
               aria-label={label}
             >
