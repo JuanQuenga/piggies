@@ -3,8 +3,9 @@
 import { useAuth } from "@clerk/nextjs";
 import { SignInButton } from "@clerk/nextjs";
 import { useEffect } from "react";
+import { Button } from "@/components/ui/button";
 
-export default function HomePage() {
+export default function DashboardPage() {
   const { isSignedIn, isLoaded } = useAuth();
 
   // Redirect authenticated users to map
@@ -48,8 +49,52 @@ export default function HomePage() {
 
   // This should not be reached due to the redirect effect, but just in case
   return (
-    <div className="flex justify-center items-center min-h-screen">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
-    </div>
+    <section className="relative flex flex-col items-center justify-center h-full min-h-[80vh] w-full">
+      {/* Controller SVG background */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-10 select-none">
+        {/* Inline SVG for PS5 controller outline */}
+        <svg
+          width="600"
+          height="260"
+          viewBox="0 0 600 260"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          className="w-[80vw] max-w-3xl h-auto"
+        >
+          <rect x="0" y="0" width="600" height="260" rx="60" fill="#18181b" />
+          <g stroke="#fff" strokeWidth="2" opacity="0.25">
+            <rect x="120" y="60" width="360" height="140" rx="60" />
+            <circle cx="200" cy="130" r="40" />
+            <circle cx="400" cy="130" r="40" />
+            <rect x="290" y="110" width="20" height="40" rx="10" />
+            <rect x="250" y="120" width="20" height="20" rx="6" />
+            <rect x="330" y="120" width="20" height="20" rx="6" />
+            {/* D-pad */}
+            <rect x="170" y="110" width="12" height="40" rx="4" />
+            <rect x="154" y="126" width="40" height="12" rx="4" />
+            {/* Buttons */}
+            <circle cx="430" cy="120" r="6" />
+            <circle cx="430" cy="140" r="6" />
+            <circle cx="410" cy="120" r="6" />
+            <circle cx="410" cy="140" r="6" />
+          </g>
+        </svg>
+      </div>
+      {/* Main content */}
+      <div className="relative z-10 flex flex-col items-center justify-center gap-8">
+        <h2
+          className="text-5xl font-extrabold text-white tracking-widest mb-4"
+          aria-label="PS5 logo"
+        >
+          PS5
+        </h2>
+        <Button
+          className="bg-rose-500 hover:bg-rose-600 text-lg px-8 py-4 rounded-full shadow-lg focus:outline-none focus:ring-2 focus:ring-rose-400 focus:ring-offset-2"
+          aria-label="Press the PS button to use controller"
+        >
+          Press the PS button to use controller
+        </Button>
+      </div>
+    </section>
   );
 }

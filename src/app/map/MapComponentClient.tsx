@@ -217,6 +217,18 @@ const MapComponentClient: React.FC<MapComponentClientProps> = ({
   const visibleUsers = useQuery(api.profiles.listVisibleUsers) || [];
   const updateProfile = useMutation(api.profiles.updateMyProfile);
 
+  // Check location permission status
+  const [locationPermission, setLocationPermission] =
+    useState<string>("unknown");
+
+  useEffect(() => {
+    if (navigator.permissions && navigator.permissions.query) {
+      navigator.permissions.query({ name: "geolocation" }).then((result) => {
+        setLocationPermission(result.state);
+      });
+    }
+  }, []);
+
   const [currentPosition, setCurrentPosition] = useState<LatLngTuple | null>(
     null
   );
@@ -277,6 +289,69 @@ const MapComponentClient: React.FC<MapComponentClientProps> = ({
       setIsVisible(currentUserProfileForMap.isVisible);
     }
   }, [currentUserProfileForMap?.isVisible]);
+
+  // Get initial location when component mounts
+  useEffect(() => {
+    const getInitialLocation = () => {
+      console.log("Attempting to get initial location...");
+      console.log("Geolocation available:", !!navigator.geolocation);
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          console.log("Location received:", {
+            latitude,
+            longitude,
+            accuracy: position.coords.accuracy,
+          });
+          setCurrentPosition([latitude, longitude]);
+          void (async () => {
+            try {
+              await updateProfile({ latitude, longitude });
+              console.log("Initial location saved to profile:", {
+                latitude,
+                longitude,
+              });
+              toast.success("Location updated successfully!");
+            } catch (error) {
+              console.error("Failed to save initial location:", error);
+              toast.error("Failed to save your location to profile.");
+            }
+          })();
+        },
+        (error) => {
+          console.error("Geolocation error:", error);
+          console.error("Error code:", error.code);
+          console.error("Error message:", error.message);
+
+          let errorMessage = "Could not get your location.";
+
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              errorMessage =
+                "Location access denied. Please allow location access in your browser settings.";
+              break;
+            case error.POSITION_UNAVAILABLE:
+              errorMessage =
+                "Location information unavailable. Please try again.";
+              break;
+            case error.TIMEOUT:
+              errorMessage = "Location request timed out. Please try again.";
+              break;
+            default:
+              errorMessage =
+                "Could not get your location. Please check your browser settings.";
+          }
+
+          toast.error(errorMessage);
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
+      );
+    };
+
+    // Get location immediately when component mounts
+    getInitialLocation();
+  }, [updateProfile]);
 
   // Auto-update location every 60 seconds if visible
   useEffect(() => {
@@ -343,7 +418,7 @@ const MapComponentClient: React.FC<MapComponentClientProps> = ({
   };
 
   return (
-    <div className="h-[calc(100vh-200px)] w-full relative md:h-[calc(100vh-120px)]">
+    <div className="flex-1 w-full relative min-h-0">
       <MapContainer
         center={mapCenter}
         zoom={mapInitialZoom}
@@ -377,6 +452,95 @@ const MapComponentClient: React.FC<MapComponentClientProps> = ({
             {isVisible ? "Visible on map" : "Hidden from map"}
           </span>
         </label>
+
+        {/* Debug Panel */}
+        <div className="bg-card border border-border rounded-lg px-4 py-3 shadow-lg max-w-xs">
+          <h4 className="text-sm font-semibold text-foreground mb-2">
+            Debug Info
+          </h4>
+          <div className="text-xs space-y-1 text-muted-foreground">
+            <div>Profile exists: {currentUserProfileForMap ? "Yes" : "No"}</div>
+            <div>User ID: {currentUserId || "None"}</div>
+            <div>
+              Latitude: {currentUserProfileForMap?.latitude || "Not set"}
+            </div>
+            <div>
+              Longitude: {currentUserProfileForMap?.longitude || "Not set"}
+            </div>
+            <div>
+              Is Visible: {currentUserProfileForMap?.isVisible ? "Yes" : "No"}
+            </div>
+            <div>
+              Last Seen:{" "}
+              {currentUserProfileForMap?.lastSeen
+                ? new Date(currentUserProfileForMap.lastSeen).toLocaleString()
+                : "Never"}
+            </div>
+            <div>Total visible users: {visibleUsers.length}</div>
+            <div>Markers to display: {allMarkersToDisplay.length}</div>
+            <div>Location permission: {locationPermission}</div>
+            <div>
+              Current position:{" "}
+              {currentPosition
+                ? `${currentPosition[0].toFixed(4)}, ${currentPosition[1].toFixed(4)}`
+                : "None"}
+            </div>
+            <div>
+              Profile updated:{" "}
+              {currentUserProfileForMap?.lastSeen ? "Yes" : "No"}
+            </div>
+          </div>
+
+          {/* Manual location update button */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full mt-3"
+            onClick={() => {
+              navigator.geolocation.getCurrentPosition(
+                (position) => {
+                  const { latitude, longitude } = position.coords;
+                  setCurrentPosition([latitude, longitude]);
+                  void (async () => {
+                    try {
+                      await updateProfile({ latitude, longitude });
+                      toast.success("Location updated!");
+                    } catch (error) {
+                      toast.error("Failed to update location.");
+                    }
+                  })();
+                },
+                (error) => {
+                  console.error("Geolocation error:", error);
+                  let errorMessage = "Could not get your location.";
+
+                  switch (error.code) {
+                    case error.PERMISSION_DENIED:
+                      errorMessage =
+                        "Location access denied. Please allow location access in your browser settings.";
+                      break;
+                    case error.POSITION_UNAVAILABLE:
+                      errorMessage =
+                        "Location information unavailable. Please try again.";
+                      break;
+                    case error.TIMEOUT:
+                      errorMessage =
+                        "Location request timed out. Please try again.";
+                      break;
+                    default:
+                      errorMessage =
+                        "Could not get your location. Please check your browser settings.";
+                  }
+
+                  toast.error(errorMessage);
+                },
+                { enableHighAccuracy: true, timeout: 10000 }
+              );
+            }}
+          >
+            Get My Location
+          </Button>
+        </div>
       </div>
     </div>
   );

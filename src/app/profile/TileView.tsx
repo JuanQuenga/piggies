@@ -149,6 +149,35 @@ export const TileView: React.FC<TileViewProps> = ({
         </p>
       </div>
 
+      {/* Debug Panel */}
+      <div className="mb-4 p-3 bg-card border border-border rounded-lg">
+        <h4 className="text-sm font-semibold text-foreground mb-2">
+          Debug Info
+        </h4>
+        <div className="text-xs space-y-1 text-muted-foreground">
+          <div>
+            Your profile exists: {currentUserProfileForMap ? "Yes" : "No"}
+          </div>
+          <div>Your User ID: {currentUserId || "None"}</div>
+          <div>
+            Your Latitude: {currentUserProfileForMap?.latitude || "Not set"}
+          </div>
+          <div>
+            Your Longitude: {currentUserProfileForMap?.longitude || "Not set"}
+          </div>
+          <div>
+            Your visibility:{" "}
+            {currentUserProfileForMap?.isVisible ? "Visible" : "Hidden"}
+          </div>
+          <div>Total visible users: {visibleUsers.length}</div>
+          <div>Filtered users (excluding you): {filteredUsers.length}</div>
+          <div>
+            Users with distance:{" "}
+            {usersWithDistance.filter((u) => u._distance !== undefined).length}
+          </div>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {usersWithDistance.map((user) => {
           const finalAvatarUrl =

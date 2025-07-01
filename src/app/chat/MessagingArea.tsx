@@ -42,46 +42,63 @@ export const MessagingArea: React.FC<MessagingAreaProps> = ({
     );
   }
 
+  // Responsive two-column layout
   return (
-    <div className="flex flex-col h-full w-full bg-background rounded-xl border border-border shadow-xl">
-      <div className="flex items-center justify-between px-4 py-3 border-b bg-card/80 rounded-t-xl">
-        <h2 className="text-lg font-bold text-primary">Chats</h2>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onBackToConversationList}
-          aria-label="Back to conversation list"
-        >
-          Back
-        </Button>
+    <div className="relative flex h-[80vh] w-full bg-background rounded-xl border border-border shadow-xl overflow-hidden">
+      {/* Conversation List (left column) */}
+      <div
+        className={
+          `hidden md:block md:w-1/3 lg:w-1/3 h-full bg-card border-r border-border overflow-y-auto transition-transform duration-300` +
+          (!selectedConversationDetails
+            ? " md:translate-x-0"
+            : " md:translate-x-0")
+        }
+      >
+        <ConversationList
+          onSelectConversation={onSelectConversation}
+          currentUserId={currentUserId}
+        />
       </div>
-      <div className="flex-1 overflow-y-auto p-4">
-        {!selectedConversationDetails ? (
-          <ConversationList
-            onSelectConversation={onSelectConversation}
-            currentUserId={currentUserId}
-          />
-        ) : (
-          <ChatView
-            conversationId={selectedConversationDetails.conversationId}
-            otherParticipant={selectedConversationDetails.otherParticipant}
-            currentUserId={currentUserId}
-            onBack={onBackToConversationList}
-          />
-        )}
-      </div>
-      <div className="border-t bg-card/80 p-3 rounded-b-xl">
-        <form className="flex gap-2">
-          <input
-            type="text"
-            className="flex-1 rounded-md border border-border px-3 py-2 text-base bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-            placeholder="Type a message..."
-            aria-label="Type a message"
-          />
-          <Button type="submit" variant="default" aria-label="Send message">
-            Send
-          </Button>
-        </form>
+      {/* ChatView (right column) */}
+      <div
+        className={
+          `flex-1 h-full bg-background transition-transform duration-300` +
+          (selectedConversationDetails
+            ? " md:translate-x-0"
+            : " md:translate-x-0")
+        }
+      >
+        {/* Mobile: show ConversationList or ChatView */}
+        <div className="block md:hidden h-full w-full">
+          {!selectedConversationDetails ? (
+            <ConversationList
+              onSelectConversation={onSelectConversation}
+              currentUserId={currentUserId}
+            />
+          ) : (
+            <ChatView
+              conversationId={selectedConversationDetails.conversationId}
+              otherParticipant={selectedConversationDetails.otherParticipant}
+              currentUserId={currentUserId}
+              onBack={onBackToConversationList}
+            />
+          )}
+        </div>
+        {/* Desktop: show ChatView if selected */}
+        <div className="hidden md:block h-full w-full">
+          {selectedConversationDetails ? (
+            <ChatView
+              conversationId={selectedConversationDetails.conversationId}
+              otherParticipant={selectedConversationDetails.otherParticipant}
+              currentUserId={currentUserId}
+              onBack={onBackToConversationList}
+            />
+          ) : (
+            <div className="flex items-center justify-center h-full text-muted-foreground text-lg">
+              Select a conversation to start chatting
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

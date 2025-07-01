@@ -87,11 +87,13 @@ export const getMyProfileWithAvatarUrl = query({
   args: {},
   handler: async (ctx) => {
     const userId = await getCurrentUserId(ctx);
+    console.log("[DEBUG] getMyProfileWithAvatarUrl userId:", userId);
     if (!userId) return null;
     const profile = await ctx.db
       .query("profiles")
       .withIndex("by_userId", (q) => q.eq("userId", userId))
       .unique();
+    console.log("[DEBUG] getMyProfileWithAvatarUrl profile:", profile);
     if (!profile) return null;
     let avatarUrl: string | undefined = undefined;
     if (profile.avatarUrl) {
@@ -109,7 +111,9 @@ export const getMyProfileWithAvatarUrl = query({
     }
     // Always resolve photo storage IDs to URLs, and return both id and url
     const photos = await resolvePhotoUrlsWithIds(ctx, profile.photos);
-    return { ...profile, avatarUrl, photos };
+    const result = { ...profile, avatarUrl, photos };
+    console.log("[DEBUG] getMyProfileWithAvatarUrl result:", result);
+    return result;
   },
 });
 
@@ -189,6 +193,10 @@ export const updateMyProfile = mutation({
       .withIndex("by_userId", (q) => q.eq("userId", userId))
       .unique();
 
+    console.log("[DEBUG] updateMyProfile args:", args);
+    console.log("[DEBUG] updateMyProfile latitude:", args.latitude);
+    console.log("[DEBUG] updateMyProfile longitude:", args.longitude);
+
     const profileData = {
       userId,
       displayName: args.displayName,
@@ -233,6 +241,8 @@ export const updateMyProfile = mutation({
       photos: args.photos,
       mainPhotoIndex: args.mainPhotoIndex,
     };
+
+    console.log("[DEBUG] updateMyProfile profileData:", profileData);
 
     if (existingProfile) {
       await ctx.db.patch(existingProfile._id, profileData);
