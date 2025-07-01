@@ -1,16 +1,30 @@
 import Link from "next/link";
-import { Home, MessageCircle, Users, Map, Settings } from "lucide-react";
+import {
+  Home,
+  MessageCircle,
+  Users,
+  Map,
+  Settings,
+  User,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
-import { UserButton } from "@clerk/nextjs";
 
 const navItems = [
-  { href: "/people", icon: Users, label: "People Nearby" },
-  { href: "/map", icon: Map, label: "Map" },
+  { href: "/profile", icon: User, label: "My Profile" },
   { href: "/chat", icon: MessageCircle, label: "Chats" },
+  { href: "/people", icon: Users, label: "People" },
+  { href: "/map", icon: Map, label: "Map" },
 ];
 
-export default function Sidebar() {
+interface SidebarProps {
+  collapsed: boolean;
+  setCollapsed: (collapsed: boolean) => void;
+}
+
+export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
   // Mobile nav state (for accessibility, not strictly needed for static nav)
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
@@ -18,14 +32,23 @@ export default function Sidebar() {
     <>
       {/* Desktop Sidebar */}
       <nav
-        className="hidden md:flex flex-col items-center bg-zinc-900 text-white h-screen w-16 py-4 border-r border-zinc-800 fixed left-0 top-0 z-30"
+        className={cn(
+          "hidden md:flex flex-col items-center bg-zinc-900 text-white h-screen py-4 border-r border-zinc-800 fixed left-0 top-0 z-30 transition-all duration-300",
+          collapsed ? "w-16" : "w-48"
+        )}
         aria-label="Main navigation"
       >
         {/* Pig logo at the top */}
-        <div className="mb-8 mt-2" aria-label="Piggies logo">
+        <div
+          className={cn(
+            "mb-8 mt-2 flex items-center justify-center transition-all",
+            collapsed ? "w-10" : "w-32"
+          )}
+          aria-label="Piggies logo"
+        >
           <svg
-            width="40"
-            height="40"
+            width={collapsed ? 40 : 48}
+            height={collapsed ? 40 : 48}
             viewBox="0 0 72 72"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
@@ -46,30 +69,45 @@ export default function Sidebar() {
             <ellipse cx="30" cy="52" rx="3" ry="5" fill="#6D2E1B" />
             <ellipse cx="42" cy="52" rx="3" ry="5" fill="#6D2E1B" />
           </svg>
+          {!collapsed && (
+            <span className="ml-3 text-lg font-bold text-white">Piggies</span>
+          )}
         </div>
-        <div className="flex flex-col gap-6 flex-1 mt-4 items-center">
-          {/* User avatar as first nav item */}
-          <div className="mb-2">
-            <UserButton
-              afterSignOutUrl="/auth"
-              appearance={{ elements: { avatarBox: "w-10 h-10" } }}
-            />
-          </div>
+        <div className="flex flex-col gap-2 flex-1 mt-4 items-stretch w-full">
           {navItems.map(({ href, icon: Icon, label }) => (
             <Link key={href} href={href} passHref legacyBehavior>
               <a
                 className={cn(
-                  "flex items-center justify-center w-10 h-10 rounded-lg hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  "flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all",
+                  collapsed ? "justify-center" : "justify-start"
                 )}
                 aria-label={label}
               >
                 <Icon className="w-6 h-6" aria-hidden="true" />
+                {!collapsed && (
+                  <span className="text-base font-medium">{label}</span>
+                )}
               </a>
             </Link>
           ))}
         </div>
+        {/* Collapse/Expand button */}
+        <button
+          className={cn(
+            "mb-2 mt-auto flex items-center justify-center w-10 h-10 rounded-lg hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all",
+            collapsed ? "mx-auto" : "ml-2"
+          )}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          onClick={() => setCollapsed(!collapsed)}
+        >
+          {collapsed ? (
+            <ChevronRight className="w-6 h-6" />
+          ) : (
+            <ChevronLeft className="w-6 h-6" />
+          )}
+        </button>
         {/* Settings button pinned to bottom */}
-        <div className="mb-2 mt-auto">
+        <div className={cn("mb-2", collapsed ? "mx-auto" : "ml-2")}>
           <Link href="/settings" passHref legacyBehavior>
             <a
               className={cn(

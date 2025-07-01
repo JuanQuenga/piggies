@@ -10,6 +10,7 @@ import { SignOutButton } from "./auth/SignOutButton";
 import { ConvexUserBootstrapper } from "./ConvexUserBootstrapper";
 import Sidebar from "@/components/common/Sidebar";
 import Header from "@/components/common/Header";
+import { useState } from "react";
 
 // Use NEXT_PUBLIC_CONVEX_URL for the Convex deployment URL
 const convex = new ConvexReactClient(
@@ -21,6 +22,7 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   return (
     <html lang="en">
       <body>
@@ -33,10 +35,18 @@ export default function RootLayout({
           <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
             <ConvexUserBootstrapper />
             <div className="min-h-screen flex flex-row bg-zinc-950">
-              <Sidebar />
-              <div className="flex-1 flex flex-col min-h-screen md:ml-16">
+              <Sidebar
+                collapsed={sidebarCollapsed}
+                setCollapsed={setSidebarCollapsed}
+              />
+              <div
+                className={
+                  `flex-1 flex flex-col min-h-screen transition-all duration-300 ` +
+                  (sidebarCollapsed ? "md:ml-16" : "md:ml-48")
+                }
+              >
                 <Header />
-                <main className="flex-1 flex flex-col items-center justify-center">
+                <main className="flex-1 flex flex-col items-center justify-center px-4">
                   {children}
                 </main>
               </div>
