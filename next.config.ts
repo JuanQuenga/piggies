@@ -1,7 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
   typescript: {
     ignoreBuildErrors: true,
     tsconfigPath: "tsconfig.json",
@@ -11,11 +10,8 @@ const nextConfig: NextConfig = {
   },
   serverExternalPackages: ["convex"],
   transpilePackages: ["@clerk/nextjs"],
-  // Disable static generation to avoid SSR issues with client-side hooks
-  experimental: {
-    // Force all pages to be dynamic
-    ppr: false,
-  },
+  // Enable React strict mode for better development experience
+  reactStrictMode: true,
 };
 
 export default nextConfig;

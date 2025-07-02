@@ -12,6 +12,7 @@ export default tseslint.config(
       "convex/_generated",
       "postcss.config.js",
       "tailwind.config.js",
+      ".next",
     ],
   },
   {
@@ -27,11 +28,7 @@ export default tseslint.config(
         ...globals.node,
       },
       parserOptions: {
-        project: [
-          "./tsconfig.node.json",
-          "./tsconfig.app.json",
-          "./convex/tsconfig.json",
-        ],
+        project: ["./tsconfig.json", "./convex/tsconfig.json"],
       },
     },
     plugins: {
