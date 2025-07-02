@@ -5,6 +5,7 @@ import { ConvexProviderWithClerk } from "convex/react-clerk";
 import { ConvexReactClient } from "convex/react";
 import { ConvexUserBootstrapper } from "./ConvexUserBootstrapper";
 import AppAuthGate from "./AppAuthGate";
+import "./globals.css";
 
 // Use NEXT_PUBLIC_CONVEX_URL for the Convex deployment URL
 const convex = new ConvexReactClient(

@@ -3,7 +3,7 @@
 import { useQuery, useMutation } from "convex/react";
 import { useAuth } from "@clerk/nextjs";
 import { api } from "../../../convex/_generated/api";
-import { PeopleNearby } from "../../app/profile/PeopleNearby";
+import { PeopleNearby } from "../profile/PeopleNearby";
 import { Id } from "../../../convex/_generated/dataModel";
 import { useRouter } from "next/navigation";
 

@@ -12,7 +12,6 @@ export default tseslint.config(
       "convex/_generated",
       "postcss.config.js",
       "tailwind.config.js",
-      "vite.config.ts",
     ],
   },
   {
@@ -73,5 +72,5 @@ export default tseslint.config(
       // for consistency (esp. Convex `handler`s)
       "@typescript-eslint/require-await": "off",
     },
-  },
+  }
 );

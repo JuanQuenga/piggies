@@ -40,7 +40,6 @@ src/
 ├── types/                # TypeScript type definitions
 ├── App.tsx              # Main app component
 ├── main.tsx             # App entry point
-└── vite-env.d.ts        # Vite environment types
 ```
 
 ## Import Guidelines
