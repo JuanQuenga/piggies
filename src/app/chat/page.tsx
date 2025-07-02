@@ -7,6 +7,10 @@ import { useSearchParams } from "next/navigation";
 import { api } from "../../../convex/_generated/api";
 import { MessagingArea } from "../../app/chat/MessagingArea";
 import { Id } from "../../../convex/_generated/dataModel";
+import Providers from "../Providers";
+
+// Force dynamic rendering to prevent static generation issues
+export const dynamic = "force-dynamic";
 
 interface SelectedConversationDetails {
   conversationId: Id<"conversations">;
@@ -17,9 +21,17 @@ interface SelectedConversationDetails {
   };
 }
 
-export default function ChatPage() {
+// Separate component that uses Convex hooks - will be wrapped in ConvexProvider
+function ChatPageContent() {
   const { isSignedIn, isLoaded } = useAuth();
   const searchParams = useSearchParams();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Now useQuery is called within ConvexProvider context
   const currentUserId = useQuery(api.users.getMyId);
   const [selectedConversationDetails, setSelectedConversationDetails] =
     useState<SelectedConversationDetails | null>(null);
@@ -53,7 +65,7 @@ export default function ChatPage() {
   }
 
   // Show loading state while user data is being fetched
-  if (currentUserId === undefined) {
+  if (!mounted || currentUserId === undefined) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
@@ -84,5 +96,14 @@ export default function ChatPage() {
         onBackToConversationList={handleBackToConversationList}
       />
     </div>
+  );
+}
+
+// Main page component that provides the ConvexProvider context
+export default function ChatPage() {
+  return (
+    <Providers>
+      <ChatPageContent />
+    </Providers>
   );
 }

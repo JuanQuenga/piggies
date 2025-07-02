@@ -10,7 +10,12 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   serverExternalPackages: ["convex"],
-  output: "standalone",
+  transpilePackages: ["@clerk/nextjs"],
+  // Disable static generation to avoid SSR issues with client-side hooks
+  experimental: {
+    // Force all pages to be dynamic
+    ppr: false,
+  },
 };
 
 export default nextConfig;

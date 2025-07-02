@@ -6,10 +6,23 @@ import { api } from "../../../convex/_generated/api";
 import { MapComponent } from "../../app/map/MapComponent";
 import { Id } from "../../../convex/_generated/dataModel";
 import { useRouter } from "next/navigation";
+import Providers from "../Providers";
+import { useEffect, useState } from "react";
 
-export default function MapPage() {
+// Force dynamic rendering to prevent static generation issues
+export const dynamic = "force-dynamic";
+
+// Separate component that uses Convex hooks - will be wrapped in ConvexProvider
+function MapPageContent() {
   const { isSignedIn, isLoaded } = useAuth();
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Now useQuery is called within ConvexProvider context
   const currentUserProfile = useQuery(api.profiles.getMyProfileWithAvatarUrl);
   const currentUserId = useQuery(api.users.getMyId);
   const getOrCreateConversationMutation = useMutation(
@@ -45,7 +58,11 @@ export default function MapPage() {
   }
 
   // Show loading state while user data is being fetched
-  if (currentUserId === undefined || currentUserProfile === undefined) {
+  if (
+    !mounted ||
+    currentUserId === undefined ||
+    currentUserProfile === undefined
+  ) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
@@ -84,5 +101,14 @@ export default function MapPage() {
         onProfileClick={handleProfileClick}
       />
     </div>
+  );
+}
+
+// Main page component that provides the ConvexProvider context
+export default function MapPage() {
+  return (
+    <Providers>
+      <MapPageContent />
+    </Providers>
   );
 }

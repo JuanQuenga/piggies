@@ -1,16 +1,5 @@
-"use client";
-
-import { ClerkProvider, useAuth } from "@clerk/nextjs";
-import { ConvexProviderWithClerk } from "convex/react-clerk";
-import { ConvexReactClient } from "convex/react";
-import { ConvexUserBootstrapper } from "./ConvexUserBootstrapper";
-import AppAuthGate from "./AppAuthGate";
 import "./globals.css";
-
-// Use NEXT_PUBLIC_CONVEX_URL for the Convex deployment URL
-const convex = new ConvexReactClient(
-  process.env.NEXT_PUBLIC_CONVEX_URL || "https://placeholder.convex.cloud"
-);
+import { ClerkProvider } from "@clerk/nextjs";
 
 export default function RootLayout({
   children,
@@ -26,10 +15,7 @@ export default function RootLayout({
             "pk_test_placeholder"
           }
         >
-          <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
-            <ConvexUserBootstrapper />
-            <AppAuthGate>{children}</AppAuthGate>
-          </ConvexProviderWithClerk>
+          {children}
         </ClerkProvider>
       </body>
     </html>
