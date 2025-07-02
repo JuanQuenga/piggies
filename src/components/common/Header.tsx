@@ -2,6 +2,8 @@ import { useUser } from "@clerk/nextjs";
 import { useState, useEffect } from "react";
 import { Bell } from "lucide-react";
 import { Button } from "../ui/button";
+import { useAuth } from "@clerk/nextjs";
+import { SignOutButton } from "../../app/auth/SignOutButton";
 
 // XP/Level system brainstorm
 const XP_LEVELS = [
@@ -37,6 +39,7 @@ function getLevel(xp: number) {
 
 export default function Header() {
   const { user } = useUser();
+  const { isSignedIn, isLoaded } = useAuth();
   // Placeholder XP value (replace with real user XP from backend)
   const [xp] = useState(220); // Example: user has 220 XP
   const { level, nextLevel } = getLevel(xp);
@@ -163,6 +166,8 @@ export default function Header() {
             )}
           </Button>
         </div>
+
+        {isLoaded && isSignedIn && <SignOutButton />}
       </div>
     </header>
   );

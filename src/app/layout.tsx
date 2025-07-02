@@ -1,16 +1,11 @@
 "use client";
 
 import "../styles/index.css";
-import Link from "next/link";
 import { ClerkProvider, useAuth } from "@clerk/nextjs";
 import { ConvexProviderWithClerk } from "convex/react-clerk";
 import { ConvexReactClient } from "convex/react";
-import { Authenticated, Unauthenticated } from "convex/react";
-import { SignOutButton } from "./auth/SignOutButton";
 import { ConvexUserBootstrapper } from "./ConvexUserBootstrapper";
-import Sidebar from "@/components/common/Sidebar";
-import Header from "@/components/common/Header";
-import { useState } from "react";
+import AppAuthGate from "./AppAuthGate";
 
 // Use NEXT_PUBLIC_CONVEX_URL for the Convex deployment URL
 const convex = new ConvexReactClient(
@@ -22,7 +17,6 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   return (
     <html lang="en">
       <body className="bg-zinc-950 text-white">
@@ -34,23 +28,7 @@ export default function RootLayout({
         >
           <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
             <ConvexUserBootstrapper />
-            <div className="min-h-screen flex flex-row bg-zinc-950">
-              <Sidebar
-                collapsed={sidebarCollapsed}
-                setCollapsed={setSidebarCollapsed}
-              />
-              <div
-                className={
-                  `flex-1 flex flex-col min-h-screen transition-all duration-300 bg-zinc-950` +
-                  (sidebarCollapsed ? " md:ml-16" : " md:ml-48")
-                }
-              >
-                <Header />
-                <main className="flex-1 flex flex-col min-h-0 pt-14 md:pt-0">
-                  {children}
-                </main>
-              </div>
-            </div>
+            <AppAuthGate>{children}</AppAuthGate>
           </ConvexProviderWithClerk>
         </ClerkProvider>
       </body>

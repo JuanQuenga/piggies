@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
-import "leaflet/dist/leaflet.css";
 import L, { LatLngTuple } from "leaflet";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
@@ -431,6 +430,7 @@ const MapComponentClient: React.FC<MapComponentClientProps> = ({
   return (
     <div className="flex-1 w-full relative min-h-0">
       <MapContainer
+        key={currentUserId || "default-map-key"}
         center={mapCenter}
         zoom={mapInitialZoom}
         scrollWheelZoom={true}

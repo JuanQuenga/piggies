@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { useQuery } from "convex/react";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation } from "convex/react";
 import { useAuth } from "@clerk/nextjs";
+import { useSearchParams } from "next/navigation";
 import { api } from "../../../convex/_generated/api";
 import { MessagingArea } from "../../app/chat/MessagingArea";
 import { Id } from "../../../convex/_generated/dataModel";
@@ -18,6 +19,7 @@ interface SelectedConversationDetails {
 
 export default function ChatPage() {
   const { isSignedIn, isLoaded } = useAuth();
+  const searchParams = useSearchParams();
   const currentUserId = useQuery(api.users.getMyId);
   const [selectedConversationDetails, setSelectedConversationDetails] =
     useState<SelectedConversationDetails | null>(null);

@@ -1,19 +1,21 @@
 "use client";
 
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { useAuth } from "@clerk/nextjs";
 import { api } from "../../../../convex/_generated/api";
 import { ProfilePage } from "../../../app/profile/ProfilePage";
 import { Id } from "../../../../convex/_generated/dataModel";
+import { useRouter, useParams } from "next/navigation";
 
-export default function UserProfilePage({
-  params,
-}: {
-  params: { userId: string };
-}) {
+export default function UserProfilePage() {
   const { isSignedIn, isLoaded } = useAuth();
-  const userId = params?.userId as Id<"users">;
+  const router = useRouter();
+  const params = useParams();
+  const userId = params.userId as Id<"users">;
   const currentUserProfile = useQuery(api.profiles.getMyProfileWithAvatarUrl);
+  const getOrCreateConversationMutation = useMutation(
+    api.messages.getOrCreateConversationWithParticipant
+  );
 
   // Show loading state while authentication is being determined
   if (!isLoaded) {
@@ -50,8 +52,18 @@ export default function UserProfilePage({
     window.history.back();
   };
 
-  const handleStartChat = (otherUserId: Id<"users">) => {
-    window.location.href = "/chat";
+  const handleStartChat = async (otherUserId: Id<"users">) => {
+    try {
+      const result = await getOrCreateConversationMutation({
+        otherParticipantUserId: otherUserId,
+      });
+      // Navigate to chat with the conversation ID as a query parameter
+      router.push(`/chat?conversation=${result.conversationId}`);
+    } catch (error) {
+      console.error("Failed to start chat:", error);
+      // Fallback to just navigating to chat
+      router.push("/chat");
+    }
   };
 
   return (

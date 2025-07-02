@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState } from "react";
 import {
   Authenticated,
@@ -9,7 +11,7 @@ import {
 import { api } from "../convex/_generated/api";
 import { SignInForm, SignOutButton } from "./app/auth";
 import { Toaster } from "sonner";
-import { MapComponent } from "./app/map";
+import { MapComponent } from "./app/map/MapComponent";
 import {
   ProfileEditor,
   TileView,
@@ -19,8 +21,8 @@ import {
   ProfileModal,
 } from "./app/profile";
 import { Id } from "../convex/_generated/dataModel";
-import { MessagingArea } from "./app/chat";
-import { ThemeToggleButton } from "./components/common";
+import { MessagingArea } from "./app/chat/MessagingArea";
+import { ThemeToggleButton } from "./components/common/ThemeToggleButton";
 import { BottomNav } from "./components/common/BottomNav";
 import { Sheet, SheetContent } from "./components/ui/sheet";
 import { Button } from "./components/ui/button";
@@ -31,8 +33,8 @@ const NAV_ITEMS = [
   { key: "map", label: "Map", icon: <Map className="w-5 h-5" /> },
   { key: "people", label: "People", icon: <Users className="w-5 h-5" /> },
   { key: "profile", label: "Profile", icon: <User className="w-5 h-5" /> },
-  { key: "chat", label: "Chats", icon: <MessageCircle className="w-5 h-5" /> },
-];
+  { key: "chat", label: "Chat", icon: <MessageCircle className="w-5 h-5" /> },
+] as const;
 
 type NavTab = "map" | "people" | "profile" | "chat";
 
@@ -48,11 +50,23 @@ function useIsMobile() {
   return isMobile;
 }
 
+interface SelectedConversationDetails {
+  conversationId: Id<"conversations">;
+  otherParticipant: {
+    _id: Id<"users">;
+    displayName?: string | null;
+    avatarUrl?: string | null;
+  };
+}
+
 export default function App() {
   const { isLoading } = useConvexAuth();
   const currentUserProfile = useQuery(api.profiles.getMyProfileWithAvatarUrl);
   const currentUserId = useQuery(api.users.getMyId);
   const loggedInUser = useQuery(api.auth.loggedInUser);
+  const getOrCreateConversationMutation = useMutation(
+    api.messages.getOrCreateConversationWithParticipant
+  );
 
   const [activeTab, setActiveTab] = useState<NavTab>("map");
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -60,6 +74,8 @@ export default function App() {
   const [viewingProfileId, setViewingProfileId] = useState<Id<"users"> | null>(
     null
   );
+  const [selectedConversationDetails, setSelectedConversationDetails] =
+    useState<SelectedConversationDetails | null>(null);
 
   // Add a responsive hook for mobile detection
   const isMobile = useIsMobile();
@@ -68,6 +84,38 @@ export default function App() {
   React.useEffect(() => {
     setSheetOpen(activeTab === "profile" || activeTab === "chat");
   }, [activeTab]);
+
+  // Handle starting a chat with a specific user
+  const handleStartChat = async (otherUserId: Id<"users">) => {
+    try {
+      const result = await getOrCreateConversationMutation({
+        otherParticipantUserId: otherUserId,
+      });
+      setSelectedConversationDetails({
+        conversationId: result.conversationId,
+        otherParticipant: result.otherParticipant,
+      });
+      setActiveTab("chat");
+      setViewingProfileId(null); // Close profile modal if open
+    } catch (error) {
+      console.error("Failed to start chat:", error);
+      // Fallback to just navigating to chat
+      setActiveTab("chat");
+    }
+  };
+
+  // Handle selecting a conversation from the conversation list
+  const handleSelectConversation = (
+    conversationId: Id<"conversations">,
+    otherParticipant: SelectedConversationDetails["otherParticipant"]
+  ) => {
+    setSelectedConversationDetails({ conversationId, otherParticipant });
+  };
+
+  // Handle going back to conversation list
+  const handleBackToConversationList = () => {
+    setSelectedConversationDetails(null);
+  };
 
   // Main content for each tab
   const renderContent = () => {
@@ -80,7 +128,7 @@ export default function App() {
           <MapComponent
             currentUserProfileForMap={currentUserProfile ?? null}
             currentUserId={safeUserId}
-            onStartChat={() => setActiveTab("chat")}
+            onStartChat={handleStartChat}
             onProfileClick={(userId) => setViewingProfileId(userId)}
           />
         );
@@ -89,7 +137,7 @@ export default function App() {
           <PeopleNearby
             currentUserProfileForMap={currentUserProfile ?? null}
             currentUserId={safeUserId}
-            onStartChat={() => setActiveTab("chat")}
+            onStartChat={handleStartChat}
             onProfileClick={(userId) => setViewingProfileId(userId)}
           />
         );
@@ -99,9 +147,9 @@ export default function App() {
         return (
           <MessagingArea
             currentUserId={safeUserId as Id<"users">}
-            selectedConversationDetails={null}
-            onSelectConversation={() => {}}
-            onBackToConversationList={() => setActiveTab("people")}
+            selectedConversationDetails={selectedConversationDetails}
+            onSelectConversation={handleSelectConversation}
+            onBackToConversationList={handleBackToConversationList}
           />
         );
       default:
@@ -129,7 +177,7 @@ export default function App() {
                 <img
                   src={
                     currentUserProfile?.avatarUrl ||
-                    loggedInUser?.image ||
+                    loggedInUser?.imageUrl ||
                     `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUserProfile?.displayName || loggedInUser?.name || "U")}&background=8b5cf6&color=fff&size=128`
                   }
                   alt="Profile Avatar"
@@ -172,9 +220,9 @@ export default function App() {
                 {activeTab === "chat" && (
                   <MessagingArea
                     currentUserId={currentUserId as Id<"users">}
-                    selectedConversationDetails={null}
-                    onSelectConversation={() => {}}
-                    onBackToConversationList={() => setActiveTab("people")}
+                    selectedConversationDetails={selectedConversationDetails}
+                    onSelectConversation={handleSelectConversation}
+                    onBackToConversationList={handleBackToConversationList}
                   />
                 )}
                 {activeTab === "profile" && <ProfileEditor />}
@@ -212,10 +260,7 @@ export default function App() {
           }}
           userId={viewingProfileId as Id<"users">}
           onBack={() => setViewingProfileId(null)}
-          onStartChat={(userId) => {
-            setViewingProfileId(null);
-            setActiveTab("chat");
-          }}
+          onStartChat={handleStartChat}
           currentUserProfileForMap={currentUserProfile ?? null}
         />
       </Authenticated>

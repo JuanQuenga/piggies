@@ -18,9 +18,14 @@ async function getAuthenticatedUserId(
     | { db: any; auth: any; storage: any }
     | { db: any; auth: any; storage?: any }
 ): Promise<Id<"users"> | null> {
-  // For now, return null until we set up proper Clerk integration
-  // This will be replaced with proper user authentication
-  return null;
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) return null;
+  // Look up user in DB by email (or Clerk ID if you store it)
+  const user = await ctx.db
+    .query("users")
+    .withIndex("by_email", (q) => q.eq("email", identity.email))
+    .unique();
+  return user?._id ?? null;
 }
 
 export const getOrCreateConversation = internalMutation({
