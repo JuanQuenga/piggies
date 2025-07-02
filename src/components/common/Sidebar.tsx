@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 import { useState } from "react";
 
 const navItems = [
-  { href: "/profile", icon: User, label: "Profile" },
+  { href: "/profile", icon: User, label: "My Profile" },
   { href: "/chat", icon: MessageCircle, label: "Chats" },
   { href: "/people", icon: Users, label: "People" },
   { href: "/map", icon: Map, label: "Map" },
@@ -49,45 +49,60 @@ export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
           <svg
             width={collapsed ? 40 : 48}
             height={collapsed ? 40 : 48}
-            viewBox="0 0 72 72"
+            viewBox="0 0 300 300"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
           >
-            <ellipse cx="36" cy="36" rx="36" ry="32" fill="#F4A7B9" />
+            <defs>
+              <radialGradient id="faceGradient" cx="50%" cy="50%" r="80%">
+                <stop offset="0%" stopColor="#a78bfa" />
+                <stop offset="100%" stopColor="#6366f1" />
+              </radialGradient>
+              <linearGradient id="noseGradient" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="#c4b5fd" />
+                <stop offset="100%" stopColor="#818cf8" />
+              </linearGradient>
+            </defs>
+            {/* Face */}
+            <circle cx="150" cy="150" r="140" fill="url(#faceGradient)" />
             {/* Ears */}
-            <path d="M4 24 Q12 4 24 16 Q20 28 12 24 Z" fill="#F4A7B9" />
-            <path d="M68 24 Q60 4 48 16 Q52 28 60 24 Z" fill="#F4A7B9" />
-            {/* Inner ears */}
-            <path d="M8 20 Q16 8 24 20 Q18 22 12 20 Z" fill="#F06277" />
-            <path d="M64 20 Q56 8 48 20 Q54 22 60 20 Z" fill="#F06277" />
+            <ellipse cx="60" cy="60" rx="40" ry="50" fill="#a78bfa" />
+            <ellipse cx="240" cy="60" rx="40" ry="50" fill="#a78bfa" />
             {/* Eyes */}
-            <ellipse cx="22" cy="36" rx="5" ry="5" fill="#2F3336" />
-            <ellipse cx="50" cy="36" rx="5" ry="5" fill="#2F3336" />
+            <ellipse cx="105" cy="140" rx="45" ry="40" fill="#fff" />
+            <ellipse cx="195" cy="140" rx="45" ry="40" fill="#fff" />
+            <ellipse cx="120" cy="150" rx="15" ry="15" fill="#222" />
+            <ellipse cx="180" cy="150" rx="15" ry="15" fill="#222" />
             {/* Nose */}
-            <ellipse cx="36" cy="52" rx="16" ry="12" fill="#F06277" />
-            {/* Nostrils */}
-            <ellipse cx="30" cy="52" rx="3" ry="5" fill="#6D2E1B" />
-            <ellipse cx="42" cy="52" rx="3" ry="5" fill="#6D2E1B" />
+            <ellipse
+              cx="150"
+              cy="200"
+              rx="55"
+              ry="40"
+              fill="url(#noseGradient)"
+            />
+            <ellipse cx="135" cy="200" rx="10" ry="15" fill="#7c3aed" />
+            <ellipse cx="165" cy="200" rx="10" ry="15" fill="#7c3aed" />
           </svg>
           {!collapsed && (
-            <span className="ml-3 text-lg font-bold text-white">Piggies</span>
+            <span className="ml-3 text-2xl font-bold text-white">Piggies</span>
           )}
         </div>
         <div className="flex flex-col gap-2 flex-1 mt-4 items-stretch w-full">
           {navItems.map(({ href, icon: Icon, label }) => (
-            <Link key={href} href={href} passHref legacyBehavior>
-              <a
-                className={cn(
-                  "flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-zinc-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 transition-all",
-                  collapsed ? "justify-center" : "justify-start"
-                )}
-                aria-label={label}
-              >
-                <Icon className="w-6 h-6" aria-hidden="true" />
-                {!collapsed && (
-                  <span className="text-base font-medium">{label}</span>
-                )}
-              </a>
+            <Link
+              key={href}
+              href={href}
+              className={cn(
+                "flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-zinc-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 transition-all",
+                collapsed ? "justify-center" : "justify-start"
+              )}
+              aria-label={label}
+            >
+              <Icon className="w-6 h-6" aria-hidden="true" />
+              {!collapsed && (
+                <span className="text-base font-medium">{label}</span>
+              )}
             </Link>
           ))}
         </div>
@@ -108,15 +123,14 @@ export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
         </button>
         {/* Settings button pinned to bottom */}
         <div className={cn("mb-2", collapsed ? "mx-auto" : "ml-2")}>
-          <Link href="/settings" passHref legacyBehavior>
-            <a
-              className={cn(
-                "flex items-center justify-center w-10 h-10 rounded-lg hover:bg-zinc-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500"
-              )}
-              aria-label="Settings"
-            >
-              <Settings className="w-6 h-6" aria-hidden="true" />
-            </a>
+          <Link
+            href="/settings"
+            className={cn(
+              "flex items-center justify-center w-10 h-10 rounded-lg hover:bg-zinc-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500"
+            )}
+            aria-label="Settings"
+          >
+            <Settings className="w-6 h-6" aria-hidden="true" />
           </Link>
         </div>
       </nav>
@@ -152,31 +166,30 @@ export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
             <path d="M68 24 Q60 12 48 24" fill="#F06277" opacity="0.2" />
           </svg>
         </div>
-        <Link href="/settings" passHref legacyBehavior>
-          <a
-            className={cn(
-              "flex items-center justify-center w-10 h-10 rounded-lg hover:bg-zinc-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500"
-            )}
-            aria-label="Settings"
-          >
-            <Settings className="w-6 h-6" aria-hidden="true" />
-          </a>
+        <Link
+          href="/settings"
+          className={cn(
+            "flex items-center justify-center w-10 h-10 rounded-lg hover:bg-zinc-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500"
+          )}
+          aria-label="Settings"
+        >
+          <Settings className="w-6 h-6" aria-hidden="true" />
         </Link>
       </nav>
 
       {/* Mobile Bottom Navbar */}
       <nav className="md:hidden flex items-center justify-around bg-zinc-900 text-white w-full h-14 px-2 border-t border-zinc-800 fixed bottom-0 left-0 z-30">
         {navItems.map(({ href, icon: Icon, label }) => (
-          <Link key={href} href={href} passHref legacyBehavior>
-            <a
-              className={cn(
-                "flex flex-col items-center justify-center w-10 h-10 rounded-lg hover:bg-zinc-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500"
-              )}
-              aria-label={label}
-            >
-              <Icon className="w-6 h-6" aria-hidden="true" />
-              <span className="text-xs mt-1">{label}</span>
-            </a>
+          <Link
+            key={href}
+            href={href}
+            className={cn(
+              "flex flex-col items-center justify-center w-10 h-10 rounded-lg hover:bg-zinc-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500"
+            )}
+            aria-label={label}
+          >
+            <Icon className="w-6 h-6" aria-hidden="true" />
+            <span className="text-xs mt-1">{label}</span>
           </Link>
         ))}
       </nav>

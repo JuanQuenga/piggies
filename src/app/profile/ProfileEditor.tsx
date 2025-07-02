@@ -663,19 +663,20 @@ export default function ProfileEditor() {
     );
   }
 
+  // If profile is null, treat as new user and allow editing with default values
   if (profile === null) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
-          <p className="mt-2 text-muted-foreground">Loading profile...</p>
-        </div>
-      </div>
+    console.log(
+      "[ProfileEditor] New user: creating profile for the first time"
     );
   }
 
   return (
     <div className="container mx-0 px-0 max-w-none">
+      {profile === null && (
+        <div className="mb-4 p-4 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-lg text-center">
+          Welcome! Please fill out your profile to get started.
+        </div>
+      )}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Profile Editor (2/3) */}
         <div className="lg:col-span-2 bg-card/90 p-8 rounded-2xl shadow-none border-none w-full">
