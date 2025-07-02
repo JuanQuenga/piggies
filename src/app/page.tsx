@@ -1,124 +1,141 @@
 "use client";
 
 import { useAuth } from "@clerk/nextjs";
-import { SignInButton } from "@clerk/nextjs";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import AuthenticatedLayout from "./AuthenticatedLayout";
-import Providers from "./Providers";
+import { useRouter } from "next/navigation";
+import { MapPin, MessageCircle, Users, Sparkles } from "lucide-react";
 
-export default function DashboardPage() {
+export default function LandingPage() {
   const { isSignedIn, isLoaded } = useAuth();
+  const router = useRouter();
 
   // Redirect authenticated users to map
   useEffect(() => {
     if (isSignedIn && isLoaded) {
-      window.location.href = "/map";
+      router.push("/map");
     }
-  }, [isSignedIn, isLoaded]);
+  }, [isSignedIn, isLoaded, router]);
 
   // Show loading state while authentication is being determined
   if (!isLoaded) {
     return (
-      <Providers>
-        <AuthenticatedLayout>
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
-              <p className="mt-2 text-muted-foreground">Loading...</p>
-            </div>
-          </div>
-        </AuthenticatedLayout>
-      </Providers>
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-purple-900 via-zinc-900 to-black">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-400 mx-auto"></div>
+          <p className="mt-2 text-zinc-400">Loading...</p>
+        </div>
+      </div>
     );
   }
 
-  // Show sign-in form for unauthenticated users
+  // Show landing page for unauthenticated users
   if (!isSignedIn) {
     return (
-      <Providers>
-        <AuthenticatedLayout>
-          <div className="flex flex-col items-center justify-center h-full p-4 bg-zinc-950">
-            <div className="w-full max-w-md space-y-8">
-              <div className="text-center">
-                <h1 className="text-3xl font-bold text-white mb-2">
-                  Welcome to Piggies
-                </h1>
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-zinc-900 to-black">
+        {/* Navigation */}
+        <nav className="flex justify-between items-center p-6">
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-lg">🐷</span>
+            </div>
+            <span className="text-white font-bold text-xl">Piggies</span>
+          </div>
+          <Button
+            onClick={() => router.push("/auth")}
+            className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg"
+          >
+            Sign In
+          </Button>
+        </nav>
+
+        {/* Hero Section */}
+        <div className="flex flex-col items-center justify-center px-6 py-20 text-center">
+          <div className="max-w-4xl mx-auto">
+            {/* Logo and Title */}
+            <div className="mb-8">
+              <div className="w-24 h-24 bg-gradient-to-br from-purple-500 to-pink-500 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-2xl">
+                <span className="text-4xl">🐷</span>
+              </div>
+              <h1 className="text-5xl md:text-7xl font-bold text-white mb-6">
+                Welcome to{" "}
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
+                  Piggies
+                </span>
+              </h1>
+              <p className="text-xl md:text-2xl text-zinc-300 mb-8 max-w-2xl mx-auto">
+                Connect with people nearby, discover new friends, and start
+                meaningful conversations in your area.
+              </p>
+            </div>
+
+            {/* CTA Buttons */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
+              <Button
+                onClick={() => router.push("/auth")}
+                className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-4 text-lg rounded-xl shadow-lg"
+                size="lg"
+              >
+                Get Started
+              </Button>
+              <Button
+                variant="outline"
+                className="border-purple-500 text-purple-400 hover:bg-purple-500 hover:text-white px-8 py-4 text-lg rounded-xl"
+                size="lg"
+              >
+                Learn More
+              </Button>
+            </div>
+
+            {/* Features */}
+            <div className="grid md:grid-cols-3 gap-8 mt-20">
+              <div className="text-center p-6 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10">
+                <MapPin className="w-12 h-12 text-purple-400 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-white mb-2">
+                  Location-Based
+                </h3>
                 <p className="text-zinc-400">
-                  Connect with people nearby and start chatting
+                  Find and connect with people in your area
                 </p>
               </div>
-              <SignInButton>
-                <button className="w-full px-4 py-3 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors font-medium">
-                  Sign In
-                </button>
-              </SignInButton>
+              <div className="text-center p-6 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10">
+                <MessageCircle className="w-12 h-12 text-purple-400 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-white mb-2">
+                  Real-time Chat
+                </h3>
+                <p className="text-zinc-400">
+                  Instant messaging with people nearby
+                </p>
+              </div>
+              <div className="text-center p-6 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10">
+                <Users className="w-12 h-12 text-purple-400 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-white mb-2">
+                  Community
+                </h3>
+                <p className="text-zinc-400">
+                  Build meaningful connections locally
+                </p>
+              </div>
             </div>
           </div>
-        </AuthenticatedLayout>
-      </Providers>
+        </div>
+
+        {/* Footer */}
+        <footer className="text-center py-8 text-zinc-500">
+          <p>&copy; 2024 Piggies. Connect locally, grow globally.</p>
+        </footer>
+      </div>
     );
   }
 
   // This should not be reached due to the redirect effect, but just in case
   return (
-    <Providers>
-      <AuthenticatedLayout>
-        <section className="relative flex flex-col items-center justify-center h-full w-full bg-zinc-950">
-          {/* Controller SVG background */}
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-10 select-none">
-            {/* Inline SVG for PS5 controller outline */}
-            <svg
-              width="600"
-              height="260"
-              viewBox="0 0 600 260"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-              className="w-[80vw] max-w-3xl h-auto"
-            >
-              <rect
-                x="0"
-                y="0"
-                width="600"
-                height="260"
-                rx="60"
-                fill="#18181b"
-              />
-              <g stroke="#fff" strokeWidth="2" opacity="0.25">
-                <rect x="120" y="60" width="360" height="140" rx="60" />
-                <circle cx="200" cy="130" r="40" />
-                <circle cx="400" cy="130" r="40" />
-                <rect x="290" y="110" width="20" height="40" rx="10" />
-                <rect x="250" y="120" width="20" height="20" rx="6" />
-                <rect x="330" y="120" width="20" height="20" rx="6" />
-                {/* D-pad */}
-                <rect x="170" y="110" width="12" height="40" rx="4" />
-                <rect x="154" y="126" width="40" height="12" rx="4" />
-                {/* Buttons */}
-                <circle cx="430" cy="120" r="6" />
-                <circle cx="430" cy="140" r="6" />
-                <circle cx="410" cy="120" r="6" />
-                <circle cx="410" cy="140" r="6" />
-              </g>
-            </svg>
-          </div>
-          {/* Main content */}
-          <div className="relative z-10 flex flex-col items-center justify-center gap-8">
-            <h2
-              className="text-5xl font-extrabold text-white tracking-widest mb-4"
-              aria-label="PS5 logo"
-            >
-              PS5
-            </h2>
-            <Button
-              className="bg-purple-600 hover:bg-purple-700 text-lg px-8 py-4 rounded-full shadow-lg focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2 focus:ring-offset-zinc-950 transition-colors"
-              aria-label="Press the PS button to use controller"
-            >
-              Press the PS button to use controller
-            </Button>
-          </div>
-        </section>
-      </AuthenticatedLayout>
-    </Providers>
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-purple-900 via-zinc-900 to-black">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-400 mx-auto"></div>
+        <p className="mt-2 text-zinc-400">Redirecting...</p>
+      </div>
+    </div>
   );
 }
+

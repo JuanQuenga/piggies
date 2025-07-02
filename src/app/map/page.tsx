@@ -93,7 +93,7 @@ function MapPageContent() {
   };
 
   return (
-    <div className="h-full w-full">
+    <div className="h-full w-full flex-1">
       <MapComponent
         currentUserProfileForMap={currentUserProfile}
         currentUserId={currentUserId}

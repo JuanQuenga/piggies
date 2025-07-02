@@ -8,7 +8,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="bg-zinc-950 text-white">
+      <body className="bg-zinc-950 text-white h-full min-h-screen">
         <ClerkProvider
           publishableKey={
             process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ||

@@ -428,13 +428,13 @@ const MapComponentClient: React.FC<MapComponentClientProps> = ({
   };
 
   return (
-    <div className="flex-1 w-full relative min-h-0">
+    <div className="flex-1 w-full relative min-h-[400px]">
       <MapContainer
         key={currentUserId || "default-map-key"}
         center={mapCenter}
         zoom={mapInitialZoom}
         scrollWheelZoom={true}
-        style={{ height: "100%", width: "100%" }}
+        className="w-full h-100vh"
       >
         <DarkTileLayer />
         {allMarkersToDisplay.map((user) => (
