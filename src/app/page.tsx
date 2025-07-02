@@ -1,5 +1,6 @@
 "use client";
 
+import "@/styles/index.css";
 import { useAuth } from "@clerk/nextjs";
 import { SignInButton } from "@clerk/nextjs";
 import { useEffect } from "react";
