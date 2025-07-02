@@ -14,8 +14,11 @@ export default function PeoplePage() {
   // Show loading state while authentication is being determined
   if (!isLoaded) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
+          <p className="mt-2 text-muted-foreground">Loading...</p>
+        </div>
       </div>
     );
   }
@@ -23,11 +26,15 @@ export default function PeoplePage() {
   // Redirect to sign in if not authenticated
   if (!isSignedIn) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 space-y-4">
-        <h2 className="text-xl font-semibold text-primary">Sign in required</h2>
-        <p className="text-muted-foreground">
-          Please sign in to view people nearby.
-        </p>
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-primary mb-2">
+            Sign in required
+          </h2>
+          <p className="text-muted-foreground">
+            Please sign in to view people nearby.
+          </p>
+        </div>
       </div>
     );
   }
@@ -35,8 +42,11 @@ export default function PeoplePage() {
   // Show loading state while user data is being fetched
   if (currentUserId === undefined || currentUserProfile === undefined) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
+          <p className="mt-2 text-muted-foreground">Loading people data...</p>
+        </div>
       </div>
     );
   }
@@ -52,11 +62,13 @@ export default function PeoplePage() {
   };
 
   return (
-    <PeopleNearby
-      currentUserProfileForMap={currentUserProfile}
-      currentUserId={currentUserId}
-      onStartChat={handleStartChat}
-      onProfileClick={handleProfileClick}
-    />
+    <div className="h-full w-full">
+      <PeopleNearby
+        currentUserProfileForMap={currentUserProfile}
+        currentUserId={currentUserId}
+        onStartChat={handleStartChat}
+        onProfileClick={handleProfileClick}
+      />
+    </div>
   );
 }

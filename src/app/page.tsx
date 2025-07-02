@@ -18,8 +18,11 @@ export default function DashboardPage() {
   // Show loading state while authentication is being determined
   if (!isLoaded) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
+          <p className="mt-2 text-muted-foreground">Loading...</p>
+        </div>
       </div>
     );
   }
@@ -27,18 +30,18 @@ export default function DashboardPage() {
   // Show sign-in form for unauthenticated users
   if (!isSignedIn) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-4">
+      <div className="flex flex-col items-center justify-center h-full p-4 bg-zinc-950">
         <div className="w-full max-w-md space-y-8">
           <div className="text-center">
-            <h1 className="text-3xl font-bold text-primary mb-2">
+            <h1 className="text-3xl font-bold text-white mb-2">
               Welcome to Piggies
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-zinc-400">
               Connect with people nearby and start chatting
             </p>
           </div>
           <SignInButton>
-            <button className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90">
+            <button className="w-full px-4 py-3 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors font-medium">
               Sign In
             </button>
           </SignInButton>
@@ -49,7 +52,7 @@ export default function DashboardPage() {
 
   // This should not be reached due to the redirect effect, but just in case
   return (
-    <section className="relative flex flex-col items-center justify-center h-full min-h-[80vh] w-full">
+    <section className="relative flex flex-col items-center justify-center h-full w-full bg-zinc-950">
       {/* Controller SVG background */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-10 select-none">
         {/* Inline SVG for PS5 controller outline */}
@@ -89,7 +92,7 @@ export default function DashboardPage() {
           PS5
         </h2>
         <Button
-          className="bg-rose-500 hover:bg-rose-600 text-lg px-8 py-4 rounded-full shadow-lg focus:outline-none focus:ring-2 focus:ring-rose-400 focus:ring-offset-2"
+          className="bg-purple-600 hover:bg-purple-700 text-lg px-8 py-4 rounded-full shadow-lg focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2 focus:ring-offset-zinc-950 transition-colors"
           aria-label="Press the PS button to use controller"
         >
           Press the PS button to use controller

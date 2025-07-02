@@ -20,6 +20,7 @@ import { ChevronLeft, ChevronRight, Trash2, Eye, X } from "lucide-react";
 import { ProfileModal } from "./ProfileModal";
 import { useSession } from "@clerk/nextjs";
 import { Id } from "../../../convex/_generated/dataModel";
+import { ProfilePage } from "./ProfilePage";
 
 // Profile field options
 const PROFILE_OPTIONS = {
@@ -674,51 +675,35 @@ export default function ProfileEditor() {
   }
 
   return (
-    <div className="container mx-auto p-4 max-w-4xl">
-      {/* Preview Button (always visible) */}
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => setIsPreviewOpen(true)}
-        className="mb-4 flex items-center gap-2"
-      >
-        <Eye size={16} />
-        Preview Profile
-      </Button>
-
-      {/* Use shared ProfileModal for preview, passing current userId */}
-      {convexUser?._id && (
-        <ProfileModal
-          open={isPreviewOpen}
-          onOpenChange={setIsPreviewOpen}
-          userId={convexUser._id}
-          onBack={() => setIsPreviewOpen(false)}
-          onStartChat={() => {}}
-        />
-      )}
-
-      {profile === null && (
-        <div className="mb-4 text-center text-muted-foreground">
-          No profile found. Please create your profile below.
-        </div>
-      )}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl font-bold text-purple-600">
-            Edit Your Profile
-          </CardTitle>
-          <CardDescription>
-            Update your profile information and preferences
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleFormSubmit} className="space-y-6">
+    <div className="container mx-0 px-0 max-w-none">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Profile Editor (2/3) */}
+        <div className="lg:col-span-2 bg-card/90 p-8 rounded-2xl shadow-none border-none w-full">
+          {/* Preview Button (mobile only) */}
+          <div className="lg:hidden mb-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsPreviewOpen(true)}
+              className="flex items-center gap-2"
+            >
+              <Eye size={16} />
+              Preview Profile
+            </Button>
+          </div>
+          {/* Profile Editor Form */}
+          <form onSubmit={handleFormSubmit} className="space-y-8">
             {/* Basic Information */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-purple-600">
+              <h2 className="text-2xl font-bold text-purple-600 mb-1">
+                Edit Your Profile
+              </h2>
+              <p className="text-muted-foreground mb-4">
+                Update your profile information and preferences
+              </p>
+              <h3 className="text-lg font-semibold text-purple-500">
                 Basic Information
               </h3>
-
               {/* Photo Gallery Management */}
               <div className="space-y-2">
                 <Label className="text-sm font-medium">
@@ -861,7 +846,6 @@ export default function ProfileEditor() {
                   always your main photo and profile picture.
                 </p>
               </div>
-
               {/* Display Name */}
               <div className="space-y-2">
                 <Label htmlFor="displayName" className="text-sm font-medium">
@@ -876,7 +860,6 @@ export default function ProfileEditor() {
                   placeholder="Enter your display name"
                 />
               </div>
-
               {/* Description */}
               <div className="space-y-2">
                 <Label htmlFor="description" className="text-sm font-medium">
@@ -892,7 +875,6 @@ export default function ProfileEditor() {
                   rows={4}
                 />
               </div>
-
               {/* Home Location */}
               <div className="space-y-2">
                 <Label htmlFor="homeLocation" className="text-sm font-medium">
@@ -908,12 +890,10 @@ export default function ProfileEditor() {
                 />
               </div>
             </div>
-
             <Separator />
-
             {/* Stats */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-purple-600">Stats</h3>
+              <h3 className="text-lg font-semibold text-purple-500">Stats</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {renderSelect("age", PROFILE_OPTIONS.age, "Age")}
                 {renderSelect(
@@ -938,12 +918,10 @@ export default function ProfileEditor() {
                 )}
               </div>
             </div>
-
             <Separator />
-
             {/* Identity */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-purple-600">
+              <h3 className="text-lg font-semibold text-purple-500">
                 Identity
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -961,12 +939,10 @@ export default function ProfileEditor() {
                 {renderSelect("position", PROFILE_OPTIONS.position, "Position")}
               </div>
             </div>
-
             <Separator />
-
             {/* Scene */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-purple-600">Scene</h3>
+              <h3 className="text-lg font-semibold text-purple-500">Scene</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {renderSelect("location", PROFILE_OPTIONS.location, "Location")}
                 {renderSelect(
@@ -976,12 +952,10 @@ export default function ProfileEditor() {
                 )}
               </div>
             </div>
-
             <Separator />
-
             {/* Health */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-purple-600">Health</h3>
+              <h3 className="text-lg font-semibold text-purple-500">Health</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {renderSelect(
                   "hivStatus",
@@ -990,12 +964,10 @@ export default function ProfileEditor() {
                 )}
               </div>
             </div>
-
             <Separator />
-
             {/* Practices */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-purple-600">
+              <h3 className="text-lg font-semibold text-purple-500">
                 Practices
               </h3>
               {renderMultiSelect(
@@ -1005,20 +977,16 @@ export default function ProfileEditor() {
                 "Practices"
               )}
             </div>
-
             <Separator />
-
             {/* Into */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-purple-600">Into</h3>
+              <h3 className="text-lg font-semibold text-purple-500">Into</h3>
               {renderMultiSelect("into", PROFILE_OPTIONS.into, 3, "Into")}
             </div>
-
             <Separator />
-
             {/* Fetishes */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-purple-600">
+              <h3 className="text-lg font-semibold text-purple-500">
                 Fetishes
               </h3>
               <div className="space-y-6">
@@ -1051,12 +1019,10 @@ export default function ProfileEditor() {
                 </div>
               </div>
             </div>
-
             <Separator />
-
             {/* Kinks */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-purple-600">Kinks</h3>
+              <h3 className="text-lg font-semibold text-purple-500">Kinks</h3>
               <div className="space-y-6">
                 <div>
                   <h4 className="text-md font-medium mb-2">General</h4>
@@ -1068,9 +1034,7 @@ export default function ProfileEditor() {
                 </div>
               </div>
             </div>
-
             <Separator />
-
             {/* Submit Button */}
             <div className="flex justify-end">
               <Button
@@ -1082,8 +1046,30 @@ export default function ProfileEditor() {
               </Button>
             </div>
           </form>
-        </CardContent>
-      </Card>
+        </div>
+        {/* Live Profile Preview (1/3, desktop only) */}
+        <div className="hidden lg:block h-[80vh] overflow-y-auto rounded-2xl shadow-2xl bg-card/95 border border-border sticky top-8">
+          {convexUser?._id && (
+            <ProfilePage
+              userId={convexUser._id}
+              onBack={() => {}}
+              onStartChat={() => {}}
+            />
+          )}
+        </div>
+      </div>
+      {/* Mobile: Show preview in a modal/sheet */}
+      <div className="lg:hidden">
+        {convexUser?._id && (
+          <ProfileModal
+            open={isPreviewOpen}
+            onOpenChange={setIsPreviewOpen}
+            userId={convexUser._id}
+            onBack={() => setIsPreviewOpen(false)}
+            onStartChat={() => {}}
+          />
+        )}
+      </div>
     </div>
   );
 }

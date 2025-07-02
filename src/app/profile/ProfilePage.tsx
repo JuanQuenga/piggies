@@ -199,8 +199,29 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   };
 
   // Determine main and additional photos
-  const photos: string[] =
-    profile.photos || (profile.avatarUrl ? [profile.avatarUrl] : []);
+  let photos: string[] = [];
+  if (
+    profile.photos &&
+    Array.isArray(profile.photos) &&
+    profile.photos.length > 0
+  ) {
+    const firstPhoto = profile.photos[0];
+    if (typeof firstPhoto === "string") {
+      photos = profile.photos as unknown as string[];
+    } else if (
+      typeof firstPhoto === "object" &&
+      firstPhoto !== null &&
+      "url" in firstPhoto
+    ) {
+      photos = (profile.photos as unknown as Array<{ id: string; url: string }>)
+        .map((p) =>
+          typeof p === "object" && p !== null && "url" in p ? p.url : ""
+        )
+        .filter(Boolean);
+    }
+  } else if (profile.avatarUrl) {
+    photos = [profile.avatarUrl];
+  }
   const mainPhotoIdx = profile.mainPhotoIndex ?? 0;
   const mainPhoto = photos[mainPhotoIdx] || finalAvatarUrl;
   const additionalPhotos = photos
@@ -208,85 +229,85 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
     .slice(0, 4);
 
   return (
-    <div className="h-full flex flex-col min-h-0 max-w-md mx-auto">
-      {/* Scrollable content */}
-      <div className="flex-1 min-h-0 overflow-y-auto">
-        {/* Cover Photo with overlays */}
-        <div className="relative w-full aspect-[4/5] bg-black overflow-hidden">
-          <img
-            src={mainPhoto}
-            alt="Profile cover"
-            className="w-full h-full object-cover object-center"
-          />
-          {/* Floating Back Button */}
-          <button
-            onClick={onBack}
-            className="absolute top-4 left-4 z-20 bg-black/60 hover:bg-black/80 text-white rounded-full p-2 shadow-lg"
-          >
-            <ArrowLeft size={24} />
-          </button>
-          {/* Floating Action Icons */}
-          <div className="absolute top-4 right-4 z-20 flex gap-2">
+    <div className="h-full flex flex-col min-h-0 max-w-md w-full mx-auto">
+      {/* Top Bar (above photo) */}
+      <div className="sticky top-0 z-20 w-full bg-black/95 border-b border-zinc-800 px-4 py-2 flex flex-col gap-0 shadow-lg">
+        <div className="flex items-center gap-2">
+          <span className="text-lg font-bold text-white drop-shadow flex items-center">
+            {/* Verified badge example, adjust as needed */}
+            <span className="mr-1">
+              {profile.displayName || user.name || "Anonymous User"}
+            </span>
+            {profile.status && (
+              <Badge
+                variant="secondary"
+                className="text-xs bg-white/80 text-black ml-2"
+              >
+                {profile.status}
+              </Badge>
+            )}
+          </span>
+          {/* Actions */}
+          <div className="ml-auto flex gap-2">
             <button className="bg-black/60 hover:bg-black/80 text-white rounded-full p-2 shadow-lg">
-              <ShieldCheck size={22} />
+              <ShieldCheck size={20} />
             </button>
             <button className="bg-black/60 hover:bg-black/80 text-white rounded-full p-2 shadow-lg">
-              <MoreVertical size={22} />
+              <MoreVertical size={20} />
             </button>
-          </div>
-          {/* Overlay additional photos */}
-          {additionalPhotos.length > 0 && (
-            <div className="absolute top-20 right-4 flex flex-col gap-2 z-10">
-              {additionalPhotos.map((photo, idx) => (
-                <img
-                  key={idx}
-                  src={photo}
-                  alt={`Gallery photo ${idx + 1}`}
-                  className="w-14 h-14 rounded-full border-2 border-white shadow-lg object-cover bg-gray-200"
-                  style={{ marginTop: idx === 0 ? 0 : -12 }}
-                />
-              ))}
-            </div>
-          )}
-          {/* Bio/description overlay */}
-          {profile.description && (
-            <div className="absolute bottom-24 left-0 w-full px-4 pb-2 z-10">
-              <div className="bg-black/60 rounded-lg p-3 text-white text-sm font-normal shadow">
-                {profile.description}
-              </div>
-            </div>
-          )}
-          {/* Profile name and stats overlay (bottom left) */}
-          <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/90 via-black/60 to-transparent p-4 flex flex-col gap-1 z-10">
-            <div className="flex items-center gap-2">
-              <span className="text-lg font-bold text-white drop-shadow">
-                {profile.displayName || user.name || "Anonymous User"}
-              </span>
-              {profile.status && (
-                <Badge
-                  variant="secondary"
-                  className="text-xs bg-white/80 text-black ml-2"
-                >
-                  {profile.status}
-                </Badge>
-              )}
-            </div>
-            <div className="text-white text-sm font-medium drop-shadow">
-              {[
-                profile.age && `${profile.age}`,
-                profile.heightInCm && `${profile.heightInCm}cm`,
-                profile.weightInKg && `${profile.weightInKg}kg`,
-                profile.endowment,
-                profile.bodyType,
-                profile.gender,
-                profile.sexuality,
-                profile.position,
-              ]
-                .filter(Boolean)
-                .join(", ")}
-            </div>
           </div>
         </div>
+        <div className="text-white text-sm font-medium drop-shadow mt-0.5">
+          {[
+            profile.age && `${profile.age}`,
+            profile.heightInCm && `${profile.heightInCm}cm`,
+            profile.weightInKg && `${profile.weightInKg}kg`,
+            profile.endowment,
+            profile.bodyType,
+            profile.gender,
+            profile.sexuality,
+            profile.position,
+          ]
+            .filter(Boolean)
+            .join(", ")}
+        </div>
+      </div>
+      {/* Profile Photo with overlays */}
+      <div className="relative w-full aspect-[4/5] bg-black overflow-hidden">
+        <img
+          src={mainPhoto}
+          alt="Profile cover"
+          className="w-full h-full object-cover object-center"
+        />
+        {/* Overlay additional photos */}
+        {additionalPhotos.length > 0 && (
+          <div className="absolute top-4 right-4 flex flex-col gap-2 z-10">
+            {additionalPhotos.map((photo, idx) => (
+              <img
+                key={idx}
+                src={photo}
+                alt={`Gallery photo ${idx + 1}`}
+                className="w-14 h-14 rounded-full border-2 border-white shadow-lg object-cover bg-gray-200"
+                style={{ marginTop: idx === 0 ? 0 : -12 }}
+              />
+            ))}
+          </div>
+        )}
+        {/* Bio/description overlay */}
+        {profile.description && (
+          <div className="absolute bottom-24 left-0 w-full px-4 pb-2 z-10">
+            <div className="bg-black/60 rounded-lg p-3 text-white text-sm font-normal shadow">
+              {profile.description}
+            </div>
+          </div>
+        )}
+        {/* Floating Back Button */}
+        <button
+          onClick={onBack}
+          className="absolute top-4 left-4 z-20 bg-black/60 hover:bg-black/80 text-white rounded-full p-2 shadow-lg"
+        >
+          <ArrowLeft size={24} />
+        </button>
       </div>
       {/* Sticky Bottom Bar */}
       <div className="w-full bg-black/90 text-white flex items-center justify-between px-4 py-3 border-t border-black/40 sticky bottom-0 z-30">

@@ -7,7 +7,6 @@ import { Id, Doc } from "../../../convex/_generated/dataModel";
 import { toast } from "sonner";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
-import { Popup } from "../../components/ui/popup";
 import {
   Send,
   Paperclip,
@@ -150,28 +149,34 @@ export const ChatView: React.FC<ChatViewProps> = ({
     `https://ui-avatars.com/api/?name=${encodeURIComponent(otherParticipant.displayName || "U")}&background=random&size=32`;
 
   return (
-    <div className="flex flex-col h-full bg-card">
-      <div className="flex items-center p-3 border-b border-border bg-muted/50">
-        <Button onClick={onBack} variant="ghost" size="sm" className="mr-2">
-          &larr; Back
+    <div className="flex flex-col h-full bg-zinc-950">
+      <div className="flex items-center p-3 border-b border-zinc-800 bg-zinc-900">
+        <Button
+          onClick={onBack}
+          variant="ghost"
+          size="sm"
+          className="mr-2 text-white hover:bg-zinc-800"
+        >
+          <ArrowLeft className="w-4 h-4 mr-1" />
+          Back
         </Button>
         <img
           src={otherParticipantAvatar}
           alt={otherParticipant.displayName || "User"}
-          className="w-8 h-8 rounded-full object-cover mr-2"
+          className="w-8 h-8 rounded-full object-cover mr-2 border border-zinc-700"
         />
-        <h3 className="text-md font-semibold text-foreground">
+        <h3 className="text-md font-semibold text-white">
           {otherParticipant.displayName || "Chat"}
         </h3>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-muted/30">
+      <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-zinc-950">
         {status === "CanLoadMore" && (
           <Button
             onClick={() => loadMore(10)}
-            variant="link"
+            variant="outline"
             size="sm"
-            className="w-full"
+            className="w-full bg-zinc-800 border-zinc-700 text-white hover:bg-zinc-700"
           >
             Load older messages
           </Button>

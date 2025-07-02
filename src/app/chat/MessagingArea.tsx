@@ -34,21 +34,37 @@ export const MessagingArea: React.FC<MessagingAreaProps> = ({
   onBackToConversationList,
 }) => {
   if (currentUserId === undefined) {
-    return <div className="p-4 text-center">Loading user...</div>;
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
+          <p className="mt-2 text-muted-foreground">Loading user...</p>
+        </div>
+      </div>
+    );
   }
   if (!currentUserId) {
     return (
-      <div className="p-4 text-center">Please sign in to use messaging.</div>
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <h3 className="text-xl font-semibold text-primary mb-2">
+            Sign in required
+          </h3>
+          <p className="text-muted-foreground">
+            Please sign in to use messaging.
+          </p>
+        </div>
+      </div>
     );
   }
 
   // Responsive two-column layout
   return (
-    <div className="relative flex h-[80vh] w-full bg-background rounded-xl border border-border shadow-xl overflow-hidden">
+    <div className="relative flex h-full w-full bg-zinc-950 overflow-hidden">
       {/* Conversation List (left column) */}
       <div
         className={
-          `hidden md:block md:w-1/3 lg:w-1/3 h-full bg-card border-r border-border overflow-y-auto transition-transform duration-300` +
+          `hidden md:block md:w-1/3 lg:w-1/3 h-full bg-zinc-900 border-r border-zinc-800 overflow-y-auto transition-transform duration-300` +
           (!selectedConversationDetails
             ? " md:translate-x-0"
             : " md:translate-x-0")
@@ -62,7 +78,7 @@ export const MessagingArea: React.FC<MessagingAreaProps> = ({
       {/* ChatView (right column) */}
       <div
         className={
-          `flex-1 h-full bg-background transition-transform duration-300` +
+          `flex-1 h-full bg-zinc-950 transition-transform duration-300` +
           (selectedConversationDetails
             ? " md:translate-x-0"
             : " md:translate-x-0")
@@ -94,7 +110,7 @@ export const MessagingArea: React.FC<MessagingAreaProps> = ({
               onBack={onBackToConversationList}
             />
           ) : (
-            <div className="flex items-center justify-center h-full text-muted-foreground text-lg">
+            <div className="flex items-center justify-center h-full text-zinc-400 text-lg">
               Select a conversation to start chatting
             </div>
           )}

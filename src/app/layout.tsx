@@ -25,7 +25,7 @@ export default function RootLayout({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   return (
     <html lang="en">
-      <body>
+      <body className="bg-zinc-950 text-white">
         <ClerkProvider
           publishableKey={
             process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ||
@@ -41,12 +41,12 @@ export default function RootLayout({
               />
               <div
                 className={
-                  `flex-1 flex flex-col min-h-screen transition-all duration-300 ` +
-                  (sidebarCollapsed ? "md:ml-16" : "md:ml-48")
+                  `flex-1 flex flex-col min-h-screen transition-all duration-300 bg-zinc-950` +
+                  (sidebarCollapsed ? " md:ml-16" : " md:ml-48")
                 }
               >
                 <Header />
-                <main className="flex-1 flex flex-col items-center justify-center">
+                <main className="flex-1 flex flex-col min-h-0 pt-14 md:pt-0">
                   {children}
                 </main>
               </div>

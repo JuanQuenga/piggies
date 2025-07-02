@@ -44,57 +44,73 @@ export const ConversationList: React.FC<ConversationListProps> = ({
 
   if (status === "LoadingFirstPage" || currentUserId === undefined) {
     return (
-      <div className="p-4 text-center text-muted-foreground">
-        Loading conversations...
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
+          <p className="mt-2 text-zinc-400">Loading conversations...</p>
+        </div>
       </div>
     );
   }
 
   if (!currentUserId) {
     return (
-      <div className="p-4 text-center text-muted-foreground">
-        Please log in.
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <h3 className="text-xl font-semibold text-white mb-2">
+            Sign in required
+          </h3>
+          <p className="text-zinc-400">Please log in to view conversations.</p>
+        </div>
       </div>
     );
   }
 
   if (!conversations || conversations.length === 0) {
     return (
-      <div className="p-4 text-center text-muted-foreground">
-        No conversations yet. Start chatting from a user's profile on the map!
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center p-4">
+          <div className="text-6xl mb-4">💬</div>
+          <h3 className="text-xl font-semibold text-white mb-2">
+            No conversations yet
+          </h3>
+          <p className="text-zinc-400">
+            Start chatting from a user's profile on the map!
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="h-full overflow-y-auto bg-card rounded-xl shadow-card">
-      <h3 className="text-lg font-semibold p-3 border-b border-border text-muted-foreground">
-        Chats
-      </h3>
-      <ul className="divide-y divide-border">
+    <div className="h-full overflow-y-auto bg-zinc-900">
+      <div className="sticky top-0 z-10 bg-zinc-900 border-b border-zinc-800 px-4 py-3">
+        <h3 className="text-lg font-semibold text-white">Chats</h3>
+      </div>
+      <ul className="divide-y divide-zinc-800">
         {conversations.map((conv) => {
           if (!conv.otherParticipant) return null;
           const otherParticipant = conv.otherParticipant;
           const avatar =
             otherParticipant.avatarUrl ||
-            `https://ui-avatars.com/api/?name=${encodeURIComponent(otherParticipant.displayName || "U")}&background=random&size=40`;
+            `https://ui-avatars.com/api/?name=${encodeURIComponent(otherParticipant.displayName || "U")}&background=8b5cf6&color=fff&size=40`;
 
           return (
             <li
               key={conv._id}
               onClick={() => onSelectConversation(conv._id, otherParticipant)}
-              className="p-3 hover:bg-muted cursor-pointer flex items-center space-x-3 transition-colors"
+              className="px-4 py-3 hover:bg-zinc-800 cursor-pointer flex items-center space-x-3 transition-colors"
             >
               <img
                 src={avatar}
                 alt={otherParticipant.displayName || "User"}
-                className="w-10 h-10 rounded-full object-cover"
+                className="w-10 h-10 rounded-full object-cover border-2 border-zinc-700"
               />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground truncate">
+                <p className="text-sm font-medium text-white truncate">
                   {otherParticipant.displayName}
                 </p>
-                <p className="text-xs text-muted-foreground truncate">
+                <p className="text-xs text-zinc-400 truncate">
                   {conv.lastMessageFormat === "image"
                     ? "📷 Image"
                     : conv.lastMessageFormat === "video"
@@ -103,7 +119,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                 </p>
               </div>
               {conv.lastMessageTimestamp && (
-                <span className="text-xs text-muted-foreground self-start pt-1">
+                <span className="text-xs text-zinc-500 self-start pt-1">
                   {new Date(conv.lastMessageTimestamp).toLocaleTimeString([], {
                     hour: "2-digit",
                     minute: "2-digit",
@@ -115,14 +131,16 @@ export const ConversationList: React.FC<ConversationListProps> = ({
         })}
       </ul>
       {status === "CanLoadMore" && (
-        <Button
-          onClick={() => loadMore(10)}
-          disabled={status !== "CanLoadMore"}
-          variant="link"
-          className="w-full p-2 text-sm"
-        >
-          Load More
-        </Button>
+        <div className="p-4 border-t border-zinc-800">
+          <Button
+            onClick={() => loadMore(10)}
+            disabled={status !== "CanLoadMore"}
+            variant="outline"
+            className="w-full bg-zinc-800 border-zinc-700 text-white hover:bg-zinc-700"
+          >
+            Load More
+          </Button>
+        </div>
       )}
     </div>
   );

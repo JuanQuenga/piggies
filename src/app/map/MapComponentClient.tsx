@@ -73,32 +73,35 @@ const UserMarker: React.FC<{
     <Marker position={[user.latitude, user.longitude]} icon={icon}>
       <Popup>
         <Card
-          className="w-56 bg-card border shadow-lg cursor-pointer hover:shadow-xl transition-shadow"
+          className="w-56 bg-zinc-900 border border-zinc-800 shadow-lg cursor-pointer hover:shadow-xl transition-shadow"
           onClick={() => onProfileClick(user.userId)}
         >
           <CardHeader className="pb-2 flex flex-col items-center">
             <img
               src={finalAvatarUrl}
               alt="Avatar"
-              className="w-16 h-16 rounded-full object-cover border-2 border-primary shadow mb-2"
+              className="w-16 h-16 rounded-full object-cover border-2 border-purple-600 shadow mb-2"
             />
-            <CardTitle className="text-base text-center text-primary">
+            <CardTitle className="text-base text-center text-white">
               {user.displayName || user.userName || "Anonymous User"}
             </CardTitle>
             {user.status && (
-              <Badge variant="secondary" className="text-xs mt-1">
+              <Badge
+                variant="secondary"
+                className="text-xs mt-1 bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200"
+              >
                 {user.status}
               </Badge>
             )}
           </CardHeader>
           <CardContent className="pt-0">
             {user.description && (
-              <p className="text-sm text-muted-foreground mb-2 text-center line-clamp-2">
+              <p className="text-sm text-zinc-400 mb-2 text-center line-clamp-2">
                 {user.description}
               </p>
             )}
             {user.lastSeen && (
-              <p className="text-xs text-muted-foreground text-center mb-1">
+              <p className="text-xs text-zinc-500 text-center mb-1">
                 Last seen: {new Date(user.lastSeen).toLocaleString()}
               </p>
             )}
@@ -108,7 +111,7 @@ const UserMarker: React.FC<{
                   e.stopPropagation();
                   onStartChat(user.userId);
                 }}
-                className="w-full mt-2 font-semibold"
+                className="w-full mt-2 font-semibold bg-purple-600 hover:bg-purple-700 text-white"
                 variant="outline"
                 aria-label={`Start chat with ${user.displayName || user.userName || "Anonymous User"}`}
               >
@@ -199,17 +202,25 @@ const MapComponentClient: React.FC<MapComponentClientProps> = ({
   const { isSignedIn, isLoaded } = useAuth();
   if (!isLoaded) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
+          <p className="mt-2 text-zinc-400">Loading map...</p>
+        </div>
       </div>
     );
   }
   if (!isSignedIn) {
     return (
-      <div className="flex flex-col items-center justify-center h-96">
-        <p className="text-muted-foreground mb-4">
-          Please sign in to use the map features.
-        </p>
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <h3 className="text-xl font-semibold text-white mb-2">
+            Sign in required
+          </h3>
+          <p className="text-zinc-400">
+            Please sign in to use the map features.
+          </p>
+        </div>
       </div>
     );
   }
@@ -438,27 +449,25 @@ const MapComponentClient: React.FC<MapComponentClientProps> = ({
         <CenterMapToUser position={currentPosition} />
       </MapContainer>
       <div className="absolute bottom-4 right-4 z-[1000] flex flex-col items-end space-y-2">
-        <label className="flex items-center gap-2 bg-card border border-border rounded-lg px-4 py-2 shadow-lg cursor-pointer select-none">
+        <label className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-2 shadow-lg cursor-pointer select-none">
           <input
             type="checkbox"
             checked={isVisible}
             onChange={() => {
               void handleToggleVisibility();
             }}
-            className="h-4 w-4 text-primary border-border rounded focus:ring-primary"
+            className="h-4 w-4 text-purple-600 border-zinc-700 rounded focus:ring-purple-500 bg-zinc-800"
             aria-label="Toggle visibility on map"
           />
-          <span className="text-sm text-foreground">
+          <span className="text-sm text-white">
             {isVisible ? "Visible on map" : "Hidden from map"}
           </span>
         </label>
 
         {/* Debug Panel */}
-        <div className="bg-card border border-border rounded-lg px-4 py-3 shadow-lg max-w-xs">
-          <h4 className="text-sm font-semibold text-foreground mb-2">
-            Debug Info
-          </h4>
-          <div className="text-xs space-y-1 text-muted-foreground">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-3 shadow-lg max-w-xs">
+          <h4 className="text-sm font-semibold text-white mb-2">Debug Info</h4>
+          <div className="text-xs space-y-1 text-zinc-400">
             <div>Profile exists: {currentUserProfileForMap ? "Yes" : "No"}</div>
             <div>User ID: {currentUserId || "None"}</div>
             <div>
@@ -495,7 +504,7 @@ const MapComponentClient: React.FC<MapComponentClientProps> = ({
           <Button
             variant="outline"
             size="sm"
-            className="w-full mt-3"
+            className="w-full mt-3 bg-zinc-800 border-zinc-700 text-white hover:bg-zinc-700"
             onClick={() => {
               navigator.geolocation.getCurrentPosition(
                 (position) => {

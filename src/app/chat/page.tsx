@@ -25,8 +25,11 @@ export default function ChatPage() {
   // Show loading state while authentication is being determined
   if (!isLoaded) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
+          <p className="mt-2 text-muted-foreground">Loading...</p>
+        </div>
       </div>
     );
   }
@@ -34,11 +37,15 @@ export default function ChatPage() {
   // Redirect to sign in if not authenticated
   if (!isSignedIn) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 space-y-4">
-        <h2 className="text-xl font-semibold text-primary">Sign in required</h2>
-        <p className="text-muted-foreground">
-          Please sign in to use messaging.
-        </p>
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-primary mb-2">
+            Sign in required
+          </h2>
+          <p className="text-muted-foreground">
+            Please sign in to use messaging.
+          </p>
+        </div>
       </div>
     );
   }
@@ -46,8 +53,11 @@ export default function ChatPage() {
   // Show loading state while user data is being fetched
   if (currentUserId === undefined) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
+          <p className="mt-2 text-muted-foreground">Loading user data...</p>
+        </div>
       </div>
     );
   }
@@ -64,11 +74,13 @@ export default function ChatPage() {
   };
 
   return (
-    <MessagingArea
-      currentUserId={currentUserId}
-      selectedConversationDetails={selectedConversationDetails}
-      onSelectConversation={handleSelectConversation}
-      onBackToConversationList={handleBackToConversationList}
-    />
+    <div className="h-full w-full">
+      <MessagingArea
+        currentUserId={currentUserId}
+        selectedConversationDetails={selectedConversationDetails}
+        onSelectConversation={handleSelectConversation}
+        onBackToConversationList={handleBackToConversationList}
+      />
+    </div>
   );
 }

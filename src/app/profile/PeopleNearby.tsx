@@ -31,7 +31,7 @@ export const PeopleNearby: React.FC<PeopleNearbyProps> = ({
   onProfileClick,
 }) => {
   return (
-    <div className="flex flex-col w-full h-full">
+    <div className="flex flex-col w-full h-full bg-zinc-950">
       <TileView
         currentUserId={currentUserId}
         onStartChat={onStartChat}

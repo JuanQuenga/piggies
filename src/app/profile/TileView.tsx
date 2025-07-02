@@ -81,13 +81,13 @@ export const TileView: React.FC<TileViewProps> = ({
 
   if (visibleUsers.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center p-8">
+      <div className="flex-1 flex items-center justify-center p-8 bg-zinc-950">
         <div className="text-center">
           <div className="text-6xl mb-4">🌍</div>
-          <h3 className="text-xl font-semibold text-primary mb-2">
+          <h3 className="text-xl font-semibold text-white mb-2">
             No profiles visible
           </h3>
-          <p className="text-muted-foreground">
+          <p className="text-zinc-400">
             Be the first to share your location and become visible to others!
           </p>
         </div>
@@ -97,13 +97,13 @@ export const TileView: React.FC<TileViewProps> = ({
 
   if (filteredUsers.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center p-8">
+      <div className="flex-1 flex items-center justify-center p-8 bg-zinc-950">
         <div className="text-center">
           <div className="text-6xl mb-4">👋</div>
-          <h3 className="text-xl font-semibold text-primary mb-2">
+          <h3 className="text-xl font-semibold text-white mb-2">
             You're the only one here
           </h3>
-          <p className="text-muted-foreground">
+          <p className="text-zinc-400">
             Share your location to connect with others nearby!
           </p>
         </div>
@@ -140,21 +140,19 @@ export const TileView: React.FC<TileViewProps> = ({
   });
 
   return (
-    <div className="flex-1 p-4">
+    <div className="flex-1 p-4 bg-zinc-950">
       <div className="mb-4">
-        <h2 className="text-2xl font-bold text-primary mb-1">People Nearby</h2>
-        <p className="text-muted-foreground">
+        <h2 className="text-2xl font-bold text-white mb-1">People Nearby</h2>
+        <p className="text-zinc-400">
           {filteredUsers.length}{" "}
           {filteredUsers.length === 1 ? "person" : "people"} visible
         </p>
       </div>
 
       {/* Debug Panel */}
-      <div className="mb-4 p-3 bg-card border border-border rounded-lg">
-        <h4 className="text-sm font-semibold text-foreground mb-2">
-          Debug Info
-        </h4>
-        <div className="text-xs space-y-1 text-muted-foreground">
+      <div className="mb-4 p-3 bg-zinc-900 border border-zinc-800 rounded-lg">
+        <h4 className="text-sm font-semibold text-white mb-2">Debug Info</h4>
+        <div className="text-xs space-y-1 text-zinc-400">
           <div>
             Your profile exists: {currentUserProfileForMap ? "Yes" : "No"}
           </div>

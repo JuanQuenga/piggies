@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 import { useState } from "react";
 
 const navItems = [
-  { href: "/profile", icon: User, label: "My Profile" },
+  { href: "/profile", icon: User, label: "Profile" },
   { href: "/chat", icon: MessageCircle, label: "Chats" },
   { href: "/people", icon: Users, label: "People" },
   { href: "/map", icon: Map, label: "Map" },
