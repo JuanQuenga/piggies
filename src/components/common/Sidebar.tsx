@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 import { useState } from "react";
 
 const navItems = [
-  { href: "/profile", icon: User, label: "My Profile" },
+  { href: "/profile", icon: User, label: "Profile" },
   { href: "/chat", icon: MessageCircle, label: "Chats" },
   { href: "/people", icon: Users, label: "People" },
   { href: "/map", icon: Map, label: "Map" },
@@ -44,48 +44,16 @@ export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
             "mb-8 mt-2 flex items-center justify-center transition-all",
             collapsed ? "w-10" : "w-32"
           )}
-          aria-label="Piggies logo"
+          aria-label="Snouts logo"
         >
-          <svg
+          <img
+            src="/pig-snout.svg"
+            alt="Snouts logo"
             width={collapsed ? 40 : 48}
             height={collapsed ? 40 : 48}
-            viewBox="0 0 300 300"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <defs>
-              <radialGradient id="faceGradient" cx="50%" cy="50%" r="80%">
-                <stop offset="0%" stopColor="#a78bfa" />
-                <stop offset="100%" stopColor="#6366f1" />
-              </radialGradient>
-              <linearGradient id="noseGradient" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor="#c4b5fd" />
-                <stop offset="100%" stopColor="#818cf8" />
-              </linearGradient>
-            </defs>
-            {/* Face */}
-            <circle cx="150" cy="150" r="140" fill="url(#faceGradient)" />
-            {/* Ears */}
-            <ellipse cx="60" cy="60" rx="40" ry="50" fill="#a78bfa" />
-            <ellipse cx="240" cy="60" rx="40" ry="50" fill="#a78bfa" />
-            {/* Eyes */}
-            <ellipse cx="105" cy="140" rx="45" ry="40" fill="#fff" />
-            <ellipse cx="195" cy="140" rx="45" ry="40" fill="#fff" />
-            <ellipse cx="120" cy="150" rx="15" ry="15" fill="#222" />
-            <ellipse cx="180" cy="150" rx="15" ry="15" fill="#222" />
-            {/* Nose */}
-            <ellipse
-              cx="150"
-              cy="200"
-              rx="55"
-              ry="40"
-              fill="url(#noseGradient)"
-            />
-            <ellipse cx="135" cy="200" rx="10" ry="15" fill="#7c3aed" />
-            <ellipse cx="165" cy="200" rx="10" ry="15" fill="#7c3aed" />
-          </svg>
+          />
           {!collapsed && (
-            <span className="ml-3 text-2xl font-bold text-white">Piggies</span>
+            <span className="ml-3 text-3xl font-bold text-white">Piggies</span>
           )}
         </div>
         <div className="flex flex-col gap-2 flex-1 mt-4 items-stretch w-full">
@@ -137,7 +105,7 @@ export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
 
       {/* Mobile Topbar (logo + settings) */}
       <nav className="md:hidden flex items-center justify-between bg-zinc-900 text-white w-full h-14 px-4 border-b border-zinc-800 fixed top-0 left-0 z-30">
-        <div aria-label="Piggies logo">
+        <div aria-label="Snouts logo">
           <svg
             width="32"
             height="32"

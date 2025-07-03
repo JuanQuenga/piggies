@@ -14,7 +14,7 @@ export default function FullScreenAuth() {
         {/* Logo and tagline */}
         <div className="mb-8 flex flex-col items-center">
           <img src="/logo.png" alt="App Logo" className="w-16 h-16 mb-2" />
-          <h1 className="text-3xl font-bold text-white mb-1">piggies</h1>
+          <h1 className="text-3xl font-bold text-white mb-1">Snouts</h1>
           <p className="text-zinc-400 text-center text-base">
             Connect with people nearby and start chatting
           </p>

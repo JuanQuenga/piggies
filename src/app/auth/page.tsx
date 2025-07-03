@@ -31,7 +31,7 @@ export default function AuthPage() {
             <span className="text-xl sm:text-2xl">🐷</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1 sm:mb-2">
-            Welcome to Piggies
+            Welcome to Snouts
           </h1>
           <p className="text-zinc-400 text-sm sm:text-base">
             {tab === "sign-in"

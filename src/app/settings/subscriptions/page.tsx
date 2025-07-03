@@ -7,10 +7,10 @@ export default function SubscriptionsPage() {
     <div className="flex flex-col items-center justify-center min-h-screen bg-zinc-950 p-6">
       <div className="w-full max-w-lg bg-zinc-900 rounded-xl shadow-lg p-8">
         <h1 className="text-2xl font-bold text-white mb-6 text-center">
-          Support Piggies
+          Support Snouts
         </h1>
         <p className="text-zinc-300 mb-8 text-center">
-          Become a Piggies Supporter to unlock exclusive features and help us
+          Become a Snouts Supporter to unlock exclusive features and help us
           build a better community!
         </p>
         {/* The PricingTable will show all publicly available plans from your Clerk dashboard */}

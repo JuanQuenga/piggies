@@ -1,4 +1,4 @@
-# Piggies 🐷
+# Snouts 🐷
 
 A modern location-based social networking app built with Next.js 15, featuring real-time messaging, user discovery, and interactive maps.
 
@@ -191,6 +191,16 @@ The app can be deployed to any platform that supports Next.js:
 - **Event Planning**: Create and join local events
 - **Photo Sharing**: Share moments with nearby users
 - **Custom Filters**: Advanced people discovery options
+
+### Global Search Bar
+
+- **Spotlight/Raycast-like Functionality**: A floating search bar at the top of the page, under the header.
+- **Search Through Chats**: Quickly find conversations and messages.
+- **Example Query**: "Find guys near Detroit, Michigan online now that are hosting."
+- **Profile Management**: Change profile picture directly from the search bar.
+- **Help and Support**: Access help resources and support options.
+
+This feature aims to enhance user experience by providing quick access to various functionalities through a centralized search interface.
 
 ## 🤝 Contributing
 
