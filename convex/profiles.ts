@@ -22,7 +22,7 @@ async function getCurrentUserId(ctx: any): Promise<Id<"users"> | null> {
 
   return user ? user._id : null;
 }
-
+//
 // Helper function to resolve avatar URL (handles both full URLs and storage IDs)
 async function resolveAvatarUrl(
   ctx: any,
