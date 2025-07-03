@@ -44,11 +44,11 @@ export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
             "mb-8 mt-2 flex items-center justify-center transition-all",
             collapsed ? "w-10" : "w-32"
           )}
-          aria-label="Snouts logo"
+          aria-label="Piggies logo"
         >
           <img
             src="/pig-snout.svg"
-            alt="Snouts logo"
+            alt="Piggies logo"
             width={collapsed ? 40 : 48}
             height={collapsed ? 40 : 48}
           />
@@ -105,7 +105,7 @@ export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
 
       {/* Mobile Topbar (logo + settings) */}
       <nav className="md:hidden flex items-center justify-between bg-zinc-900 text-white w-full h-14 px-4 border-b border-zinc-800 fixed top-0 left-0 z-30">
-        <div aria-label="Snouts logo">
+        <div aria-label="Piggies logo">
           <svg
             width="32"
             height="32"

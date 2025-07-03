@@ -39,7 +39,7 @@ export default function LandingPage() {
             <div className="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-lg">🐷</span>
             </div>
-            <span className="text-white font-bold text-xl">Snouts</span>
+            <span className="text-white font-bold text-xl">Piggies</span>
           </div>
           <Button
             onClick={() => router.push("/auth")}
@@ -60,7 +60,7 @@ export default function LandingPage() {
               <h1 className="text-5xl md:text-7xl font-bold text-white mb-6">
                 Welcome to{" "}
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
-                  Snouts
+                  Piggies
                 </span>
               </h1>
               <p className="text-xl md:text-2xl text-zinc-300 mb-8 max-w-2xl mx-auto">
@@ -122,7 +122,7 @@ export default function LandingPage() {
 
         {/* Footer */}
         <footer className="text-center py-8 text-zinc-500">
-          <p>&copy; 2024 Snouts. Connect locally, grow globally.</p>
+          <p>&copy; 2025 Piggies. Connect locally, grow globally.</p>
         </footer>
       </div>
     );

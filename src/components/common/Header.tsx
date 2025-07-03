@@ -74,7 +74,7 @@ export default function Header() {
     if (condition === "Snow") {
       const snowy = [
         "Bundle up, it's snowing! ❄️",
-        "Snouts love snowflakes!",
+        "Pigs love snowflakes!",
         "Time for a snowball fight!",
       ];
       return snowy[Math.floor(Math.random() * snowy.length)];

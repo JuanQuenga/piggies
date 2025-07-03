@@ -1,4 +1,4 @@
-# Snouts 🐷
+# Piggies 🐷
 
 A modern location-based social networking app built with Next.js 15, featuring real-time messaging, user discovery, and interactive maps.
 
