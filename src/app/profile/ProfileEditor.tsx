@@ -603,7 +603,7 @@ export default function ProfileEditor() {
     title: string
   ) => (
     <div className="space-y-2">
-      <Label className="text-sm font-medium">{title}</Label>
+      <Label className="text-sm font-medium text-zinc-200">{title}</Label>
       <div className="flex flex-wrap gap-2">
         {options.map((option) => {
           const isSelected = (
@@ -621,7 +621,7 @@ export default function ProfileEditor() {
           );
         })}
       </div>
-      <p className="text-xs text-muted-foreground">
+      <p className="text-xs text-zinc-400">
         Choose up to {maxSelections} options
       </p>
     </div>
@@ -633,7 +633,7 @@ export default function ProfileEditor() {
     title: string
   ) => (
     <div className="space-y-2">
-      <Label htmlFor={field} className="text-sm font-medium">
+      <Label htmlFor={field} className="text-sm font-medium text-zinc-200">
         {title}
       </Label>
       <select
@@ -671,22 +671,22 @@ export default function ProfileEditor() {
   }
 
   return (
-    <div className="container mx-0 px-0 max-w-none">
+    <div className="min-h-screen w-full bg-zinc-950 py-8 px-2 md:px-8">
       {profile === null && (
-        <div className="mb-4 p-4 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-lg text-center">
+        <div className="mb-4 p-4 bg-purple-900/60 text-purple-200 rounded-xl text-center shadow-lg border border-purple-700">
           Welcome! Please fill out your profile to get started.
         </div>
       )}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
         {/* Profile Editor (2/3) */}
-        <div className="lg:col-span-2 bg-card/90 p-8 rounded-2xl shadow-none border-none w-full">
+        <div className="lg:col-span-2 bg-zinc-900 rounded-xl shadow-lg border border-zinc-800 p-8 w-full">
           {/* Preview Button (mobile only) */}
           <div className="lg:hidden mb-4">
             <Button
               variant="outline"
               size="sm"
               onClick={() => setIsPreviewOpen(true)}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 border-purple-500 text-purple-400 hover:bg-purple-500 hover:text-white px-4 py-2 rounded-lg"
             >
               <Eye size={16} />
               Preview Profile
@@ -696,18 +696,18 @@ export default function ProfileEditor() {
           <form onSubmit={handleFormSubmit} className="space-y-8">
             {/* Basic Information */}
             <div className="space-y-4">
-              <h2 className="text-2xl font-bold text-purple-600 mb-1">
+              <h2 className="text-3xl font-bold text-white mb-1">
                 Edit Your Profile
               </h2>
-              <p className="text-muted-foreground mb-4">
+              <p className="text-zinc-400 mb-4">
                 Update your profile information and preferences
               </p>
-              <h3 className="text-lg font-semibold text-purple-500">
+              <h3 className="text-lg font-semibold text-purple-400">
                 Basic Information
               </h3>
               {/* Photo Gallery Management */}
               <div className="space-y-2">
-                <Label className="text-sm font-medium">
+                <Label className="text-sm font-medium text-zinc-200">
                   Profile Photos ({photos.length + photoPreviews.length}/5)
                 </Label>
                 <div className="flex flex-wrap gap-4 items-center">
@@ -841,7 +841,7 @@ export default function ProfileEditor() {
                     return null;
                   })}
                 </div>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-zinc-400">
                   Drag to reorder, or use the up/down buttons. Click ★ to set as
                   main photo (moves to first position). The first photo is
                   always your main photo and profile picture.
@@ -849,7 +849,10 @@ export default function ProfileEditor() {
               </div>
               {/* Display Name */}
               <div className="space-y-2">
-                <Label htmlFor="displayName" className="text-sm font-medium">
+                <Label
+                  htmlFor="displayName"
+                  className="text-sm font-medium text-zinc-200"
+                >
                   Display Name
                 </Label>
                 <Input
@@ -859,11 +862,15 @@ export default function ProfileEditor() {
                     handleInputChange("displayName", e.target.value)
                   }
                   placeholder="Enter your display name"
+                  className="bg-zinc-800 border border-zinc-700 text-white placeholder-zinc-500 rounded-lg"
                 />
               </div>
               {/* Description */}
               <div className="space-y-2">
-                <Label htmlFor="description" className="text-sm font-medium">
+                <Label
+                  htmlFor="description"
+                  className="text-sm font-medium text-zinc-200"
+                >
                   About Me
                 </Label>
                 <Textarea
@@ -874,11 +881,15 @@ export default function ProfileEditor() {
                   }
                   placeholder="Tell us about yourself..."
                   rows={4}
+                  className="bg-zinc-800 border border-zinc-700 text-white placeholder-zinc-500 rounded-lg"
                 />
               </div>
               {/* Home Location */}
               <div className="space-y-2">
-                <Label htmlFor="homeLocation" className="text-sm font-medium">
+                <Label
+                  htmlFor="homeLocation"
+                  className="text-sm font-medium text-zinc-200"
+                >
                   Home Location
                 </Label>
                 <Input
@@ -888,13 +899,14 @@ export default function ProfileEditor() {
                     handleInputChange("homeLocation", e.target.value)
                   }
                   placeholder="Enter your home location"
+                  className="bg-zinc-800 border border-zinc-700 text-white placeholder-zinc-500 rounded-lg"
                 />
               </div>
             </div>
-            <Separator />
+            <Separator className="bg-zinc-800" />
             {/* Stats */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-purple-500">Stats</h3>
+              <h3 className="text-lg font-semibold text-purple-400">Stats</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {renderSelect("age", PROFILE_OPTIONS.age, "Age")}
                 {renderSelect(
@@ -919,10 +931,10 @@ export default function ProfileEditor() {
                 )}
               </div>
             </div>
-            <Separator />
+            <Separator className="bg-zinc-800" />
             {/* Identity */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-purple-500">
+              <h3 className="text-lg font-semibold text-purple-400">
                 Identity
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -940,10 +952,10 @@ export default function ProfileEditor() {
                 {renderSelect("position", PROFILE_OPTIONS.position, "Position")}
               </div>
             </div>
-            <Separator />
+            <Separator className="bg-zinc-800" />
             {/* Scene */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-purple-500">Scene</h3>
+              <h3 className="text-lg font-semibold text-purple-400">Scene</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {renderSelect("location", PROFILE_OPTIONS.location, "Location")}
                 {renderSelect(
@@ -953,10 +965,10 @@ export default function ProfileEditor() {
                 )}
               </div>
             </div>
-            <Separator />
+            <Separator className="bg-zinc-800" />
             {/* Health */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-purple-500">Health</h3>
+              <h3 className="text-lg font-semibold text-purple-400">Health</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {renderSelect(
                   "hivStatus",
@@ -965,10 +977,10 @@ export default function ProfileEditor() {
                 )}
               </div>
             </div>
-            <Separator />
+            <Separator className="bg-zinc-800" />
             {/* Practices */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-purple-500">
+              <h3 className="text-lg font-semibold text-purple-400">
                 Practices
               </h3>
               {renderMultiSelect(
@@ -978,21 +990,23 @@ export default function ProfileEditor() {
                 "Practices"
               )}
             </div>
-            <Separator />
+            <Separator className="bg-zinc-800" />
             {/* Into */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-purple-500">Into</h3>
+              <h3 className="text-lg font-semibold text-purple-400">Into</h3>
               {renderMultiSelect("into", PROFILE_OPTIONS.into, 3, "Into")}
             </div>
-            <Separator />
+            <Separator className="bg-zinc-800" />
             {/* Fetishes */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-purple-500">
+              <h3 className="text-lg font-semibold text-purple-400">
                 Fetishes
               </h3>
               <div className="space-y-6">
                 <div>
-                  <h4 className="text-md font-medium mb-2">Body</h4>
+                  <h4 className="text-md font-medium mb-2 text-zinc-200">
+                    Body
+                  </h4>
                   {renderMultiSelect(
                     "fetishes",
                     PROFILE_OPTIONS.fetishes.body,
@@ -1001,7 +1015,9 @@ export default function ProfileEditor() {
                   )}
                 </div>
                 <div>
-                  <h4 className="text-md font-medium mb-2">Clothing</h4>
+                  <h4 className="text-md font-medium mb-2 text-zinc-200">
+                    Clothing
+                  </h4>
                   {renderMultiSelect(
                     "fetishes",
                     PROFILE_OPTIONS.fetishes.clothing,
@@ -1010,7 +1026,9 @@ export default function ProfileEditor() {
                   )}
                 </div>
                 <div>
-                  <h4 className="text-md font-medium mb-2">Underwear</h4>
+                  <h4 className="text-md font-medium mb-2 text-zinc-200">
+                    Underwear
+                  </h4>
                   {renderMultiSelect(
                     "fetishes",
                     PROFILE_OPTIONS.fetishes.underwear,
@@ -1020,28 +1038,32 @@ export default function ProfileEditor() {
                 </div>
               </div>
             </div>
-            <Separator />
+            <Separator className="bg-zinc-800" />
             {/* Kinks */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-purple-500">Kinks</h3>
+              <h3 className="text-lg font-semibold text-purple-400">Kinks</h3>
               <div className="space-y-6">
                 <div>
-                  <h4 className="text-md font-medium mb-2">General</h4>
+                  <h4 className="text-md font-medium mb-2 text-zinc-200">
+                    General
+                  </h4>
                   {renderMultiSelect("kinks", KINKS.general, 6, "")}
                 </div>
                 <div>
-                  <h4 className="text-md font-medium mb-2">Role Play</h4>
+                  <h4 className="text-md font-medium mb-2 text-zinc-200">
+                    Role Play
+                  </h4>
                   {renderMultiSelect("kinks", KINKS.rolePlay, 6, "")}
                 </div>
               </div>
             </div>
-            <Separator />
+            <Separator className="bg-zinc-800" />
             {/* Submit Button */}
             <div className="flex justify-end">
               <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-2"
+                className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-2 rounded-lg shadow-lg font-semibold"
               >
                 {isSubmitting ? "Saving..." : "Save Profile"}
               </Button>
@@ -1049,7 +1071,7 @@ export default function ProfileEditor() {
           </form>
         </div>
         {/* Live Profile Preview (1/3, desktop only) */}
-        <div className="hidden lg:block h-[80vh] overflow-y-auto rounded-2xl shadow-2xl bg-card/95 border border-border sticky top-8">
+        <div className="hidden lg:block h-[80vh] overflow-y-auto rounded-xl shadow-lg bg-zinc-900 border border-zinc-800 sticky top-8">
           {convexUser?._id && (
             <ProfilePage
               userId={convexUser._id}

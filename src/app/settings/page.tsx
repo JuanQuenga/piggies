@@ -4,16 +4,26 @@ import React from "react";
 import { SignOutButton, useAuth } from "@clerk/nextjs";
 import Providers from "../Providers";
 import { useEffect, useState } from "react";
+import { Switch } from "../../components/ui/switch";
+import { useUnitPreference } from "../../components/common/UnitPreferenceContext";
 
 // Force dynamic rendering to prevent static generation issues
 export const dynamic = "force-dynamic";
 
 export default function SettingsPage() {
   const [mounted, setMounted] = useState(false);
+  const { isSignedIn, isLoaded } = useAuth();
+  const { isUSUnits, setIsUSUnits } = useUnitPreference();
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("unitPreference", isUSUnits ? "imperial" : "metric");
+    }
+  }, [isUSUnits]);
 
   if (!mounted) {
     return (
@@ -26,7 +36,6 @@ export default function SettingsPage() {
     );
   }
 
-  const { isSignedIn, isLoaded } = useAuth();
   return (
     <Providers>
       <div className="flex flex-col md:flex-row h-full w-full bg-zinc-950">
@@ -60,6 +69,18 @@ export default function SettingsPage() {
           <h3 className="text-xl font-semibold text-white mb-4">
             Settings Details
           </h3>
+          <div className="mb-6 flex items-center gap-4">
+            <span className="text-white font-medium">Units:</span>
+            <span className="text-zinc-400">
+              {isUSUnits ? "Imperial" : "Metric"}
+            </span>
+            <Switch
+              checked={isUSUnits}
+              onCheckedChange={setIsUSUnits}
+              className="ml-2"
+              aria-label="Toggle units between Imperial and Metric"
+            />
+          </div>
           <div className="bg-zinc-900 rounded-lg p-6 text-zinc-300 shadow">
             <p>This is where the selected settings details will appear.</p>
           </div>

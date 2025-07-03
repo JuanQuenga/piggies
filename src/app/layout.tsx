@@ -1,23 +1,19 @@
 import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
+import { UnitPreferenceProvider } from "../components/common/UnitPreferenceContext";
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   return (
-    <html lang="en">
-      <body className="bg-zinc-950 text-white h-full min-h-screen">
-        <ClerkProvider
-          publishableKey={
-            process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ||
-            "pk_test_placeholder"
-          }
-        >
-          {children}
-        </ClerkProvider>
-      </body>
-    </html>
+    <ClerkProvider>
+      <UnitPreferenceProvider>
+        <html lang="en">
+          <body className="bg-zinc-950 min-h-screen">{children}</body>
+        </html>
+      </UnitPreferenceProvider>
+    </ClerkProvider>
   );
 }

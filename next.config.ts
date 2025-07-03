@@ -10,6 +10,7 @@ const nextConfig: NextConfig = {
   },
   serverExternalPackages: ["convex"],
   transpilePackages: ["@clerk/nextjs"],
+  // transpilePackages: ["@clerk/nextjs", "use-sync-external-store", "swr"],
   // Enable React strict mode for better development experience
   reactStrictMode: true,
 };
