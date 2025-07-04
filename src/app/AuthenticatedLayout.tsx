@@ -12,6 +12,7 @@ export default function AuthenticatedLayout({
       publishableKey={
         process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || "pk_test_placeholder"
       }
+      signInFallbackRedirectUrl="/"
     >
       <ConvexClientProvider>{children}</ConvexClientProvider>
     </ClerkProvider>
