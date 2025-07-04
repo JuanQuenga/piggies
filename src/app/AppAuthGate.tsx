@@ -1,6 +1,7 @@
 "use client";
 import { useAuth } from "@clerk/nextjs";
 import { useState } from "react";
+import { usePathname } from "next/navigation";
 import FullScreenAuth from "./auth/FullScreenAuth";
 import Sidebar from "@/components/common/Sidebar";
 import Header from "@/components/common/Header";
@@ -12,6 +13,11 @@ export default function AppAuthGate({
 }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { isSignedIn, isLoaded } = useAuth();
+  const pathname = usePathname();
+
+  // Allow the landing page to be shown when not signed in
+  const isLandingPage = pathname === "/";
+  const isAuthPage = pathname === "/auth";
 
   if (!isLoaded) {
     return (
@@ -26,6 +32,12 @@ export default function AppAuthGate({
     );
   }
 
+  // Show landing page or auth page without the authenticated layout
+  if (!isSignedIn && (isLandingPage || isAuthPage)) {
+    return <>{children}</>;
+  }
+
+  // Show auth gate for all other pages when not signed in
   if (!isSignedIn) {
     return <FullScreenAuth />;
   }

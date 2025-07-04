@@ -36,9 +36,13 @@ export default function LandingPage() {
         {/* Navigation */}
         <nav className="flex justify-between items-center p-6">
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-lg">🐷</span>
-            </div>
+            <img
+              src="/pig-snout.svg"
+              alt="Piggies logo"
+              width={32}
+              height={32}
+              className="w-8 h-8"
+            />
             <span className="text-white font-bold text-xl">Piggies</span>
           </div>
           <Button
@@ -55,7 +59,13 @@ export default function LandingPage() {
             {/* Logo and Title */}
             <div className="mb-8">
               <div className="w-24 h-24 bg-gradient-to-br from-purple-500 to-pink-500 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-2xl">
-                <span className="text-4xl">🐷</span>
+                <img
+                  src="/pig-snout.svg"
+                  alt="Piggies logo"
+                  width={64}
+                  height={64}
+                  className="w-16 h-16"
+                />
               </div>
               <h1 className="text-5xl md:text-7xl font-bold text-white mb-6">
                 Welcome to{" "}

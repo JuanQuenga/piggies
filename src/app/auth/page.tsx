@@ -1,7 +1,7 @@
 "use client";
 
 import { SignIn, SignUp } from "@clerk/nextjs";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
@@ -9,6 +9,14 @@ import { ArrowLeft } from "lucide-react";
 export default function AuthPage() {
   const [tab, setTab] = useState<"sign-in" | "sign-up">("sign-in");
   const router = useRouter();
+
+  // Debug: Check if Clerk environment variables are set
+  useEffect(() => {
+    console.log(
+      "Clerk Publishable Key:",
+      process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ? "Set" : "Not set"
+    );
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-zinc-900 to-black flex flex-col">
@@ -28,7 +36,13 @@ export default function AuthPage() {
         {/* Logo and Title */}
         <div className="text-center mb-6 sm:mb-8 w-full">
           <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center mx-auto mb-3 sm:mb-4 shadow-lg">
-            <span className="text-xl sm:text-2xl">🐷</span>
+            <img
+              src="/pig-snout.svg"
+              alt="Piggies logo"
+              width={32}
+              height={32}
+              className="w-8 h-8 sm:w-10 sm:h-10"
+            />
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1 sm:mb-2">
             Welcome to Piggies
@@ -69,9 +83,37 @@ export default function AuthPage() {
           {/* Clerk Components */}
           <div>
             {tab === "sign-in" ? (
-              <SignIn routing="hash" />
+              <SignIn
+                appearance={{
+                  elements: {
+                    formButtonPrimary:
+                      "bg-purple-600 hover:bg-purple-700 text-white",
+                    card: "bg-zinc-900 border border-zinc-800",
+                    headerTitle: "text-white",
+                    headerSubtitle: "text-zinc-400",
+                    formFieldLabel: "text-zinc-300",
+                    formFieldInput: "bg-zinc-800 border-zinc-700 text-white",
+                    footerActionLink: "text-purple-400 hover:text-purple-300",
+                    footerActionText: "text-zinc-400",
+                  },
+                }}
+              />
             ) : (
-              <SignUp routing="hash" />
+              <SignUp
+                appearance={{
+                  elements: {
+                    formButtonPrimary:
+                      "bg-purple-600 hover:bg-purple-700 text-white",
+                    card: "bg-zinc-900 border border-zinc-800",
+                    headerTitle: "text-white",
+                    headerSubtitle: "text-zinc-400",
+                    formFieldLabel: "text-zinc-300",
+                    formFieldInput: "bg-zinc-800 border-zinc-700 text-white",
+                    footerActionLink: "text-purple-400 hover:text-purple-300",
+                    footerActionText: "text-zinc-400",
+                  },
+                }}
+              />
             )}
           </div>
         </div>
