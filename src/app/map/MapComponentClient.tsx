@@ -16,6 +16,14 @@ import {
 } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
 import { useAuth } from "@clerk/nextjs";
+import { Info } from "lucide-react";
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "../../components/ui/dialog";
 
 // Fix for default Leaflet marker icon issue
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -408,107 +416,105 @@ const MapComponentClient: React.FC<MapComponentClientProps> = ({
         <CenterMapToUser position={currentPosition} />
       </MapContainer>
       <div className="absolute bottom-4 right-4 z-[100] flex flex-col items-end space-y-2">
-        <label className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-2 shadow-lg cursor-pointer select-none">
-          <input
-            type="checkbox"
-            checked={isVisible}
-            onChange={() => {
-              void handleToggleVisibility();
-            }}
-            className="h-4 w-4 text-purple-600 border-zinc-700 rounded focus:ring-purple-500 bg-zinc-800"
-            aria-label="Toggle visibility on map"
-          />
-          <span className="text-sm text-white">
-            {isVisible ? "Visible on map" : "Hidden from map"}
-          </span>
-        </label>
-
-        {/* Debug Panel */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-3 shadow-lg max-w-xs">
-          <h4 className="text-sm font-semibold text-white mb-2">Debug Info</h4>
-          <div className="text-xs space-y-1 text-zinc-400">
-            <div>Profile exists: {currentUserProfileForMap ? "Yes" : "No"}</div>
-            <div>User ID: {currentUserId || "None"}</div>
-            <div>
-              Latitude: {currentUserProfileForMap?.latitude || "Not set"}
+        {/* Info Button for Debug Panel */}
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon"
+              className="bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-full shadow-lg"
+              aria-label="Show debug info"
+            >
+              <Info className="w-5 h-5" />
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Debug Info</DialogTitle>
+            </DialogHeader>
+            <div className="text-xs space-y-1 text-zinc-400">
+              <div>
+                Profile exists: {currentUserProfileForMap ? "Yes" : "No"}
+              </div>
+              <div>User ID: {currentUserId || "None"}</div>
+              <div>
+                Latitude: {currentUserProfileForMap?.latitude || "Not set"}
+              </div>
+              <div>
+                Longitude: {currentUserProfileForMap?.longitude || "Not set"}
+              </div>
+              <div>
+                Is Visible: {currentUserProfileForMap?.isVisible ? "Yes" : "No"}
+              </div>
+              <div>
+                Last Seen:{" "}
+                {currentUserProfileForMap?.lastSeen
+                  ? new Date(currentUserProfileForMap.lastSeen).toLocaleString()
+                  : "Never"}
+              </div>
+              <div>Total visible users: {visibleUsers.length}</div>
+              <div>Markers to display: {allMarkersToDisplay.length}</div>
+              <div>Location permission: {locationPermission}</div>
+              <div>
+                Current position:{" "}
+                {currentPosition
+                  ? `${currentPosition[0].toFixed(4)}, ${currentPosition[1].toFixed(4)}`
+                  : "None"}
+              </div>
+              <div>
+                Profile updated:{" "}
+                {currentUserProfileForMap?.lastSeen ? "Yes" : "No"}
+              </div>
             </div>
-            <div>
-              Longitude: {currentUserProfileForMap?.longitude || "Not set"}
-            </div>
-            <div>
-              Is Visible: {currentUserProfileForMap?.isVisible ? "Yes" : "No"}
-            </div>
-            <div>
-              Last Seen:{" "}
-              {currentUserProfileForMap?.lastSeen
-                ? new Date(currentUserProfileForMap.lastSeen).toLocaleString()
-                : "Never"}
-            </div>
-            <div>Total visible users: {visibleUsers.length}</div>
-            <div>Markers to display: {allMarkersToDisplay.length}</div>
-            <div>Location permission: {locationPermission}</div>
-            <div>
-              Current position:{" "}
-              {currentPosition
-                ? `${currentPosition[0].toFixed(4)}, ${currentPosition[1].toFixed(4)}`
-                : "None"}
-            </div>
-            <div>
-              Profile updated:{" "}
-              {currentUserProfileForMap?.lastSeen ? "Yes" : "No"}
-            </div>
-          </div>
-
-          {/* Manual location update button */}
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full mt-3 bg-zinc-800 border-zinc-700 text-white hover:bg-zinc-700"
-            onClick={() => {
-              navigator.geolocation.getCurrentPosition(
-                (position) => {
-                  const { latitude, longitude } = position.coords;
-                  setCurrentPosition([latitude, longitude]);
-                  void (async () => {
-                    try {
-                      await updateProfile({ latitude, longitude });
-                      toast.success("Location updated!");
-                    } catch (error) {
-                      toast.error("Failed to update location.");
+            {/* Manual location update button */}
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full mt-3 bg-zinc-800 border-zinc-700 text-white hover:bg-zinc-700"
+              onClick={() => {
+                navigator.geolocation.getCurrentPosition(
+                  (position) => {
+                    const { latitude, longitude } = position.coords;
+                    setCurrentPosition([latitude, longitude]);
+                    void (async () => {
+                      try {
+                        await updateProfile({ latitude, longitude });
+                        toast.success("Location updated!");
+                      } catch (error) {
+                        toast.error("Failed to update location.");
+                      }
+                    })();
+                  },
+                  (error) => {
+                    console.error("Geolocation error:", error);
+                    let errorMessage = "Could not get your location.";
+                    switch (error.code) {
+                      case error.PERMISSION_DENIED:
+                        errorMessage =
+                          "Location access denied. Please allow location access in your browser settings.";
+                        break;
+                      case error.POSITION_UNAVAILABLE:
+                        errorMessage =
+                          "Location information unavailable. Please try again.";
+                        break;
+                      case error.TIMEOUT:
+                        errorMessage =
+                          "Location request timed out. Please try again.";
+                        break;
+                      default:
+                        errorMessage =
+                          "Could not get your location. Please check your browser settings.";
                     }
-                  })();
-                },
-                (error) => {
-                  console.error("Geolocation error:", error);
-                  let errorMessage = "Could not get your location.";
-
-                  switch (error.code) {
-                    case error.PERMISSION_DENIED:
-                      errorMessage =
-                        "Location access denied. Please allow location access in your browser settings.";
-                      break;
-                    case error.POSITION_UNAVAILABLE:
-                      errorMessage =
-                        "Location information unavailable. Please try again.";
-                      break;
-                    case error.TIMEOUT:
-                      errorMessage =
-                        "Location request timed out. Please try again.";
-                      break;
-                    default:
-                      errorMessage =
-                        "Could not get your location. Please check your browser settings.";
-                  }
-
-                  toast.error(errorMessage);
-                },
-                { enableHighAccuracy: true, timeout: 10000 }
-              );
-            }}
-          >
-            Get My Location
-          </Button>
-        </div>
+                    toast.error(errorMessage);
+                  },
+                  { enableHighAccuracy: true, timeout: 10000 }
+                );
+              }}
+            >
+              Get My Location
+            </Button>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

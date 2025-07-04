@@ -6,6 +6,7 @@ interface WeatherGreetingProps {
   temp: number | null;
   condition: string;
   isUSUnits: boolean;
+  compact?: boolean;
 }
 
 function formatTemp(temp: number, isUSUnits: boolean): string {
@@ -79,6 +80,7 @@ export function WeatherGreeting({
   temp,
   condition,
   isUSUnits,
+  compact = false,
 }: WeatherGreetingProps) {
   if (temp === null) {
     return <span>Welcome!</span>;
@@ -86,6 +88,22 @@ export function WeatherGreeting({
 
   const greeting = pickGreeting(temp, condition, isUSUnits);
   const formattedTemp = formatTemp(temp, isUSUnits);
+
+  if (compact) {
+    // Extract the emoji (last emoji in the greeting string)
+    const emojiMatch = greeting.match(
+      /([\p{Emoji}\uFE0F\u200D\u20E3\u2600-\u27BF\uD83C-\uDBFF\uDC00-\uDFFF!\u0021-\u007E])\s*$/u
+    );
+    const emoji = emojiMatch ? emojiMatch[1] : "";
+    return (
+      <span className="flex items-center gap-1">
+        <span className={getTempColor(temp, isUSUnits) + " font-semibold"}>
+          {formattedTemp}
+        </span>
+        <span>{emoji}</span>
+      </span>
+    );
+  }
 
   // Split the greeting into parts based on the temperature placeholder
   const parts = greeting.split("{temp}");

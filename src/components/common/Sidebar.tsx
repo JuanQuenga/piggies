@@ -98,7 +98,7 @@ export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
         setWeatherLoading(false);
       }
     );
-  });
+  }, [isUSUnits]);
 
   return (
     <>
@@ -220,6 +220,7 @@ export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
                   temp={weather.temp}
                   condition={weather.condition}
                   isUSUnits={isUSUnits}
+                  compact={true}
                 />
               )}
             </span>
