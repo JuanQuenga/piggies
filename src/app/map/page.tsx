@@ -7,6 +7,7 @@ import { MapComponent } from "../../app/map/MapComponent";
 import { Id } from "../../../convex/_generated/dataModel";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { ProfileModal } from "../profile/ProfileModal";
 
 // Force dynamic rendering to prevent static generation issues
 export const dynamic = "force-dynamic";
@@ -15,6 +16,9 @@ export default function MapPage() {
   const { isSignedIn, isLoaded } = useAuth();
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<Id<"users"> | null>(
+    null
+  );
 
   useEffect(() => {
     setMounted(true);
@@ -86,18 +90,32 @@ export default function MapPage() {
   };
 
   const handleProfileClick = (userId: Id<"users">) => {
-    // Navigate to user profile - this will be handled by the parent component
-    router.push(`/user/${userId}`);
+    // Open the ProfileModal instead of navigating
+    setSelectedUserId(userId);
   };
 
   return (
-    <div className="h-full w-full flex-1">
+    <div className="h-full w-full flex-1 relative">
       <MapComponent
         currentUserProfileForMap={currentUserProfile}
         currentUserId={currentUserId}
         onStartChat={handleStartChat}
         onProfileClick={handleProfileClick}
       />
+
+      {/* Profile Modal */}
+      {selectedUserId && (
+        <ProfileModal
+          open={!!selectedUserId}
+          onOpenChange={(open) => {
+            if (!open) setSelectedUserId(null);
+          }}
+          userId={selectedUserId}
+          onBack={() => setSelectedUserId(null)}
+          onStartChat={handleStartChat}
+          currentUserProfileForMap={currentUserProfile}
+        />
+      )}
     </div>
   );
 }

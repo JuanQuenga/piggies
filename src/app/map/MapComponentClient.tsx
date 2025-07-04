@@ -69,58 +69,13 @@ const UserMarker: React.FC<{
   });
 
   return (
-    <Marker position={[user.latitude, user.longitude]} icon={icon}>
-      <Popup>
-        <Card
-          className="w-56 bg-zinc-900 border border-zinc-800 shadow-lg cursor-pointer hover:shadow-xl transition-shadow"
-          onClick={() => onProfileClick(user.userId)}
-        >
-          <CardHeader className="pb-2 flex flex-col items-center">
-            <img
-              src={finalAvatarUrl}
-              alt="Avatar"
-              className="w-16 h-16 rounded-full object-cover border-2 border-purple-600 shadow mb-2"
-            />
-            <CardTitle className="text-base text-center text-white">
-              {user.displayName || user.userName || "Anonymous User"}
-            </CardTitle>
-            {user.status && (
-              <Badge
-                variant="secondary"
-                className="text-xs mt-1 bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200"
-              >
-                {user.status}
-              </Badge>
-            )}
-          </CardHeader>
-          <CardContent className="pt-0">
-            {user.description && (
-              <p className="text-sm text-zinc-400 mb-2 text-center line-clamp-2">
-                {user.description}
-              </p>
-            )}
-            {user.lastSeen && (
-              <p className="text-xs text-zinc-500 text-center mb-1">
-                Last seen: {new Date(user.lastSeen).toLocaleString()}
-              </p>
-            )}
-            {currentUserId && user.userId !== currentUserId && (
-              <Button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onStartChat(user.userId);
-                }}
-                className="w-full mt-2 font-semibold bg-purple-600 hover:bg-purple-700 text-white"
-                variant="outline"
-                aria-label={`Start chat with ${user.displayName || user.userName || "Anonymous User"}`}
-              >
-                Message
-              </Button>
-            )}
-          </CardContent>
-        </Card>
-      </Popup>
-    </Marker>
+    <Marker
+      position={[user.latitude, user.longitude]}
+      icon={icon}
+      eventHandlers={{
+        click: () => onProfileClick(user.userId),
+      }}
+    />
   );
 };
 
@@ -434,7 +389,7 @@ const MapComponentClient: React.FC<MapComponentClientProps> = ({
         center={mapCenter}
         zoom={mapInitialZoom}
         scrollWheelZoom={true}
-        className="w-full h-100vh"
+        className="w-full h-[90vh]"
       >
         <DarkTileLayer />
         {allMarkersToDisplay.map((user) => (

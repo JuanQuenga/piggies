@@ -61,24 +61,26 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
     );
   }
 
-  // Desktop dialog
+  // Desktop dialog - no backdrop, just the modal
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="fixed right-6 top-8 max-w-md w-full max-h-[90vh] rounded-2xl shadow-2xl p-0 bg-card/95 border border-border flex flex-col z-[9999]"
+    <div className="absolute inset-0 pointer-events-none">
+      {/* Click outside to close */}
+      <div
+        className="absolute inset-0 pointer-events-auto"
+        onClick={() => onOpenChange(false)}
+      />
+      <div
+        className="absolute left-6 top-1/2 transform -translate-y-1/2 max-w-md w-full max-h-[90vh] rounded-2xl shadow-2xl p-0 bg-zinc-900/95 backdrop-blur-sm border border-zinc-800 flex flex-col z-[9999] pointer-events-auto"
         style={{ margin: 0 }}
+        onClick={(e) => e.stopPropagation()}
       >
-        {/* Accessible but visually hidden title for screen readers */}
-        <DialogTitle>
-          <VisuallyHidden>Profile Preview</VisuallyHidden>
-        </DialogTitle>
         <ProfilePage
           userId={userId}
           onBack={onBack}
           onStartChat={onStartChat}
           currentUserProfileForMap={currentUserProfileForMap}
         />
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
 };
