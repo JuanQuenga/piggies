@@ -392,6 +392,7 @@ const MapComponentClient: React.FC<MapComponentClientProps> = ({
         className="w-full h-full md:h-[90vh]"
         style={{
           height: "calc(100vh - 96px - 56px)", // Full viewport height minus mobile topbar (96px) and mobile bottom nav (56px)
+          zIndex: 1, // Set the map itself to lowest z-index
         }}
       >
         <DarkTileLayer />
@@ -406,7 +407,7 @@ const MapComponentClient: React.FC<MapComponentClientProps> = ({
         ))}
         <CenterMapToUser position={currentPosition} />
       </MapContainer>
-      <div className="absolute bottom-4 right-4 z-[1000] flex flex-col items-end space-y-2">
+      <div className="absolute bottom-4 right-4 z-[100] flex flex-col items-end space-y-2">
         <label className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-2 shadow-lg cursor-pointer select-none">
           <input
             type="checkbox"

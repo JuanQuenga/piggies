@@ -11,6 +11,8 @@ import {
   EyeOff,
   ChevronDown,
   MapPin,
+  MapPinOff,
+  Shuffle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SignOutButton } from "@/app/auth";
@@ -24,10 +26,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
 import { WeatherGreeting } from "./WeatherGreeting";
 import { SmartSearch } from "./SmartSearch";
 import { Input } from "@/components/ui/input";
+import { StatusControls } from "./StatusControls";
 
 // XP/Level system brainstorm
 const XP_LEVELS = [
@@ -157,6 +161,7 @@ export default function Header() {
             city: data.name,
             condition: data.weather?.[0]?.main || "Unknown",
           });
+          setCurrentCity(data.name);
         } catch (e) {
           setWeatherError("Could not fetch weather");
         } finally {
@@ -174,94 +179,15 @@ export default function Header() {
   const [hostingStatus, setHostingStatus] =
     useState<HostingStatus>("not-hosting");
   const [isHostingDialogOpen, setIsHostingDialogOpen] = useState(false);
+  const [isLocationEnabled, setIsLocationEnabled] = useState(true);
+  const [locationRandomization, setLocationRandomization] = useState([0]);
+  const [currentCity, setCurrentCity] = useState<string>("Unknown");
 
   return (
-    <header className="hidden md:flex w-full bg-zinc-900 border-b border-zinc-800 items-center justify-between px-2 md:px-8 py-2 h-20">
+    <header className="hidden md:flex w-full bg-zinc-900 border-b border-zinc-800 items-center justify-between px-2 md:px-8 py-2 h-20 relative z-[50]">
       {/* Status Controls */}
       <div className="flex items-center gap-4">
-        <div className="flex items-center gap-3">
-          {/* Looking Now Toggle */}
-          <Button
-            variant="outline"
-            size="sm"
-            className={cn(
-              "flex items-center gap-2 px-3 py-1.5 bg-transparent",
-              isLookingNow
-                ? "text-green-400 border-green-400"
-                : "text-zinc-400 border-zinc-600"
-            )}
-            onClick={() => setIsLookingNow(!isLookingNow)}
-          >
-            {isLookingNow ? (
-              <Eye className="w-4 h-4" />
-            ) : (
-              <EyeOff className="w-4 h-4" />
-            )}
-            <span className="text-sm">
-              {isLookingNow ? "Looking" : "Not Looking"}
-            </span>
-          </Button>
-
-          {/* Hosting Status Dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className={cn(
-                  "flex items-center gap-2 px-3 py-1.5 bg-transparent",
-                  !isLookingNow && "opacity-50 cursor-not-allowed",
-                  hostingStatusConfig[hostingStatus].color
-                )}
-                disabled={!isLookingNow}
-              >
-                {(() => {
-                  const IconComponent = hostingStatusConfig[hostingStatus].icon;
-                  return (
-                    <IconComponent
-                      className={cn(
-                        "w-4 h-4",
-                        hostingStatusConfig[hostingStatus].color
-                      )}
-                    />
-                  );
-                })()}
-                <span className="text-sm">
-                  {hostingStatusConfig[hostingStatus].label}
-                </span>
-                <ChevronDown
-                  className={cn(
-                    "w-4 h-4 ml-1",
-                    hostingStatusConfig[hostingStatus].color
-                  )}
-                />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-[200px]">
-              {(
-                Object.entries(hostingStatusConfig) as [
-                  HostingStatus,
-                  (typeof hostingStatusConfig)[keyof typeof hostingStatusConfig],
-                ][]
-              ).map(([key, config]) => {
-                const IconComponent = config.icon;
-                return (
-                  <DropdownMenuItem
-                    key={key}
-                    className={cn(
-                      "flex items-center gap-2",
-                      hostingStatus === key && "bg-zinc-800"
-                    )}
-                    onClick={() => setHostingStatus(key)}
-                  >
-                    <IconComponent className={cn("w-4 h-4", config.color)} />
-                    <span className={cn(config.color)}>{config.label}</span>
-                  </DropdownMenuItem>
-                );
-              })}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+        <StatusControls variant="desktop" />
       </div>
       {/* Smart Search */}
       <div className="flex-1 px-4">

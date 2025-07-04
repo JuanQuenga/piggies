@@ -9,12 +9,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Newspaper,
-  Eye,
-  EyeOff,
-  ChevronDown,
   Menu,
   LogOut,
-  Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
@@ -30,6 +26,7 @@ import { SmartSearch } from "./SmartSearch";
 import { useUnitPreference } from "./UnitPreferenceContext";
 import { SignOutButton } from "@/app/auth";
 import { useClerk } from "@clerk/nextjs";
+import { StatusControls } from "./StatusControls";
 
 const navItems = [
   { href: "/profile", icon: User, label: "Profile" },
@@ -40,53 +37,6 @@ const navItems = [
 
 // Mobile hamburger menu navigation items (not in bottom nav)
 const mobileMenuItems = [{ href: "/blog", icon: Newspaper, label: "Blog" }];
-
-type HostingStatus =
-  | "not-hosting"
-  | "hosting"
-  | "hosting-group"
-  | "gloryhole"
-  | "hotel"
-  | "car"
-  | "cruising";
-
-const hostingStatusConfig = {
-  "not-hosting": {
-    label: "Not hosting",
-    icon: Home,
-    color: "text-zinc-400",
-  },
-  hosting: {
-    label: "I'm hosting",
-    icon: Home,
-    color: "text-green-400",
-  },
-  "hosting-group": {
-    label: "I'm hosting a group",
-    icon: Users,
-    color: "text-purple-400",
-  },
-  gloryhole: {
-    label: "I have a gloryhole set up",
-    icon: Home,
-    color: "text-pink-400",
-  },
-  hotel: {
-    label: "I'm hosting in my hotel room",
-    icon: Home,
-    color: "text-blue-400",
-  },
-  car: {
-    label: "I'm hosting in my car",
-    icon: Home,
-    color: "text-yellow-400",
-  },
-  cruising: {
-    label: "I'm at a cruising spot.",
-    icon: Map,
-    color: "text-red-400",
-  },
-} as const;
 
 interface SidebarProps {
   collapsed: boolean;
@@ -99,10 +49,7 @@ export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
   const { isUSUnits } = useUnitPreference();
   const { signOut } = useClerk();
 
-  // Status states for mobile header
-  const [isLookingNow, setIsLookingNow] = useState(false);
-  const [hostingStatus, setHostingStatus] =
-    useState<HostingStatus>("not-hosting");
+  // Weather state for mobile header
   const [weather, setWeather] = useState<{
     temp: number;
     city: string;
@@ -248,23 +195,9 @@ export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
 
       {/* Mobile Topbar with Header Content */}
       <nav className="md:hidden flex flex-col bg-zinc-900 text-white w-full border-b border-zinc-800 fixed top-0 left-0 z-30">
-        {/* Top row: Search, Logo, and Hamburger Menu */}
+        {/* Top row: Logo left, Weather + Hamburger Menu right */}
         <div className="flex items-center justify-between h-14 px-4">
-          {/* Search Icon Button - Left */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-zinc-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500"
-            aria-label="Search"
-            onClick={() => {
-              // TODO: Implement search functionality
-              console.log("Search clicked");
-            }}
-          >
-            <Search className="w-5 h-5" aria-hidden="true" />
-          </Button>
-
-          {/* Logo - Center */}
+          {/* Logo - Left */}
           <div className="flex items-center gap-3" aria-label="Piggies logo">
             <img
               src="/pig-snout.svg"
@@ -275,138 +208,76 @@ export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
             <span className="text-xl font-bold text-white">Piggies</span>
           </div>
 
-          {/* Hamburger Menu - Right */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-zinc-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500"
-                aria-label="Menu"
-              >
-                <Menu className="w-6 h-6" aria-hidden="true" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              {/* Mobile hamburger menu navigation items */}
-              {mobileMenuItems.map(({ href, icon: Icon, label }) => (
-                <DropdownMenuItem key={href} asChild>
-                  <Link href={href} className="flex items-center gap-2 w-full">
-                    <Icon className="w-4 h-4" />
-                    <span>{label}</span>
+          {/* Weather Greeting + Hamburger Menu - Right */}
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-zinc-400">
+              {weatherLoading && "fetching weather..."}
+              {weatherError && (
+                <span className="text-red-400">weather unavailable</span>
+              )}
+              {weather && (
+                <WeatherGreeting
+                  temp={weather.temp}
+                  condition={weather.condition}
+                  isUSUnits={isUSUnits}
+                />
+              )}
+            </span>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-zinc-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500"
+                  aria-label="Menu"
+                >
+                  <Menu className="w-6 h-6" aria-hidden="true" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                {/* Mobile hamburger menu navigation items */}
+                {mobileMenuItems.map(({ href, icon: Icon, label }) => (
+                  <DropdownMenuItem key={href} asChild>
+                    <Link
+                      href={href}
+                      className="flex items-center gap-2 w-full"
+                    >
+                      <Icon className="w-4 h-4" />
+                      <span>{label}</span>
+                    </Link>
+                  </DropdownMenuItem>
+                ))}
+
+                {/* Divider */}
+                <div className="h-px bg-zinc-700 my-1" />
+
+                {/* Settings */}
+                <DropdownMenuItem asChild>
+                  <Link
+                    href="/settings"
+                    className="flex items-center gap-2 w-full"
+                  >
+                    <Settings className="w-4 h-4" />
+                    <span>Settings</span>
                   </Link>
                 </DropdownMenuItem>
-              ))}
 
-              {/* Divider */}
-              <div className="h-px bg-zinc-700 my-1" />
-
-              {/* Settings */}
-              <DropdownMenuItem asChild>
-                <Link
-                  href="/settings"
-                  className="flex items-center gap-2 w-full"
+                {/* Sign Out */}
+                <DropdownMenuItem
+                  onClick={() => signOut()}
+                  className="flex items-center gap-2 w-full text-left px-2 py-1.5 text-sm rounded-sm outline-none transition-colors focus:bg-zinc-800 focus:text-zinc-50 data-[disabled]:pointer-events-none data-[disabled]:opacity-50 cursor-pointer"
                 >
-                  <Settings className="w-4 h-4" />
-                  <span>Settings</span>
-                </Link>
-              </DropdownMenuItem>
-
-              {/* Sign Out */}
-              <DropdownMenuItem
-                onClick={() => signOut()}
-                className="flex items-center gap-2 w-full text-left px-2 py-1.5 text-sm rounded-sm outline-none transition-colors focus:bg-zinc-800 focus:text-zinc-50 data-[disabled]:pointer-events-none data-[disabled]:opacity-50 cursor-pointer"
-              >
-                <LogOut className="w-4 h-4" />
-                <span>Sign Out</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                  <LogOut className="w-4 h-4" />
+                  <span>Sign Out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
 
         {/* Second row: Status Controls */}
-        <div className="flex items-center gap-2 px-4 py-2">
-          {/* Looking Now Toggle */}
-          <Button
-            variant="outline"
-            size="sm"
-            className={cn(
-              "flex items-center gap-1 px-2 py-1 bg-transparent text-xs",
-              isLookingNow
-                ? "text-green-400 border-green-400"
-                : "text-zinc-400 border-zinc-600"
-            )}
-            onClick={() => setIsLookingNow(!isLookingNow)}
-          >
-            {isLookingNow ? (
-              <Eye className="w-3 h-3" />
-            ) : (
-              <EyeOff className="w-3 h-3" />
-            )}
-            <span className="text-xs">
-              {isLookingNow ? "Looking" : "Not Looking"}
-            </span>
-          </Button>
-
-          {/* Hosting Status Dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className={cn(
-                  "flex items-center gap-1 px-2 py-1 bg-transparent text-xs",
-                  !isLookingNow && "opacity-50 cursor-not-allowed",
-                  hostingStatusConfig[hostingStatus].color
-                )}
-                disabled={!isLookingNow}
-              >
-                {(() => {
-                  const IconComponent = hostingStatusConfig[hostingStatus].icon;
-                  return (
-                    <IconComponent
-                      className={cn(
-                        "w-3 h-3",
-                        hostingStatusConfig[hostingStatus].color
-                      )}
-                    />
-                  );
-                })()}
-                <span className="text-xs">
-                  {hostingStatusConfig[hostingStatus].label}
-                </span>
-                <ChevronDown
-                  className={cn(
-                    "w-3 h-3 ml-1",
-                    hostingStatusConfig[hostingStatus].color
-                  )}
-                />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-[180px]">
-              {(
-                Object.entries(hostingStatusConfig) as [
-                  HostingStatus,
-                  (typeof hostingStatusConfig)[keyof typeof hostingStatusConfig],
-                ][]
-              ).map(([key, config]) => {
-                const IconComponent = config.icon;
-                return (
-                  <DropdownMenuItem
-                    key={key}
-                    className={cn(
-                      "flex items-center gap-2",
-                      hostingStatus === key && "bg-zinc-800"
-                    )}
-                    onClick={() => setHostingStatus(key)}
-                  >
-                    <IconComponent className={cn("w-4 h-4", config.color)} />
-                    <span className={cn(config.color)}>{config.label}</span>
-                  </DropdownMenuItem>
-                );
-              })}
-            </DropdownMenuContent>
-          </DropdownMenu>
+        <div className="flex items-center gap-2 px-4 py-2 overflow-x-auto">
+          <StatusControls variant="mobile" />
         </div>
       </nav>
 
