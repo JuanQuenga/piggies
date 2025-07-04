@@ -140,7 +140,7 @@ export default function Header() {
         try {
           const lat = position.coords.latitude;
           const lon = position.coords.longitude;
-          const apiKey = process.env.OPENWEATHER_API_SECRET_KEY;
+          const apiKey = process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY;
           if (!apiKey) {
             setWeatherError("No weather API key");
             setWeatherLoading(false);
