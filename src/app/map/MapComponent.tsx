@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import React, { useState, useEffect } from "react";
 import { Id } from "../../../convex/_generated/dataModel";
 
@@ -25,14 +26,27 @@ interface MapComponentProps {
   onProfileClick: (userId: Id<"users">) => void;
 }
 
+// Dynamically import the client component with SSR disabled
+const MapComponentClient = dynamic(() => import("./MapComponentClient"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center h-full">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
+        <p className="mt-2 text-zinc-400">Loading map...</p>
+      </div>
+    </div>
+  ),
+});
+
 export const MapComponent: React.FC<MapComponentProps> = (props) => {
-  const [isClient, setIsClient] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setIsClient(true);
+    setMounted(true);
   }, []);
 
-  if (!isClient) {
+  if (!mounted) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
@@ -43,21 +57,5 @@ export const MapComponent: React.FC<MapComponentProps> = (props) => {
     );
   }
 
-  // Dynamically import the client component
-  const MapComponentClient = React.lazy(() => import("./MapComponentClient"));
-
-  return (
-    <React.Suspense
-      fallback={
-        <div className="flex items-center justify-center h-full">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
-            <p className="mt-2 text-zinc-400">Loading map...</p>
-          </div>
-        </div>
-      }
-    >
-      <MapComponentClient {...props} />
-    </React.Suspense>
-  );
+  return <MapComponentClient {...props} />;
 };

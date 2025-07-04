@@ -1,10 +1,32 @@
-import { useUser } from "@clerk/nextjs";
+"use client";
+
 import { useState, useEffect } from "react";
-import { Bell } from "lucide-react";
-import { Button } from "../ui/button";
-import { useAuth } from "@clerk/nextjs";
-import { SignOutButton } from "../../app/auth/SignOutButton";
+import {
+  Bell,
+  Home,
+  Users,
+  Car,
+  Hotel,
+  Eye,
+  EyeOff,
+  ChevronDown,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { SignOutButton } from "@/app/auth";
+import { useConvexAuth } from "convex/react";
 import { useUnitPreference } from "./UnitPreferenceContext";
+import { api } from "../../../convex/_generated/api";
+import { useMutation } from "convex/react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
+import { WeatherGreeting } from "./WeatherGreeting";
+import { SmartSearch } from "./SmartSearch";
+import { Input } from "@/components/ui/input";
 
 // XP/Level system brainstorm
 const XP_LEVELS = [
@@ -38,9 +60,55 @@ function getLevel(xp: number) {
   return { level, nextLevel };
 }
 
+type HostingStatus =
+  | "not-hosting"
+  | "hosting"
+  | "hosting-group"
+  | "gloryhole"
+  | "hotel"
+  | "car"
+  | "liveplay";
+
+const hostingStatusConfig = {
+  "not-hosting": {
+    label: "Not hosting",
+    icon: Home,
+    color: "text-zinc-400",
+  },
+  hosting: {
+    label: "I'm hosting",
+    icon: Home,
+    color: "text-green-400",
+  },
+  "hosting-group": {
+    label: "I'm hosting a group",
+    icon: Users,
+    color: "text-purple-400",
+  },
+  gloryhole: {
+    label: "I have a gloryhole set up",
+    icon: Home,
+    color: "text-pink-400",
+  },
+  hotel: {
+    label: "I'm hosting in my hotel room",
+    icon: Hotel,
+    color: "text-blue-400",
+  },
+  car: {
+    label: "I'm hosting in my car",
+    icon: Car,
+    color: "text-yellow-400",
+  },
+  liveplay: {
+    label: "I'm looking to LivePlay",
+    icon: Users,
+    color: "text-red-400",
+  },
+} as const;
+
 export default function Header() {
-  const { user } = useUser();
-  const { isSignedIn, isLoaded } = useAuth();
+  const { isAuthenticated, isLoading } = useConvexAuth();
   const { isUSUnits } = useUnitPreference();
   // Placeholder XP value (replace with real user XP from backend)
   const [xp] = useState(220); // Example: user has 220 XP
@@ -57,134 +125,8 @@ export default function Header() {
   const [weatherLoading, setWeatherLoading] = useState(true);
   const [weatherError, setWeatherError] = useState<string | null>(null);
 
-  // Context-aware greetings
-  function pickGreeting(temp: number | null, condition: string) {
-    if (temp === null) return "Welcome!";
-    // Use Celsius for logic
-    const tC = isUSUnits && temp !== null ? ((temp - 32) * 5) / 9 : temp;
-    if (condition === "Rain" || condition === "Drizzle") {
-      const rainy = [
-        "Don't forget your umbrella! ☔️",
-        "Rainy days are for piggy puddles!",
-        "Stay dry and cozy!",
-        "Perfect weather for a nap!",
-      ];
-      return rainy[Math.floor(Math.random() * rainy.length)];
-    }
-    if (condition === "Snow") {
-      const snowy = [
-        "Bundle up, it's snowing! ❄️",
-        "Pigs love snowflakes!",
-        "Time for a snowball fight!",
-      ];
-      return snowy[Math.floor(Math.random() * snowy.length)];
-    }
-    if (condition === "Thunderstorm") {
-      const stormy = [
-        "Stay safe, it's stormy!",
-        "Thunder buddies unite!",
-        "Snuggle up, it's wild outside!",
-      ];
-      return stormy[Math.floor(Math.random() * stormy.length)];
-    }
-    if (condition === "Wind" || condition === "Squall") {
-      const windy = [
-        "Hold onto your hat!",
-        "It's a blustery day!",
-        "Wind in your hair, adventure in the air!",
-      ];
-      return windy[Math.floor(Math.random() * windy.length)];
-    }
-    if (tC <= 0) {
-      const cold = [
-        "Brrr! Stay warm!",
-        "Piggy snuggles recommended!",
-        "Hot cocoa time!",
-      ];
-      return cold[Math.floor(Math.random() * cold.length)];
-    }
-    if (tC >= 30) {
-      const hot = [
-        "It's a scorcher! Stay cool!",
-        "Perfect day for ice cream!",
-        "Don't forget sunscreen!",
-      ];
-      return hot[Math.floor(Math.random() * hot.length)];
-    }
-    if (condition === "Clear") {
-      const clear = [
-        "Sunny smiles ahead!",
-        "What a beautiful day!",
-        "Perfect weather for piggy adventures!",
-      ];
-      return clear[Math.floor(Math.random() * clear.length)];
-    }
-    // Default
-    const neutral = [
-      "Hope you find a friend!",
-      "Waddle on!",
-      "Keep exploring!",
-      "You're a star!",
-      "Shine bright!",
-      "Let's make today fun!",
-    ];
-    return neutral[Math.floor(Math.random() * neutral.length)];
-  }
-
-  // Humanized weather message
-  function getTempColor(temp: number, isFahrenheit: boolean) {
-    // Convert to Celsius for consistent coloring if needed
-    const tC = isFahrenheit ? ((temp - 32) * 5) / 9 : temp;
-    if (tC <= 0) return "text-blue-400"; // freezing or below
-    if (tC <= 10) return "text-cyan-400"; // cold
-    if (tC <= 20) return "text-green-400"; // mild
-    if (tC <= 28) return "text-yellow-400"; // warm
-    if (tC <= 35) return "text-orange-400"; // hot
-    return "text-red-500"; // very hot
-  }
-
-  function getWeatherGreeting(
-    name: string | undefined,
-    temp: number | null,
-    greeting: string,
-    isFahrenheit: boolean
-  ) {
-    if (temp === null) return greeting;
-    const namePart = name ? name + ", " : "";
-    const unit = isFahrenheit ? "°F" : "°C";
-    // Pick a few templates for variety, with styled temp
-    const tempSpan = (
-      <span className={getTempColor(temp, isFahrenheit) + " font-semibold"}>
-        {temp}
-        {unit}
-      </span>
-    );
-    const templates = [
-      <>
-        {namePart}it's a lovely {tempSpan} today! {greeting}
-      </>,
-      <>
-        {namePart}enjoy the {tempSpan} weather! {greeting}
-      </>,
-      <>
-        {namePart}the weather is {tempSpan}. {greeting}
-      </>,
-      <>
-        {namePart}
-        {greeting} It's {tempSpan} out!
-      </>,
-      <>
-        {namePart}feeling {tempSpan}? {greeting}
-      </>,
-      <>
-        {namePart}it's {tempSpan} right now. {greeting}
-      </>,
-    ];
-    return templates[Math.floor(Math.random() * templates.length)];
-  }
-
   // Notification state (placeholder)
-  const [hasNotifications] = useState(true);
+  const [hasNotifications, setHasNotifications] = useState(false);
 
   useEffect(() => {
     if (!navigator.geolocation) {
@@ -227,66 +169,125 @@ export default function Header() {
     );
   }, [isUSUnits]);
 
+  const [isLookingNow, setIsLookingNow] = useState(false);
+  const [hostingStatus, setHostingStatus] =
+    useState<HostingStatus>("not-hosting");
+  const [isHostingDialogOpen, setIsHostingDialogOpen] = useState(false);
+
   return (
     <header className="w-full bg-zinc-900 border-b border-zinc-800 flex items-center justify-between px-2 md:px-8 py-2 h-20">
-      {/* Main content split into three sections */}
-      <div className="flex flex-1 items-center justify-between w-full gap-4">
-        {/* Left: Weather and greeting */}
+      {/* Status Controls */}
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          {/* Looking Now Toggle */}
+          <div className="flex items-center gap-2">
+            <label
+              htmlFor="looking-now"
+              className="relative inline-flex items-center cursor-pointer"
+            >
+              <input
+                type="checkbox"
+                id="looking-now"
+                className="sr-only peer"
+                checked={isLookingNow}
+                onChange={(e) => setIsLookingNow(e.target.checked)}
+              />
+              <div className="w-14 h-7 bg-zinc-800 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300/20 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-purple-500 relative">
+                <div className="absolute inset-0 flex justify-between items-center px-1.5 pointer-events-none">
+                  <Eye className="h-3.5 w-3.5 text-zinc-400" />
+                  <EyeOff className="h-3.5 w-3.5 text-white" />
+                </div>
+              </div>
+              <span className="ms-1 text-sm font-medium text-zinc-400">
+                Looking
+              </span>
+            </label>
+          </div>
+
+          {/* Hosting Status Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className={cn(
+                  "flex items-center gap-2 px-3 py-1.5 bg-transparent",
+                  !isLookingNow && "opacity-50 cursor-not-allowed",
+                  hostingStatusConfig[hostingStatus].color
+                )}
+                disabled={!isLookingNow}
+              >
+                {(() => {
+                  const IconComponent = hostingStatusConfig[hostingStatus].icon;
+                  return (
+                    <IconComponent
+                      className={cn(
+                        "w-4 h-4",
+                        hostingStatusConfig[hostingStatus].color
+                      )}
+                    />
+                  );
+                })()}
+                <span className="text-sm">
+                  {hostingStatusConfig[hostingStatus].label}
+                </span>
+                <ChevronDown
+                  className={cn(
+                    "w-4 h-4 ml-1",
+                    hostingStatusConfig[hostingStatus].color
+                  )}
+                />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-[200px]">
+              {(
+                Object.entries(hostingStatusConfig) as [
+                  HostingStatus,
+                  (typeof hostingStatusConfig)[keyof typeof hostingStatusConfig],
+                ][]
+              ).map(([key, config]) => {
+                const IconComponent = config.icon;
+                return (
+                  <DropdownMenuItem
+                    key={key}
+                    className={cn(
+                      "flex items-center gap-2",
+                      hostingStatus === key && "bg-zinc-800"
+                    )}
+                    onClick={() => setHostingStatus(key)}
+                  >
+                    <IconComponent className={cn("w-4 h-4", config.color)} />
+                    <span className={cn(config.color)}>{config.label}</span>
+                  </DropdownMenuItem>
+                );
+              })}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+      {/* Smart Search */}
+      <div className="flex-1 px-4">
+        <SmartSearch />
+      </div>
+
+      {/* Weather Greeting */}
+      <div className="flex flex-1 items-center justify-end w-full gap-4">
         <div className="flex flex-col items-start min-w-[180px]">
           <span className="text-sm text-zinc-400">
-            {weatherLoading &&
-              (user?.firstName ? user.firstName + ", " : "") +
-                "fetching weather..."}
+            {weatherLoading && "fetching weather..."}
             {weatherError && (
               <span className="text-red-400">weather unavailable</span>
             )}
-            {weather &&
-              getWeatherGreeting(
-                user?.firstName ?? undefined,
-                weather.temp,
-                pickGreeting(weather.temp, weather.condition),
-                isUSUnits
-              )}
+            {weather && (
+              <WeatherGreeting
+                temp={weather.temp}
+                condition={weather.condition}
+                isUSUnits={isUSUnits}
+              />
+            )}
           </span>
         </div>
-
-        {/* Center: Title and subtitle */}
-        <div className="flex flex-col items-center flex-1 min-w-0">
-          <h1 className="text-lg md:text-xl font-bold text-white text-center truncate">
-            Bixbia,{" "}
-            <span className="font-extrabold text-purple-400">
-              connecting to playstation
-            </span>
-          </h1>
-          <span
-            className="w-16 md:w-24 h-1 bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 rounded-full mt-1"
-            aria-hidden="true"
-          />
-        </div>
-
-        {/* Right: XP Progress Bar */}
-        <div className="flex flex-col gap-1 items-end min-w-[200px] max-w-xs">
-          <div className="flex justify-between items-center text-xs text-zinc-400 w-full">
-            <span className="truncate">{level.name}</span>
-            <span className="text-purple-400 font-medium">{xp} XP</span>
-            <span className="truncate">{nextLevel.name}</span>
-          </div>
-          <div
-            className="w-full h-2 md:h-3 bg-zinc-800 rounded-full overflow-hidden"
-            aria-label="XP progress bar"
-            role="progressbar"
-            aria-valuenow={Math.round(progress * 100)}
-            aria-valuemin={0}
-            aria-valuemax={100}
-          >
-            <div
-              className="h-full bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 transition-all duration-300"
-              style={{ width: `${progress * 100}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Notifications: Far right */}
+        {/* Notifications
         <div className="flex items-center gap-2 min-w-[60px] justify-end ml-2">
           <Button
             variant="ghost"
@@ -299,9 +300,9 @@ export default function Header() {
               <span className="absolute top-1 right-1 block w-2 h-2 bg-pink-400 rounded-full animate-pulse" />
             )}
           </Button>
-        </div>
+        </div> */}
 
-        {isLoaded && isSignedIn && <SignOutButton />}
+        {isLoading ? null : isAuthenticated && <SignOutButton />}
       </div>
     </header>
   );

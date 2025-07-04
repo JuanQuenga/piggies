@@ -64,10 +64,10 @@ export const MessagingArea: React.FC<MessagingAreaProps> = ({
       {/* Conversation List (left column) */}
       <div
         className={
-          `hidden md:block md:w-1/3 lg:w-1/3 h-full bg-zinc-900 border-r border-zinc-800 overflow-y-auto transition-transform duration-300` +
+          `md:block md:w-1/3 lg:w-1/3 h-full bg-zinc-900 border-r border-zinc-800 overflow-y-auto transition-transform duration-300` +
           (!selectedConversationDetails
-            ? " md:translate-x-0"
-            : " md:translate-x-0")
+            ? " translate-x-0"
+            : " -translate-x-full md:translate-x-0")
         }
       >
         <ConversationList
@@ -80,8 +80,8 @@ export const MessagingArea: React.FC<MessagingAreaProps> = ({
         className={
           `flex-1 h-full bg-zinc-950 transition-transform duration-300` +
           (selectedConversationDetails
-            ? " md:translate-x-0"
-            : " md:translate-x-0")
+            ? " translate-x-0"
+            : " translate-x-full md:translate-x-0")
         }
       >
         {/* Mobile: show ConversationList or ChatView */}

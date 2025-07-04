@@ -1,29 +1,26 @@
 "use client";
-import { ClerkProvider } from "@clerk/nextjs";
+
+import { useEffect, useState } from "react";
 import ConvexClientProvider from "./ConvexClientProvider";
-import { usePathname } from "next/navigation";
 
 export default function ClientRoot({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
+  const [isClient, setIsClient] = useState(false);
 
-  // Don't render providers for error/not-found pages
-  const isErrorPage = pathname === "/_not-found" || pathname === "/_error";
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
-  if (isErrorPage) {
-    return <>{children}</>;
+  if (!isClient) {
+    return (
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+        <div className="text-white">Loading...</div>
+      </div>
+    );
   }
 
-  return (
-    <ClerkProvider
-      publishableKey={
-        process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || "pk_test_placeholder"
-      }
-    >
-      <ConvexClientProvider>{children}</ConvexClientProvider>
-    </ClerkProvider>
-  );
+  return <ConvexClientProvider>{children}</ConvexClientProvider>;
 }

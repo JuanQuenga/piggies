@@ -1,97 +1,118 @@
-import { ConvexError, v } from "convex/values";
-import { query, mutation } from "./_generated/server";
-import { Id } from "./_generated/dataModel";
+import { v } from "convex/values";
+import { mutation } from "./_generated/server";
+import { ConvexError } from "convex/values";
 
-export const loggedInUser = query({
+export const getOrCreateUser = mutation({
   args: {},
-  returns: v.union(
-    v.object({
-      _id: v.id("users"),
-      _creationTime: v.number(),
-      email: v.string(),
-      name: v.optional(v.string()),
-      imageUrl: v.optional(v.string()),
-    }),
-    v.null()
-  ),
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      return null;
+      throw new ConvexError(
+        "Called getOrCreateUser without authentication present"
+      );
     }
 
-    // Get the user's email from Clerk
     const email = identity.email;
     if (!email) {
-      throw new ConvexError("User email not found");
+      throw new ConvexError("User email not found in identity");
     }
 
-    // Look up the user in our database
+    // Check if we've already stored this identity before.
     const user = await ctx.db
       .query("users")
       .withIndex("by_email", (q) => q.eq("email", email))
       .unique();
 
-    return user;
+    if (user !== null) {
+      return user._id;
+    }
+
+    // If it's a new identity, create a new `User`.
+    return await ctx.db.insert("users", {
+      name: identity.name ?? "Anonymous",
+      email: email,
+      location: [0, 0], // Default location, should be updated later
+    });
   },
 });
 
 export const createUser = mutation({
   args: {
-    email: v.string(),
     name: v.optional(v.string()),
-    imageUrl: v.optional(v.string()),
+    email: v.string(),
+    location: v.array(v.number()),
   },
-  returns: v.id("users"),
   handler: async (ctx, args) => {
-    // Check if user already exists
-    const existingUser = await ctx.db
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new ConvexError("Called storeUser without authentication present");
+    }
+
+    // Check if we've already stored this identity before.
+    const user = await ctx.db
       .query("users")
       .withIndex("by_email", (q) => q.eq("email", args.email))
       .unique();
 
-    if (existingUser) {
-      return existingUser._id;
+    if (user !== null) {
+      // If we've seen this identity before but the name has changed, patch the value.
+      if (args.name && user.name !== args.name) {
+        await ctx.db.patch(user._id, { name: args.name });
+      }
+      return user._id;
     }
 
+    // If it's a new identity, create a new `User`.
+    const defaultName = identity.name ?? "Anonymous";
     return await ctx.db.insert("users", {
+      name: args.name ?? defaultName,
       email: args.email,
-      name: args.name,
-      imageUrl: args.imageUrl,
+      location: args.location,
     });
   },
 });
 
-// Helper function to get or create user from Clerk identity
-export const getOrCreateUser = mutation({
-  args: {},
-  returns: v.id("users"),
-  handler: async (ctx) => {
+export const updateUser = mutation({
+  args: {
+    name: v.optional(v.string()),
+    email: v.optional(v.string()),
+    imageUrl: v.optional(v.string()),
+    bio: v.optional(v.string()),
+    tags: v.optional(v.array(v.string())),
+    isHosting: v.optional(v.boolean()),
+    lastActive: v.optional(v.number()),
+    displayName: v.optional(v.string()),
+    location: v.optional(v.array(v.number())),
+  },
+  handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      throw new ConvexError("Not authenticated");
+      throw new ConvexError("Called updateUser without authentication present");
     }
 
-    const email = identity.email;
-    if (!email) {
-      throw new ConvexError("User email not found");
+    if (!identity.email) {
+      throw new ConvexError("User email not found in identity");
     }
 
-    // Check if user already exists
-    const existingUser = await ctx.db
+    const user = await ctx.db
       .query("users")
-      .withIndex("by_email", (q) => q.eq("email", email))
+      .withIndex("by_email", (q) => q.eq("email", identity.email))
       .unique();
 
-    if (existingUser) {
-      return existingUser._id;
+    if (!user) {
+      throw new ConvexError("User not found");
     }
 
-    // Create new user from Clerk data
-    return await ctx.db.insert("users", {
-      email: email,
-      name: identity.name,
-      imageUrl: identity.pictureUrl,
-    });
+    // Only update fields that are provided and not undefined
+    const updates: Record<string, any> = {};
+    for (const [key, value] of Object.entries(args)) {
+      if (value !== undefined) {
+        updates[key] = value;
+      }
+    }
+
+    if (Object.keys(updates).length > 0) {
+      await ctx.db.patch(user._id, updates);
+    }
   },
 });

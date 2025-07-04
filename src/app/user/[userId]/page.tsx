@@ -86,11 +86,11 @@ function UserProfilePageContent() {
         otherParticipantUserId,
       });
       // Navigate to chat with the conversation ID as a query parameter
-      router.push(`/chat?conversation=${result.conversationId}`);
+      router.push(`/chats?conversation=${result.conversationId}`);
     } catch (error) {
       console.error("Failed to start chat:", error);
       // Fallback to just navigating to chat
-      router.push("/chat");
+      router.push("/chats");
     }
   };
 

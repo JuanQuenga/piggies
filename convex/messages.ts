@@ -8,24 +8,37 @@ import {
 import { Doc, Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import { paginationOptsValidator } from "convex/server";
+import { ConvexError } from "convex/values";
+import { DataModel } from "./_generated/dataModel";
+import { IndexRangeBuilder, QueryBuilder } from "convex/server";
+
+// Remove duplicate QueryBuilder interface since it's already defined in convex/server
+type MessageDoc = Doc<"messages">;
+type ConversationDoc = Doc<"conversations">;
+type UserDoc = Doc<"users">;
+type ProfileDoc = Doc<"profiles">;
 
 // TEMP: Mock userId for development. Replace with Clerk integration in production.
 const MOCK_USER_ID = "mock_user_id" as Id<"users">;
 
 // Temporary authentication function - will be replaced with proper Clerk integration
-async function getAuthenticatedUserId(
-  ctx:
-    | { db: any; auth: any; storage: any }
-    | { db: any; auth: any; storage?: any }
-): Promise<Id<"users"> | null> {
+async function getAuthenticatedUserId(ctx: any): Promise<Id<"users"> | null> {
   const identity = await ctx.auth.getUserIdentity();
-  if (!identity) return null;
-  // Look up user in DB by email (or Clerk ID if you store it)
+  if (!identity) {
+    return null;
+  }
+
+  const email = identity.email;
+  if (!email) {
+    return null;
+  }
+
   const user = await ctx.db
     .query("users")
-    .withIndex("by_email", (q) => q.eq("email", identity.email))
+    .withIndex("by_email", (q) => q.eq("email", email))
     .unique();
-  return user?._id ?? null;
+
+  return user ? user._id : null;
 }
 
 export const getOrCreateConversation = internalMutation({
@@ -43,8 +56,8 @@ export const getOrCreateConversation = internalMutation({
     const sortedParticipantIds = [participantOneId, participantTwoId].sort();
     const existingConversation = await ctx.db
       .query("conversations")
-      .withIndex("by_participantIds", (q) =>
-        q.eq("participantIds", sortedParticipantIds)
+      .withIndex("by_participant_time", (q) =>
+        q.eq("participantSet", sortedParticipantIds)
       )
       .unique();
     if (existingConversation) {
@@ -53,7 +66,9 @@ export const getOrCreateConversation = internalMutation({
     const conversationId: Id<"conversations"> = await ctx.db.insert(
       "conversations",
       {
-        participantIds: sortedParticipantIds,
+        participants: sortedParticipantIds,
+        participantSet: sortedParticipantIds,
+        lastMessageTime: Date.now(),
       }
     );
     return conversationId;
@@ -122,7 +137,7 @@ export const getOrCreateConversationWithParticipant = mutation({
 export const sendMessage = mutation({
   args: {
     receiverId: v.id("users"),
-    body: v.string(),
+    content: v.string(),
     format: v.union(v.literal("text"), v.literal("image"), v.literal("video")),
   },
   handler: async (ctx, args): Promise<Id<"messages">> => {
@@ -144,8 +159,8 @@ export const sendMessage = mutation({
 
     const messageId: Id<"messages"> = await ctx.db.insert("messages", {
       conversationId,
-      authorId: senderId,
-      body: args.body,
+      senderId,
+      content: args.content,
       format: args.format,
     });
 
@@ -178,7 +193,7 @@ export const listMessages = query({
 
     const result = await ctx.db
       .query("messages")
-      .withIndex("by_conversationId", (q) =>
+      .withIndex("by_conversation", (q) =>
         q.eq("conversationId", args.conversationId)
       )
       .order("desc")
@@ -188,21 +203,19 @@ export const listMessages = query({
       result.page.map(async (message) => {
         const authorProfile = await ctx.db
           .query("profiles")
-          .withIndex("by_userId", (q) => q.eq("userId", message.authorId))
+          .withIndex("by_userId", (q) => q.eq("userId", message.senderId))
           .unique();
 
-        const authorUser = await ctx.db.get(message.authorId);
+        const authorUser = await ctx.db.get(message.senderId);
 
         let attachmentUrl: string | null = null;
         if (message.format === "image" || message.format === "video") {
-          if (message.body) {
+          if (message.storageId) {
             try {
-              attachmentUrl = await ctx.storage.getUrl(
-                message.body as Id<"_storage">
-              );
+              attachmentUrl = await ctx.storage.getUrl(message.storageId);
             } catch (e) {
               console.error(
-                `Failed to get URL for storageId ${message.body}`,
+                `Failed to get URL for storageId ${message.storageId}`,
                 e
               );
               attachmentUrl = null;
@@ -212,36 +225,29 @@ export const listMessages = query({
 
         let authorAvatarFinalUrl: string | null = null;
         if (authorProfile?.avatarUrl) {
-          try {
-            authorAvatarFinalUrl = await ctx.storage.getUrl(
-              authorProfile.avatarUrl as Id<"_storage">
-            );
-          } catch (e) {
-            console.error(
-              `Failed to get URL for avatar storageId ${authorProfile.avatarUrl}`,
-              e
-            );
-          }
+          authorAvatarFinalUrl = authorProfile.avatarUrl;
         } else if (authorUser?.imageUrl) {
           authorAvatarFinalUrl = authorUser.imageUrl;
         }
 
+        const messageAuthor = {
+          _id: message.senderId,
+          name:
+            authorProfile?.displayName ?? authorUser?.name ?? "Unknown User",
+          avatarUrl: authorAvatarFinalUrl,
+        };
+
         return {
           ...message,
-          author: {
-            _id: message.authorId,
-            displayName:
-              authorProfile?.displayName ?? authorUser?.name ?? "Unknown User",
-            avatarUrl: authorAvatarFinalUrl,
-          },
-          attachmentUrl: attachmentUrl,
+          author: messageAuthor,
+          attachmentUrl,
         };
       })
     );
+
     return {
+      ...result,
       page: messagesWithAuthorsAndUrls,
-      isDone: result.isDone,
-      continueCursor: result.continueCursor,
     };
   },
 });
@@ -249,101 +255,140 @@ export const listMessages = query({
 export const listConversations = query({
   args: { paginationOpts: paginationOptsValidator },
   handler: async (ctx, args) => {
-    const userId = MOCK_USER_ID;
+    const userId = await getAuthenticatedUserId(ctx);
+    if (!userId) {
+      throw new Error("User not authenticated");
+    }
+    console.log("Fetching conversations for user:", userId);
 
-    const allConversations = await ctx.db.query("conversations").collect();
-    const userConversations = allConversations.filter((conv) =>
-      conv.participantIds.includes(userId)
-    );
+    // Query conversations using the new index
+    const result = await ctx.db
+      .query("conversations")
+      .withIndex(
+        "by_participant_time",
+        (q: QueryBuilder<"conversations", "by_participant_time">) =>
+          q.eq("participantSet", [userId])
+      )
+      .order("desc")
+      .paginate(args.paginationOpts);
 
     const conversationsWithDetails = await Promise.all(
-      userConversations.map(async (conv) => {
-        const otherParticipantId = conv.participantIds.find(
+      result.page.map(async (conv) => {
+        const otherParticipantId = conv.participants.find(
           (id) => id !== userId
         )!;
+        console.log("Processing conversation with:", otherParticipantId);
+
+        // Get other participant's profile and auth info
         const otherUserProfile = await ctx.db
           .query("profiles")
           .withIndex("by_userId", (q) => q.eq("userId", otherParticipantId))
           .unique();
         const otherUserAuth = await ctx.db.get(otherParticipantId);
 
-        let lastMessageSnippet: string | null = null;
-        let lastMessageTimestamp: number | null = null;
-        let lastMessageFormat: string | null = null;
-
+        let lastMessage = null;
         if (conv.lastMessageId) {
-          const lastMessage = await ctx.db.get(conv.lastMessageId);
-          if (lastMessage) {
-            lastMessageTimestamp = lastMessage._creationTime;
-            lastMessageFormat = lastMessage.format;
-            if (lastMessage.format === "text") {
-              lastMessageSnippet =
-                lastMessage.body.substring(0, 30) +
-                (lastMessage.body.length > 30 ? "..." : "");
-            } else if (lastMessage.format === "image") {
-              lastMessageSnippet = "📷 Image";
-            } else if (lastMessage.format === "video") {
-              lastMessageSnippet = "📹 Video";
-            }
-          }
+          lastMessage = await ctx.db.get(conv.lastMessageId);
         }
 
-        let otherUserAvatarFinalUrl: string | null = null;
+        let avatarUrl = null;
         if (otherUserProfile?.avatarUrl) {
           try {
-            otherUserAvatarFinalUrl = await ctx.storage.getUrl(
+            avatarUrl = await ctx.storage.getUrl(
               otherUserProfile.avatarUrl as Id<"_storage">
             );
           } catch (e) {
             console.error(
-              `Failed to get URL for other user avatar storageId ${otherUserProfile.avatarUrl}`,
+              `Failed to get URL for avatar storageId ${otherUserProfile.avatarUrl}`,
               e
             );
           }
         } else if (otherUserAuth?.imageUrl) {
-          otherUserAvatarFinalUrl = otherUserAuth.imageUrl;
+          avatarUrl = otherUserAuth.imageUrl;
         }
 
         return {
           _id: conv._id,
-          participantIds: conv.participantIds,
+          participants: conv.participants,
           otherParticipant: {
             _id: otherParticipantId,
             displayName:
               otherUserProfile?.displayName ??
               otherUserAuth?.name ??
               "Unknown User",
-            avatarUrl: otherUserAvatarFinalUrl,
+            avatarUrl,
           },
-          lastMessageSnippet,
-          lastMessageTimestamp,
-          lastMessageFormat,
+          lastMessageSnippet: lastMessage?.content ?? null,
+          lastMessageFormat: lastMessage?.format ?? "text",
+          lastMessageTimestamp: conv.lastMessageTime,
         };
       })
     );
 
-    conversationsWithDetails.sort((a, b) => {
-      if (b.lastMessageTimestamp === null) return -1;
-      if (a.lastMessageTimestamp === null) return 1;
-      return b.lastMessageTimestamp - a.lastMessageTimestamp;
-    });
-
-    const { numItems, cursor: startCursorStr } = args.paginationOpts;
-    const startIndex = startCursorStr ? parseInt(startCursorStr) : 0;
-
-    const page = conversationsWithDetails.slice(
-      startIndex,
-      startIndex + numItems
+    console.log(
+      "Returning conversations with details:",
+      conversationsWithDetails.length
     );
-    const newCursor =
-      startIndex + page.length < conversationsWithDetails.length
-        ? (startIndex + page.length).toString()
-        : null;
+    return {
+      isDone: result.isDone,
+      continueCursor: result.continueCursor,
+      page: conversationsWithDetails,
+    };
+  },
+});
+
+export const getConversationDetails = query({
+  args: {
+    conversationId: v.id("conversations"),
+  },
+  handler: async (ctx, args) => {
+    const currentUserId = await getAuthenticatedUserId(ctx);
+    if (!currentUserId) {
+      throw new Error("User not authenticated");
+    }
+
+    const conversation = await ctx.db.get(args.conversationId);
+    if (!conversation) {
+      throw new Error("Conversation not found");
+    }
+
+    // Make sure the current user is a participant
+    if (!conversation.participants.includes(currentUserId)) {
+      throw new Error("User is not a participant in this conversation");
+    }
+
+    // Get the other participant's ID
+    const otherParticipantId = conversation.participants.find(
+      (id: Id<"users">) => id !== currentUserId
+    );
+    if (!otherParticipantId) {
+      throw new Error("Other participant not found");
+    }
+
+    // Get the other participant's profile and auth info
+    const otherUserProfile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", otherParticipantId))
+      .unique();
+    const otherUserAuth = await ctx.db.get(otherParticipantId);
+
+    let otherUserAvatarFinalUrl: string | null = null;
+    if (otherUserProfile?.avatarUrl) {
+      otherUserAvatarFinalUrl = otherUserProfile.avatarUrl;
+    } else if (otherUserAuth?.imageUrl) {
+      otherUserAvatarFinalUrl = otherUserAuth.imageUrl;
+    }
 
     return {
-      page,
-      isDone: newCursor === null,
-      continueCursor: newCursor ?? "",
+      conversationId: args.conversationId,
+      otherParticipant: {
+        _id: otherParticipantId,
+        displayName:
+          otherUserProfile?.displayName ??
+          otherUserAuth?.name ??
+          "Unknown User",
+        avatarUrl: otherUserAvatarFinalUrl,
+      },
     };
   },
 });

@@ -41,6 +41,9 @@ interface TileViewProps {
   onStartChat: (userId: Id<"users">) => void;
   onProfileClick: (userId: Id<"users">) => void;
   currentUserProfileForMap?: UserMarkerDisplayData | null;
+  searchQuery: string;
+  showOnlineOnly: boolean;
+  showWithinMiles: number | null;
 }
 
 function haversineDistance(
@@ -69,49 +72,43 @@ export const TileView: React.FC<TileViewProps> = ({
   onStartChat,
   onProfileClick,
   currentUserProfileForMap,
+  searchQuery,
+  showOnlineOnly,
+  showWithinMiles,
 }) => {
   const visibleUsers = useQuery(api.profiles.listVisibleUsers) || [];
 
-  const filteredUsers = visibleUsers.filter(
+  let filteredUsers = visibleUsers.filter(
     (user) => user.userId !== currentUserId
   );
+
+  // Apply search filter
+  if (searchQuery) {
+    const query = searchQuery.toLowerCase();
+    filteredUsers = filteredUsers.filter((user) => {
+      const displayName = (user.displayName || "").toLowerCase();
+      const userName = (user.userName || "").toLowerCase();
+      const description = (user.description || "").toLowerCase();
+      return (
+        displayName.includes(query) ||
+        userName.includes(query) ||
+        description.includes(query)
+      );
+    });
+  }
+
+  // Apply online filter
+  if (showOnlineOnly) {
+    const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+    filteredUsers = filteredUsers.filter(
+      (user) => user.lastSeen && user.lastSeen > fiveMinutesAgo
+    );
+  }
 
   const currentLat = currentUserProfileForMap?.latitude;
   const currentLon = currentUserProfileForMap?.longitude;
 
-  if (visibleUsers.length === 0) {
-    return (
-      <div className="flex-1 flex items-center justify-center p-8 bg-zinc-950">
-        <div className="text-center">
-          <div className="text-6xl mb-4">🌍</div>
-          <h3 className="text-xl font-semibold text-white mb-2">
-            No profiles visible
-          </h3>
-          <p className="text-zinc-400">
-            Be the first to share your location and become visible to others!
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  if (filteredUsers.length === 0) {
-    return (
-      <div className="flex-1 flex items-center justify-center p-8 bg-zinc-950">
-        <div className="text-center">
-          <div className="text-6xl mb-4">👋</div>
-          <h3 className="text-xl font-semibold text-white mb-2">
-            You're the only one here
-          </h3>
-          <p className="text-zinc-400">
-            Share your location to connect with others nearby!
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  // Attach distance to each user for sorting
+  // Attach distance to each user for sorting and filtering
   const usersWithDistance = filteredUsers.map((user) => {
     let distance = undefined;
     if (
@@ -131,6 +128,14 @@ export const TileView: React.FC<TileViewProps> = ({
     return { ...user, _distance: distance };
   });
 
+  // Apply distance filter
+  if (showWithinMiles !== null) {
+    usersWithDistance.filter((user) => {
+      if (user._distance === undefined) return false;
+      return user._distance <= showWithinMiles;
+    });
+  }
+
   // Sort by distance (nearest first), users without distance at the end
   usersWithDistance.sort((a, b) => {
     if (a._distance === undefined && b._distance === undefined) return 0;
@@ -139,44 +144,41 @@ export const TileView: React.FC<TileViewProps> = ({
     return a._distance - b._distance;
   });
 
-  return (
-    <div className="flex-1 p-4 bg-zinc-950">
-      <div className="mb-4">
-        <h2 className="text-2xl font-bold text-white mb-1">People Nearby</h2>
-        <p className="text-zinc-400">
-          {filteredUsers.length}{" "}
-          {filteredUsers.length === 1 ? "person" : "people"} visible
-        </p>
-      </div>
-
-      {/* Debug Panel */}
-      <div className="mb-4 p-3 bg-zinc-900 border border-zinc-800 rounded-lg">
-        <h4 className="text-sm font-semibold text-white mb-2">Debug Info</h4>
-        <div className="text-xs space-y-1 text-zinc-400">
-          <div>
-            Your profile exists: {currentUserProfileForMap ? "Yes" : "No"}
-          </div>
-          <div>Your User ID: {currentUserId || "None"}</div>
-          <div>
-            Your Latitude: {currentUserProfileForMap?.latitude || "Not set"}
-          </div>
-          <div>
-            Your Longitude: {currentUserProfileForMap?.longitude || "Not set"}
-          </div>
-          <div>
-            Your visibility:{" "}
-            {currentUserProfileForMap?.isVisible ? "Visible" : "Hidden"}
-          </div>
-          <div>Total visible users: {visibleUsers.length}</div>
-          <div>Filtered users (excluding you): {filteredUsers.length}</div>
-          <div>
-            Users with distance:{" "}
-            {usersWithDistance.filter((u) => u._distance !== undefined).length}
-          </div>
+  if (visibleUsers.length === 0) {
+    return (
+      <div className="flex-1 flex items-center justify-center p-8">
+        <div className="text-center">
+          <div className="text-6xl mb-4">🌍</div>
+          <h3 className="text-xl font-semibold text-white mb-2">
+            No profiles visible
+          </h3>
+          <p className="text-zinc-400">
+            Be the first to share your location and become visible to others!
+          </p>
         </div>
       </div>
+    );
+  }
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+  if (filteredUsers.length === 0) {
+    return (
+      <div className="flex-1 flex items-center justify-center p-8">
+        <div className="text-center">
+          <div className="text-6xl mb-4">👋</div>
+          <h3 className="text-xl font-semibold text-white mb-2">
+            No matches found
+          </h3>
+          <p className="text-zinc-400">
+            Try adjusting your filters or search criteria
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-4">
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
         {usersWithDistance.map((user) => {
           const finalAvatarUrl =
             user.avatarUrl ||
@@ -184,87 +186,57 @@ export const TileView: React.FC<TileViewProps> = ({
               user.displayName || user.userName || user.userEmail || "U"
             )}&background=8b5cf6&color=fff&size=128`;
 
-          const lastSeenText = user.lastSeen
-            ? new Date(user.lastSeen).toLocaleString()
-            : "Unknown";
-
-          let distanceDisplay = "--";
-          if (
-            currentLat !== undefined &&
-            currentLon !== undefined &&
-            user.latitude !== undefined &&
-            user.longitude !== undefined
-          ) {
-            const distMi = haversineDistance(
-              currentLat,
-              currentLon,
-              user.latitude,
-              user.longitude,
-              "mi"
-            );
-            const distKm = haversineDistance(
-              currentLat,
-              currentLon,
-              user.latitude,
-              user.longitude,
-              "km"
-            );
-            distanceDisplay = `${distMi.toFixed(1)} mi / ${distKm.toFixed(1)} km`;
-          }
+          const isOnline =
+            user.lastSeen && user.lastSeen > Date.now() - 5 * 60 * 1000;
 
           return (
             <Card
               key={user._id}
-              className="hover:shadow-lg transition-shadow duration-200 cursor-pointer group bg-card border border-border rounded-xl"
-              tabIndex={0}
-              aria-label={`Profile of ${user.displayName || user.userName || "Anonymous User"}`}
+              className="hover:shadow-lg transition-shadow duration-200 cursor-pointer group bg-card border border-border rounded-xl overflow-hidden"
               onClick={() => onProfileClick(user.userId)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  onProfileClick(user.userId);
-                }
-              }}
             >
-              <CardHeader className="pb-3 flex flex-row items-center gap-3">
+              <div className="aspect-square relative">
                 <img
                   src={finalAvatarUrl}
                   alt={user.displayName || user.userName || "User"}
-                  className="w-14 h-14 rounded-full object-cover border-2 border-primary shadow"
+                  className="w-full h-full object-cover"
                 />
-                <div className="flex-1 min-w-0">
-                  <CardTitle className="text-lg truncate text-primary">
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                <div className="absolute bottom-0 left-0 right-0 p-2">
+                  <h3 className="text-white font-semibold truncate">
                     {user.displayName || user.userName || "Anonymous User"}
-                  </CardTitle>
+                  </h3>
+                  {user._distance !== undefined && (
+                    <p className="text-xs text-white/80">
+                      {user._distance.toFixed(1)} miles away
+                    </p>
+                  )}
+                </div>
+                {isOnline && (
+                  <div className="absolute top-2 right-2">
+                    <div className="w-3 h-3 bg-green-500 rounded-full ring-2 ring-white" />
+                  </div>
+                )}
+              </div>
+              <CardContent className="p-2">
+                <div className="flex items-center justify-between">
                   {user.status && (
-                    <Badge variant="secondary" className="text-xs mt-1">
+                    <Badge variant="secondary" className="text-xs">
                       {user.status}
                     </Badge>
                   )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onStartChat(user.userId);
+                    }}
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                  </Button>
                 </div>
-              </CardHeader>
-              <CardContent className="pt-0 pb-4">
-                {user.description && (
-                  <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
-                    {user.description}
-                  </p>
-                )}
-                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-                  <span>Last seen:</span>
-                  <span>{lastSeenText}</span>
-                </div>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-                  <span>Distance:</span>
-                  <span>{distanceDisplay}</span>
-                </div>
-                <Button
-                  variant="outline"
-                  className="w-full mt-2 font-semibold"
-                  onClick={() => onStartChat(user.userId)}
-                  aria-label={`Start chat with ${user.displayName || user.userName || "Anonymous User"}`}
-                >
-                  Message
-                </Button>
               </CardContent>
             </Card>
           );

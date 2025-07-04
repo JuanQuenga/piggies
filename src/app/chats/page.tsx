@@ -5,9 +5,8 @@ import { useQuery, useMutation } from "convex/react";
 import { useAuth } from "@clerk/nextjs";
 import { useSearchParams } from "next/navigation";
 import { api } from "../../../convex/_generated/api";
-import { MessagingArea } from "../../app/chat/MessagingArea";
+import { MessagingArea } from "./MessagingArea";
 import { Id } from "../../../convex/_generated/dataModel";
-import Providers from "../Providers";
 
 // Force dynamic rendering to prevent static generation issues
 export const dynamic = "force-dynamic";
@@ -21,23 +20,51 @@ interface SelectedConversationDetails {
   };
 }
 
-// Separate component that uses Convex hooks - will be wrapped in ConvexProvider
-function ChatPageContent() {
+export default function ChatPage() {
+  // Authentication hooks
   const { isSignedIn, isLoaded } = useAuth();
   const searchParams = useSearchParams();
-  const [mounted, setMounted] = useState(false);
 
+  // State hooks
+  const [mounted, setMounted] = useState(false);
+  const [selectedConversationDetails, setSelectedConversationDetails] =
+    useState<SelectedConversationDetails | null>(null);
+
+  // Query hooks - always declare these at the top level
+  const currentUserId = useQuery(api.users.getMyId);
+  const conversationId = searchParams.get(
+    "conversation"
+  ) as Id<"conversations"> | null;
+  const conversationDetails = useQuery(
+    api.messages.getConversationDetails,
+    conversationId ? { conversationId } : "skip"
+  );
+
+  // Effects
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Now useQuery is called within ConvexProvider context
-  const currentUserId = useQuery(api.users.getMyId);
-  const [selectedConversationDetails, setSelectedConversationDetails] =
-    useState<SelectedConversationDetails | null>(null);
+  useEffect(() => {
+    if (conversationDetails) {
+      setSelectedConversationDetails(conversationDetails);
+    }
+  }, [conversationDetails]);
 
-  // Show loading state while authentication is being determined
-  if (!isLoaded) {
+  // Event handlers
+  const handleSelectConversation = (
+    conversationId: Id<"conversations">,
+    otherParticipant: SelectedConversationDetails["otherParticipant"]
+  ) => {
+    setSelectedConversationDetails({ conversationId, otherParticipant });
+  };
+
+  const handleBackToConversationList = () => {
+    setSelectedConversationDetails(null);
+  };
+
+  // Render loading states and auth gates
+  if (!isLoaded || !mounted) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
@@ -48,7 +75,6 @@ function ChatPageContent() {
     );
   }
 
-  // Redirect to sign in if not authenticated
   if (!isSignedIn) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -64,8 +90,7 @@ function ChatPageContent() {
     );
   }
 
-  // Show loading state while user data is being fetched
-  if (!mounted || currentUserId === undefined) {
+  if (currentUserId === undefined) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
@@ -76,17 +101,7 @@ function ChatPageContent() {
     );
   }
 
-  const handleSelectConversation = (
-    conversationId: Id<"conversations">,
-    otherParticipant: SelectedConversationDetails["otherParticipant"]
-  ) => {
-    setSelectedConversationDetails({ conversationId, otherParticipant });
-  };
-
-  const handleBackToConversationList = () => {
-    setSelectedConversationDetails(null);
-  };
-
+  // Main render
   return (
     <div className="h-full w-full">
       <MessagingArea
@@ -96,14 +111,5 @@ function ChatPageContent() {
         onBackToConversationList={handleBackToConversationList}
       />
     </div>
-  );
-}
-
-// Main page component that provides the ConvexProvider context
-export default function ChatPage() {
-  return (
-    <Providers>
-      <ChatPageContent />
-    </Providers>
   );
 }

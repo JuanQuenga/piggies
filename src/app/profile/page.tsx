@@ -1,14 +1,17 @@
 "use client";
 
-import Providers from "../Providers";
-import ProfileEditor from "../../app/profile/ProfileEditor";
+import { ProfileEditor } from "./ProfileEditor";
 import { useEffect, useState } from "react";
+import { useQuery } from "convex/react";
+import { api } from "../../../convex/_generated/api";
 
 // Force dynamic rendering to prevent static generation issues
 export const dynamic = "force-dynamic";
 
 export default function ProfilePage() {
   const [mounted, setMounted] = useState(false);
+  const profile = useQuery(api.profiles.getMyProfile);
+  const convexUser = useQuery(api.users.currentLoggedInUser);
 
   useEffect(() => {
     setMounted(true);
@@ -25,11 +28,18 @@ export default function ProfilePage() {
     );
   }
 
+  const handleUpdateProfile = async (data: any) => {
+    // TODO: Implement profile update
+    console.log("Updating profile:", data);
+  };
+
   return (
-    <Providers>
-      <div className="h-full w-full bg-zinc-950">
-        <ProfileEditor />
-      </div>
-    </Providers>
+    <div className="h-full w-full bg-zinc-950">
+      <ProfileEditor
+        profile={profile}
+        updateProfile={handleUpdateProfile}
+        convexUser={convexUser}
+      />
+    </div>
   );
 }

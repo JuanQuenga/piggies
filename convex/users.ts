@@ -80,8 +80,9 @@ export const createOrGetUser = mutation({
     // Create new user from Clerk data
     return await ctx.db.insert("users", {
       email: email,
-      name: identity.name,
+      name: identity.name ?? "Anonymous",
       imageUrl: identity.pictureUrl,
+      location: [0, 0], // Default location
     });
   },
 });

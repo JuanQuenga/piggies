@@ -17,7 +17,7 @@ async function getCurrentUserId(ctx: any): Promise<Id<"users"> | null> {
 
   const user = await ctx.db
     .query("users")
-    .withIndex("by_email", (q: any) => q.eq("email", email))
+    .withIndex("by_email", (q) => q.eq("email", email))
     .unique();
 
   return user ? user._id : null;

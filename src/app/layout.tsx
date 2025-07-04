@@ -1,19 +1,22 @@
+import { Inter } from "next/font/google";
 import "./globals.css";
-import { ClerkProvider } from "@clerk/nextjs";
-import { UnitPreferenceProvider } from "../components/common/UnitPreferenceContext";
+import Providers from "./Providers";
+
+const inter = Inter({ subsets: ["latin"] });
+
+// Force dynamic rendering to prevent SSR issues with Convex
+export const dynamic = "force-dynamic";
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
-    <ClerkProvider>
-      <UnitPreferenceProvider>
-        <html lang="en">
-          <body className="bg-zinc-950 min-h-screen">{children}</body>
-        </html>
-      </UnitPreferenceProvider>
-    </ClerkProvider>
+    <html lang="en">
+      <body className={`${inter.className} bg-zinc-950 min-h-screen`}>
+        <Providers>{children}</Providers>
+      </body>
+    </html>
   );
 }

@@ -8,16 +8,20 @@ import {
   User,
   ChevronLeft,
   ChevronRight,
+  Newspaper,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 
 const navItems = [
   { href: "/profile", icon: User, label: "Profile" },
-  { href: "/chat", icon: MessageCircle, label: "Chats" },
+  { href: "/chats", icon: MessageCircle, label: "Chats" },
   { href: "/people", icon: Users, label: "People" },
   { href: "/map", icon: Map, label: "Map" },
 ];
+
+// Desktop-only navigation items
+const desktopOnlyNavItems = [{ href: "/blog", icon: Newspaper, label: "Blog" }];
 
 interface SidebarProps {
   collapsed: boolean;
@@ -58,6 +62,24 @@ export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
         </div>
         <div className="flex flex-col gap-2 flex-1 mt-4 items-stretch w-full">
           {navItems.map(({ href, icon: Icon, label }) => (
+            <Link
+              key={href}
+              href={href}
+              className={cn(
+                "flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-zinc-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 transition-all",
+                collapsed ? "justify-center" : "justify-start"
+              )}
+              aria-label={label}
+            >
+              <Icon className="w-6 h-6" aria-hidden="true" />
+              {!collapsed && (
+                <span className="text-base font-medium">{label}</span>
+              )}
+            </Link>
+          ))}
+
+          {/* Desktop-only navigation items */}
+          {desktopOnlyNavItems.map(({ href, icon: Icon, label }) => (
             <Link
               key={href}
               href={href}

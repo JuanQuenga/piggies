@@ -1,15 +1,13 @@
 "use client";
 
+import { ClerkProvider, useAuth } from "@clerk/nextjs";
 import { ConvexProviderWithClerk } from "convex/react-clerk";
 import { ConvexReactClient } from "convex/react";
-import { useAuth } from "@clerk/nextjs";
 import { ConvexUserBootstrapper } from "./ConvexUserBootstrapper";
 import AppAuthGate from "./AppAuthGate";
 
 // Use NEXT_PUBLIC_CONVEX_URL for the Convex deployment URL
-const convex = new ConvexReactClient(
-  process.env.NEXT_PUBLIC_CONVEX_URL || "https://placeholder.convex.cloud"
-);
+const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
 export default function ConvexClientProvider({
   children,
@@ -17,9 +15,13 @@ export default function ConvexClientProvider({
   children: React.ReactNode;
 }) {
   return (
-    <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
-      <ConvexUserBootstrapper />
-      <AppAuthGate>{children}</AppAuthGate>
-    </ConvexProviderWithClerk>
+    <ClerkProvider
+      publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY!}
+    >
+      <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
+        <ConvexUserBootstrapper />
+        <AppAuthGate>{children}</AppAuthGate>
+      </ConvexProviderWithClerk>
+    </ClerkProvider>
   );
 }

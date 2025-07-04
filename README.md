@@ -53,7 +53,7 @@ A modern location-based social networking app built with Next.js 15, featuring r
 - **`/map`** - Interactive map with user locations
 - **`/people`** - Discover people nearby
 - **`/profile`** - Edit your profile and view others
-- **`/chat`** - Real-time messaging interface
+- **`/chats`** - Real-time messaging interface
 - **`/user/[userId]`** - Individual user profiles
 - **`/settings`** - App settings and preferences
 
@@ -191,6 +191,37 @@ The app can be deployed to any platform that supports Next.js:
 - **Event Planning**: Create and join local events
 - **Photo Sharing**: Share moments with nearby users
 - **Custom Filters**: Advanced people discovery options
+
+### Looking Now
+
+- **Tinder-style Interface**: Swipe-based profile navigation with fluid animations
+- **Active Users Only**: Shows profiles with "Looking Now" status enabled
+- **Distance-**:
+  - Base distance: 25 miles
+- **Quick Actions**:
+  - Swipe left/right to navigate profiles (no matching system)
+  - Direct "Start Chat" button on each profile
+  - Quick view of key stats and availability
+- **Real-time Updates**:
+  - Profiles automatically refresh as users toggle their status
+  - See how long each user has been "Looking Now"
+- **Smart Filters**:
+  - Filter by specific interests or preferences
+  - Prioritize profiles based on activity and response time
+- **Mobile Optimized**:
+  - Gesture-based interactions
+  - Smooth transitions and loading states
+  - Haptic feedback on actions
+
+### Meetup Spots Map
+
+- **Interactive Heatmap**: Shows popular meetup locations with real-time density visualization
+- **Dynamic Glow Effect**: Gradient halos around spots indicate number of nearby online users
+- **Spot Categories**: Filter spots by type (bars, clubs, parks, etc.)
+- **Spot Details**: View spot information, peak hours, and current activity level
+- **User Privacy**: No individual user locations shown, only aggregated density data
+- **Time-based View**: See how spot popularity changes throughout the day
+- **Favorite Spots**: Save and track your preferred meetup locations
 
 ### Global Search Bar
 

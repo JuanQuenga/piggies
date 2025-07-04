@@ -6,14 +6,12 @@ import { api } from "../../../convex/_generated/api";
 import { MapComponent } from "../../app/map/MapComponent";
 import { Id } from "../../../convex/_generated/dataModel";
 import { useRouter } from "next/navigation";
-import Providers from "../Providers";
 import { useEffect, useState } from "react";
 
 // Force dynamic rendering to prevent static generation issues
 export const dynamic = "force-dynamic";
 
-// Separate component that uses Convex hooks - will be wrapped in ConvexProvider
-function MapPageContent() {
+export default function MapPage() {
   const { isSignedIn, isLoaded } = useAuth();
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
@@ -79,11 +77,11 @@ function MapPageContent() {
         otherParticipantUserId,
       });
       // Navigate to chat with the conversation ID as a query parameter
-      router.push(`/chat?conversation=${result.conversationId}`);
+      router.push(`/chats?conversation=${result.conversationId}`);
     } catch (error) {
       console.error("Failed to start chat:", error);
       // Fallback to just navigating to chat
-      router.push("/chat");
+      router.push("/chats");
     }
   };
 
@@ -101,14 +99,5 @@ function MapPageContent() {
         onProfileClick={handleProfileClick}
       />
     </div>
-  );
-}
-
-// Main page component that provides the ConvexProvider context
-export default function MapPage() {
-  return (
-    <Providers>
-      <MapPageContent />
-    </Providers>
   );
 }

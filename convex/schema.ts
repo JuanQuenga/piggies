@@ -3,9 +3,15 @@ import { v } from "convex/values";
 
 const applicationTables = {
   users: defineTable({
+    name: v.string(),
     email: v.string(),
-    name: v.optional(v.string()),
     imageUrl: v.optional(v.string()),
+    bio: v.optional(v.string()),
+    tags: v.optional(v.array(v.string())),
+    isHosting: v.optional(v.boolean()),
+    lastActive: v.optional(v.number()),
+    displayName: v.optional(v.string()),
+    location: v.array(v.number()),
   }).index("by_email", ["email"]),
 
   profiles: defineTable({
@@ -17,29 +23,26 @@ const applicationTables = {
     status: v.optional(v.string()),
     isVisible: v.boolean(),
     lastSeen: v.optional(v.number()),
-    avatarUrl: v.optional(v.string()), // Convex storage ID for the avatar
-
-    // Photo gallery
-    photos: v.optional(v.array(v.string())), // Up to 5 Convex storage IDs
-    mainPhotoIndex: v.optional(v.number()), // Index in the photos array
-
-    // Home location
+    avatarUrl: v.optional(v.string()),
+    photos: v.optional(v.array(v.string())),
+    mainPhotoIndex: v.optional(v.number()),
     homeLocation: v.optional(v.string()),
-
     // Stats
     age: v.optional(v.number()),
-    heightInCm: v.optional(v.number()),
-    weightInKg: v.optional(v.number()),
-    endowment: v.optional(v.string()),
+    isAgeVisible: v.optional(v.boolean()),
+    heightInInches: v.optional(v.number()), // Stored in inches, converted to cm for metric users
+    isHeightVisible: v.optional(v.boolean()),
+    weightInLbs: v.optional(v.number()), // Stored in lbs, converted to kg for metric users
+    isWeightVisible: v.optional(v.boolean()),
+    endowmentLength: v.optional(v.number()), // Stored in inches, converted to cm for metric users
+    endowmentCut: v.optional(v.string()), // "Cut" or "Uncut"
+    isEndowmentVisible: v.optional(v.boolean()),
     bodyType: v.optional(v.string()),
-
-    // Identity
+    isBodyTypeVisible: v.optional(v.boolean()),
     gender: v.optional(v.string()),
     expression: v.optional(v.string()),
     sexuality: v.optional(v.string()),
     position: v.optional(v.string()),
-
-    // Scene
     location: v.optional(v.string()),
     intoPublic: v.optional(v.string()),
     lookingFor: v.optional(v.string()),
@@ -47,20 +50,14 @@ const applicationTables = {
     kinks: v.optional(v.array(v.string())),
     into: v.optional(v.array(v.string())),
     interaction: v.optional(v.string()),
-
-    // Health & Preferences
     practices: v.optional(v.array(v.string())),
     hivStatus: v.optional(v.string()),
-    hivTestedDate: v.optional(v.number()), // timestamp
-    stiTestedDate: v.optional(v.number()), // timestamp
+    hivTestedDate: v.optional(v.number()),
+    stiTestedDate: v.optional(v.number()),
     safeguards: v.optional(v.array(v.string())),
     comfortLevels: v.optional(v.array(v.string())),
     carrying: v.optional(v.array(v.string())),
-
-    // Hosting status
     hostingStatus: v.optional(v.string()),
-
-    // Visibility toggles for each section
     showStats: v.optional(v.boolean()),
     showIdentity: v.optional(v.boolean()),
     showScene: v.optional(v.boolean()),
@@ -70,18 +67,38 @@ const applicationTables = {
     .index("by_visibility_and_lastSeen", ["isVisible", "lastSeen"]),
 
   conversations: defineTable({
-    participantIds: v.array(v.id("users")),
+    participants: v.array(v.id("users")),
+    lastMessageTime: v.number(),
     lastMessageId: v.optional(v.id("messages")),
-  }).index("by_participantIds", ["participantIds"]),
+    participantSet: v.array(v.id("users")), // New field for efficient querying
+  })
+    .index("by_participant_time", ["participantSet", "lastMessageTime"])
+    .index("by_lastMessageTime", ["lastMessageTime"]),
 
   messages: defineTable({
     conversationId: v.id("conversations"),
-    authorId: v.id("users"),
-    body: v.string(),
+    senderId: v.id("users"),
+    content: v.string(),
     format: v.union(v.literal("text"), v.literal("image"), v.literal("video")),
+    mediaUrl: v.optional(v.string()),
+    storageId: v.optional(v.id("_storage")),
   })
-    // Corrected index: _creationTime is implicitly handled by Convex
-    .index("by_conversationId", ["conversationId"]),
+    .index("by_conversation", ["conversationId"])
+    .searchIndex("search_content", {
+      searchField: "content",
+      filterFields: ["conversationId"],
+    }),
+
+  blogPosts: defineTable({
+    title: v.string(),
+    content: v.string(),
+    authorId: v.id("users"),
+    tags: v.array(v.string()),
+    published: v.boolean(),
+    publishedAt: v.number(),
+  })
+    .index("by_publishedAt", ["published", "publishedAt"])
+    .index("by_author", ["authorId"]),
 };
 
 export default defineSchema({
