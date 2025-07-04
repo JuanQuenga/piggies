@@ -31,6 +31,7 @@ interface ProfilePageProps {
     latitude?: number;
     longitude?: number;
   } | null;
+  modalMode?: boolean;
 }
 
 function haversineDistance(
@@ -59,6 +60,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   onBack,
   onStartChat,
   currentUserProfileForMap,
+  modalMode = false,
 }) => {
   const profile = useQuery(api.profiles.getProfileWithAvatarUrl, { userId });
   const user = useQuery(api.profiles.getUser, { userId });
@@ -154,6 +156,17 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
     distanceDisplay = `${distMi.toFixed(1)} mi / ${distKm.toFixed(1)} km`;
   }
 
+  // For display, convert to metric if needed (assume US units for now, can add a prop for user preference)
+  const heightInCm = profile.heightInInches
+    ? Math.round(profile.heightInInches * 2.54)
+    : undefined;
+  const weightInKg = profile.weightInLbs
+    ? Math.round(profile.weightInLbs * 0.453592)
+    : undefined;
+  const endowmentCm = profile.endowmentLength
+    ? Math.round(profile.endowmentLength * 2.54)
+    : undefined;
+
   const renderSection = (title: string, content: React.ReactNode) => (
     <div className="space-y-3">
       <h3 className="text-lg font-semibold text-purple-600">{title}</h3>
@@ -229,9 +242,21 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
     .slice(0, 4);
 
   return (
-    <div className="h-full flex flex-col min-h-0 max-w-md w-full mx-auto">
+    <div
+      className={
+        modalMode
+          ? "h-full flex flex-col min-h-0 max-w-lg w-full mx-auto bg-zinc-900"
+          : "h-full flex flex-col min-h-0 max-w-md w-full mx-auto"
+      }
+    >
       {/* Top Bar (above photo) */}
-      <div className="sticky top-0 z-20 w-full bg-black/95 border-b border-zinc-800 px-4 py-2 flex flex-col gap-0 shadow-lg">
+      <div
+        className={
+          modalMode
+            ? "sticky top-0 z-20 w-full bg-zinc-900/95 border-b border-zinc-800 px-4 py-2 flex flex-col gap-0 shadow-lg"
+            : "sticky top-0 z-20 w-full bg-black/95 border-b border-zinc-800 px-4 py-2 flex flex-col gap-0 shadow-lg"
+        }
+      >
         <div className="flex items-center gap-2">
           <span className="text-lg font-bold text-white drop-shadow flex items-center">
             {/* Verified badge example, adjust as needed */}
@@ -260,9 +285,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
         <div className="text-white text-sm font-medium drop-shadow mt-0.5">
           {[
             profile.age && `${profile.age}`,
-            profile.heightInCm && `${profile.heightInCm}cm`,
-            profile.weightInKg && `${profile.weightInKg}kg`,
-            profile.endowment,
+            heightInCm && `${heightInCm}cm`,
+            weightInKg && `${weightInKg}kg`,
+            endowmentCm && `${endowmentCm}cm`,
             profile.bodyType,
             profile.gender,
             profile.sexuality,
@@ -273,11 +298,11 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
         </div>
       </div>
       {/* Profile Photo with overlays */}
-      <div className="relative w-full aspect-[4/5] bg-black overflow-hidden">
+      <div className="relative w-full aspect-[4/5] bg-black overflow-hidden flex items-center justify-center">
         <img
           src={mainPhoto}
           alt="Profile cover"
-          className="w-full h-full object-cover object-center"
+          className="w-48 h-48 rounded-full object-cover object-center border-4 border-white shadow-xl mx-auto mt-6 mb-4 bg-zinc-200"
         />
         {/* Overlay additional photos */}
         {additionalPhotos.length > 0 && (
@@ -301,13 +326,15 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
             </div>
           </div>
         )}
-        {/* Floating Back Button */}
-        <button
-          onClick={onBack}
-          className="absolute top-4 left-4 z-20 bg-black/60 hover:bg-black/80 text-white rounded-full p-2 shadow-lg"
-        >
-          <ArrowLeft size={24} />
-        </button>
+        {/* Floating Back Button (only if not modalMode) */}
+        {!modalMode && (
+          <button
+            onClick={onBack}
+            className="absolute top-4 left-4 z-20 bg-black/60 hover:bg-black/80 text-white rounded-full p-2 shadow-lg"
+          >
+            <ArrowLeft size={24} />
+          </button>
+        )}
       </div>
       {/* Sticky Bottom Bar */}
       <div className="w-full bg-black/90 text-white flex items-center justify-between px-4 py-3 border-t border-black/40 sticky bottom-0 z-30">

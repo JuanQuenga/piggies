@@ -1,13 +1,10 @@
 "use client";
 
 import React from "react";
-import { Dialog, DialogContent, DialogTitle } from "../../components/ui/dialog";
 import { ProfilePage } from "./ProfilePage";
 import { Id } from "../../../convex/_generated/dataModel";
-import { Sheet, SheetContent } from "../../components/ui/sheet";
 import { Button } from "../../components/ui/button";
 import { X } from "lucide-react";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = React.useState(false);
@@ -38,48 +35,62 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   currentUserProfileForMap,
 }) => {
   const isMobile = useIsMobile();
-
   if (!open) return null;
+
+  // Shared sticky header
+  const Header = (
+    <div className="sticky top-0 z-10 flex items-center justify-between bg-zinc-900/95 backdrop-blur px-4 py-3 border-b border-zinc-800">
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => onOpenChange(false)}
+        aria-label="Close"
+        className="mr-2"
+      >
+        <X className="w-6 h-6" />
+      </Button>
+      <div className="flex-1 flex items-center justify-center">
+        {/* Name will be rendered by ProfilePage header */}
+      </div>
+      <div className="w-8" /> {/* Spacer for symmetry */}
+    </div>
+  );
 
   if (isMobile) {
     // Full-page overlay for mobile
     return (
-      <div className="fixed inset-0 z-[9999] bg-black/90 flex flex-col h-full">
-        <ProfilePage
-          userId={userId}
-          onBack={onBack}
-          onStartChat={onStartChat}
-          currentUserProfileForMap={currentUserProfileForMap}
-        />
-        {/* Click outside to close */}
-        <div
-          className="fixed inset-0 z-[9998]"
-          onClick={() => onOpenChange(false)}
-          style={{ pointerEvents: "auto" }}
-        />
+      <div className="fixed inset-0 z-[9999] bg-black/90 flex flex-col h-full w-full">
+        {Header}
+        <div className="flex-1 overflow-y-auto">
+          <ProfilePage
+            userId={userId}
+            onBack={() => onOpenChange(false)}
+            onStartChat={onStartChat}
+            currentUserProfileForMap={currentUserProfileForMap}
+            modalMode={true}
+          />
+        </div>
       </div>
     );
   }
 
-  // Desktop dialog - no backdrop, just the modal
+  // Desktop dialog - centered modal
   return (
-    <div className="absolute inset-0 pointer-events-none">
-      {/* Click outside to close */}
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60">
       <div
-        className="absolute inset-0 pointer-events-auto"
-        onClick={() => onOpenChange(false)}
-      />
-      <div
-        className="absolute left-6 top-1/2 transform -translate-y-1/2 max-w-md w-full max-h-[90vh] rounded-2xl shadow-2xl p-0 bg-zinc-900/95 backdrop-blur-sm border border-zinc-800 flex flex-col z-[9999] pointer-events-auto"
+        className="relative w-full max-w-lg max-h-[90vh] rounded-2xl shadow-2xl bg-zinc-900/95 backdrop-blur border border-zinc-800 flex flex-col"
         style={{ margin: 0 }}
-        onClick={(e) => e.stopPropagation()}
       >
-        <ProfilePage
-          userId={userId}
-          onBack={onBack}
-          onStartChat={onStartChat}
-          currentUserProfileForMap={currentUserProfileForMap}
-        />
+        {Header}
+        <div className="flex-1 overflow-y-auto">
+          <ProfilePage
+            userId={userId}
+            onBack={() => onOpenChange(false)}
+            onStartChat={onStartChat}
+            currentUserProfileForMap={currentUserProfileForMap}
+            modalMode={true}
+          />
+        </div>
       </div>
     </div>
   );
