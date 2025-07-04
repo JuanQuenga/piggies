@@ -94,7 +94,7 @@ A modern location-based social networking app built with Next.js 15, featuring r
    CLERK_FRONTEND_API_URL=your_clerk_frontend_api_url_here
 
    # Weather API (optional)
-   NEXT_PUBLIC_OPENWEATHER_API_KEY=your_openweather_api_key_here
+   OPENWEATHER_API_SECRET_KEY=your_openweather_api_key_here
    ```
 
 4. **Configure Clerk Authentication**
@@ -118,7 +118,7 @@ A modern location-based social networking app built with Next.js 15, featuring r
 | `NEXT_PUBLIC_CONVEX_URL`            | Your Convex deployment URL                 | ✅       |
 | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk publishable key                      | ✅       |
 | `CLERK_FRONTEND_API_URL`            | Clerk frontend API URL                     | ✅       |
-| `NEXT_PUBLIC_OPENWEATHER_API_KEY`   | OpenWeatherMap API key for weather feature | ❌       |
+| `OPENWEATHER_API_SECRET_KEY`        | OpenWeatherMap API key for weather feature | ❌       |
 
 ## 🏗️ Project Structure
 
