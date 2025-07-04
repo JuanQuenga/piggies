@@ -10,6 +10,7 @@ import {
   Eye,
   EyeOff,
   ChevronDown,
+  MapPin,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SignOutButton } from "@/app/auth";
@@ -67,7 +68,7 @@ type HostingStatus =
   | "gloryhole"
   | "hotel"
   | "car"
-  | "liveplay";
+  | "cruising";
 
 const hostingStatusConfig = {
   "not-hosting": {
@@ -100,9 +101,9 @@ const hostingStatusConfig = {
     icon: Car,
     color: "text-yellow-400",
   },
-  liveplay: {
-    label: "I'm looking to LivePlay",
-    icon: Users,
+  cruising: {
+    label: "I'm at a cruising spot.",
+    icon: MapPin,
     color: "text-red-400",
   },
 } as const;
@@ -180,29 +181,26 @@ export default function Header() {
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-3">
           {/* Looking Now Toggle */}
-          <div className="flex items-center gap-2">
-            <label
-              htmlFor="looking-now"
-              className="relative inline-flex items-center cursor-pointer"
-            >
-              <input
-                type="checkbox"
-                id="looking-now"
-                className="sr-only peer"
-                checked={isLookingNow}
-                onChange={(e) => setIsLookingNow(e.target.checked)}
-              />
-              <div className="w-14 h-7 bg-zinc-800 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300/20 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-purple-500 relative">
-                <div className="absolute inset-0 flex justify-between items-center px-1.5 pointer-events-none">
-                  <Eye className="h-3.5 w-3.5 text-zinc-400" />
-                  <EyeOff className="h-3.5 w-3.5 text-white" />
-                </div>
-              </div>
-              <span className="ms-1 text-sm font-medium text-zinc-400">
-                Looking
-              </span>
-            </label>
-          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className={cn(
+              "flex items-center gap-2 px-3 py-1.5 bg-transparent",
+              isLookingNow
+                ? "text-green-400 border-green-400"
+                : "text-zinc-400 border-zinc-600"
+            )}
+            onClick={() => setIsLookingNow(!isLookingNow)}
+          >
+            {isLookingNow ? (
+              <Eye className="w-4 h-4" />
+            ) : (
+              <EyeOff className="w-4 h-4" />
+            )}
+            <span className="text-sm">
+              {isLookingNow ? "Looking" : "Not Looking"}
+            </span>
+          </Button>
 
           {/* Hosting Status Dropdown */}
           <DropdownMenu>
