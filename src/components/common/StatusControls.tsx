@@ -81,6 +81,19 @@ export function StatusControls({ variant = "desktop" }: StatusControlsProps) {
   const [isLocationEnabled, setIsLocationEnabled] = useState(true);
   const [locationRandomization, setLocationRandomization] = useState([0]);
   const [currentCity, setCurrentCity] = useState<string>("Unknown");
+  const [geoPermission, setGeoPermission] = useState<
+    "prompt" | "granted" | "denied"
+  >("prompt");
+
+  // Track geolocation permission
+  useEffect(() => {
+    if (navigator.permissions && navigator.permissions.query) {
+      navigator.permissions.query({ name: "geolocation" }).then((result) => {
+        setGeoPermission(result.state);
+        result.onchange = () => setGeoPermission(result.state);
+      });
+    }
+  }, []);
 
   // Get current city from weather API
   useEffect(() => {
@@ -210,28 +223,49 @@ export function StatusControls({ variant = "desktop" }: StatusControlsProps) {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {/* Location Toggle Button */}
-      <Button
-        variant="outline"
-        size={buttonSize}
-        className={cn(
-          "flex items-center gap-2 bg-transparent",
-          padding,
-          isLocationEnabled
-            ? "text-blue-400 border-blue-400"
-            : "text-zinc-400 border-zinc-600"
-        )}
-        onClick={() => setIsLocationEnabled(!isLocationEnabled)}
-      >
-        {isLocationEnabled ? (
+      {/* Location Status Control */}
+      {geoPermission !== "granted" ? (
+        <Button
+          variant="outline"
+          size={buttonSize}
+          className={cn(
+            "flex items-center gap-2 bg-transparent",
+            padding,
+            "text-blue-400 border-blue-400"
+          )}
+          onClick={() => {
+            navigator.geolocation.getCurrentPosition(
+              () => setGeoPermission("granted"),
+              () => setGeoPermission("denied")
+            );
+          }}
+        >
           <MapPin className={iconSize} />
-        ) : (
-          <MapPinOff className={iconSize} />
-        )}
-        <span className={textSize}>
-          {isLocationEnabled ? currentCity : "Location Off"}
-        </span>
-      </Button>
+          <span className={textSize}>Share My Location</span>
+        </Button>
+      ) : (
+        <Button
+          variant="outline"
+          size={buttonSize}
+          className={cn(
+            "flex items-center gap-2 bg-transparent",
+            padding,
+            isLocationEnabled
+              ? "text-blue-400 border-blue-400"
+              : "text-zinc-400 border-zinc-600"
+          )}
+          onClick={() => setIsLocationEnabled(!isLocationEnabled)}
+        >
+          {isLocationEnabled ? (
+            <MapPin className={iconSize} />
+          ) : (
+            <MapPinOff className={iconSize} />
+          )}
+          <span className={textSize}>
+            {isLocationEnabled ? currentCity : "Location Off"}
+          </span>
+        </Button>
+      )}
 
       {/* Location Randomizer */}
       <Button
