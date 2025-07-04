@@ -17,6 +17,7 @@ import type * as auth from "../auth.js";
 import type * as blog from "../blog.js";
 import type * as http from "../http.js";
 import type * as messages from "../messages.js";
+import type * as migrateConversations from "../migrateConversations.js";
 import type * as profiles from "../profiles.js";
 import type * as router from "../router.js";
 import type * as search from "../search.js";
@@ -35,6 +36,7 @@ declare const fullApi: ApiFromModules<{
   blog: typeof blog;
   http: typeof http;
   messages: typeof messages;
+  migrateConversations: typeof migrateConversations;
   profiles: typeof profiles;
   router: typeof router;
   search: typeof search;

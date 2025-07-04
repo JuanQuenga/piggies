@@ -20,7 +20,7 @@ export const getOrCreateUser = mutation({
     // Check if we've already stored this identity before.
     const user = await ctx.db
       .query("users")
-      .withIndex("by_email", (q) => q.eq("email", email))
+      .withIndex("by_email", (q: any) => q.eq("email", email))
       .unique();
 
     if (user !== null) {
@@ -51,7 +51,7 @@ export const createUser = mutation({
     // Check if we've already stored this identity before.
     const user = await ctx.db
       .query("users")
-      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .withIndex("by_email", (q: any) => q.eq("email", args.email))
       .unique();
 
     if (user !== null) {
@@ -96,7 +96,7 @@ export const updateUser = mutation({
 
     const user = await ctx.db
       .query("users")
-      .withIndex("by_email", (q) => q.eq("email", identity.email))
+      .withIndex("by_email", (q: any) => q.eq("email", identity.email!))
       .unique();
 
     if (!user) {

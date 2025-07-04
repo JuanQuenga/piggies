@@ -29,18 +29,8 @@ export const searchPeopleNearby = query({
     // Get users within the specified radius who match the search term
     const users = await ctx.db
       .query("users")
-      .withSearchIndex("search_content", (q) =>
-        q.search("bio", args.searchTerm).filter((q) =>
-          q
-            .gte("location", [
-              args.latitude - maxDist / 111, // rough conversion from km to degrees
-              args.longitude - maxDist / 111,
-            ])
-            .lte("location", [
-              args.latitude + maxDist / 111,
-              args.longitude + maxDist / 111,
-            ])
-        )
+      .withSearchIndex("search_bio", (q: any) =>
+        q.search("bio", args.searchTerm)
       )
       .collect();
 
@@ -95,7 +85,9 @@ export const searchConversations = query({
     // Get all conversations the user is part of
     const userConversations = await ctx.db
       .query("conversations")
-      .withIndex("by_participant", (q) => q.eq("participants", [args.userId]))
+      .withIndex("by_participant", (q: any) =>
+        q.eq("participants", [args.userId])
+      )
       .collect();
 
     // Search for messages in these conversations
@@ -103,11 +95,10 @@ export const searchConversations = query({
     for (const conversation of userConversations) {
       const messages = await ctx.db
         .query("messages")
-        .withSearchIndex("search_content", (q) =>
-          q
-            .search("content", args.searchTerm)
-            .filter((q) => q.eq("conversationId", conversation._id))
+        .withSearchIndex("search_content", (q: any) =>
+          q.search("content", args.searchTerm)
         )
+        .filter((q: any) => q.eq("conversationId", conversation._id))
         .take(5); // Take 5 most recent matches per conversation
 
       for (const message of messages) {
@@ -180,7 +171,9 @@ export const searchUsers = query({
   handler: async (ctx, args) => {
     const users = await ctx.db
       .query("users")
-      .withSearchIndex("search_bio", (q) => q.search("bio", args.searchTerm))
+      .withSearchIndex("search_bio", (q: any) =>
+        q.search("bio", args.searchTerm)
+      )
       .collect();
 
     return users.map((user) => ({
@@ -205,10 +198,10 @@ export const searchMessages = query({
 
     const messages = await ctx.db
       .query("messages")
-      .withSearchIndex("search_content", (q) =>
+      .withSearchIndex("search_content", (q: any) =>
         q.search("content", args.searchTerm)
       )
-      .filter((q) => q.eq("conversationId", args.conversationId))
+      .filter((q: any) => q.eq("conversationId", args.conversationId))
       .collect();
 
     return messages;

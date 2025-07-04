@@ -12,7 +12,11 @@ const applicationTables = {
     lastActive: v.optional(v.number()),
     displayName: v.optional(v.string()),
     location: v.array(v.number()),
-  }).index("by_email", ["email"]),
+  })
+    .index("by_email", ["email"])
+    .searchIndex("search_bio", {
+      searchField: "bio",
+    }),
 
   profiles: defineTable({
     userId: v.id("users"),
@@ -68,12 +72,13 @@ const applicationTables = {
 
   conversations: defineTable({
     participants: v.array(v.id("users")),
-    lastMessageTime: v.number(),
+    lastMessageTime: v.optional(v.number()),
     lastMessageId: v.optional(v.id("messages")),
-    participantSet: v.array(v.id("users")), // New field for efficient querying
+    participantSet: v.optional(v.array(v.id("users"))), // New field for efficient querying
   })
     .index("by_participant_time", ["participantSet", "lastMessageTime"])
-    .index("by_lastMessageTime", ["lastMessageTime"]),
+    .index("by_lastMessageTime", ["lastMessageTime"])
+    .index("by_participant", ["participants"]),
 
   messages: defineTable({
     conversationId: v.id("conversations"),

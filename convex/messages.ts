@@ -35,7 +35,7 @@ async function getAuthenticatedUserId(ctx: any): Promise<Id<"users"> | null> {
 
   const user = await ctx.db
     .query("users")
-    .withIndex("by_email", (q) => q.eq("email", email))
+    .withIndex("by_email", (q: any) => q.eq("email", email))
     .unique();
 
   return user ? user._id : null;
@@ -56,7 +56,7 @@ export const getOrCreateConversation = internalMutation({
     const sortedParticipantIds = [participantOneId, participantTwoId].sort();
     const existingConversation = await ctx.db
       .query("conversations")
-      .withIndex("by_participant_time", (q) =>
+      .withIndex("by_participant_time", (q: any) =>
         q.eq("participantSet", sortedParticipantIds)
       )
       .unique();
@@ -193,7 +193,7 @@ export const listMessages = query({
 
     const result = await ctx.db
       .query("messages")
-      .withIndex("by_conversation", (q) =>
+      .withIndex("by_conversation", (q: any) =>
         q.eq("conversationId", args.conversationId)
       )
       .order("desc")
@@ -203,7 +203,7 @@ export const listMessages = query({
       result.page.map(async (message) => {
         const authorProfile = await ctx.db
           .query("profiles")
-          .withIndex("by_userId", (q) => q.eq("userId", message.senderId))
+          .withIndex("by_userId", (q: any) => q.eq("userId", message.senderId))
           .unique();
 
         const authorUser = await ctx.db.get(message.senderId);
@@ -264,10 +264,8 @@ export const listConversations = query({
     // Query conversations using the new index
     const result = await ctx.db
       .query("conversations")
-      .withIndex(
-        "by_participant_time",
-        (q: QueryBuilder<"conversations", "by_participant_time">) =>
-          q.eq("participantSet", [userId])
+      .withIndex("by_participant_time", (q: any) =>
+        q.eq("participantSet", [userId])
       )
       .order("desc")
       .paginate(args.paginationOpts);
@@ -282,7 +280,9 @@ export const listConversations = query({
         // Get other participant's profile and auth info
         const otherUserProfile = await ctx.db
           .query("profiles")
-          .withIndex("by_userId", (q) => q.eq("userId", otherParticipantId))
+          .withIndex("by_userId", (q: any) =>
+            q.eq("userId", otherParticipantId)
+          )
           .unique();
         const otherUserAuth = await ctx.db.get(otherParticipantId);
 
@@ -368,7 +368,7 @@ export const getConversationDetails = query({
     // Get the other participant's profile and auth info
     const otherUserProfile = await ctx.db
       .query("profiles")
-      .withIndex("by_userId", (q) => q.eq("userId", otherParticipantId))
+      .withIndex("by_userId", (q: any) => q.eq("userId", otherParticipantId))
       .unique();
     const otherUserAuth = await ctx.db.get(otherParticipantId);
 
