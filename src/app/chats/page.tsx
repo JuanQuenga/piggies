@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery } from "convex/react";
 import { useAuth } from "@clerk/nextjs";
-import { useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { api } from "../../../convex/_generated/api";
-import { MessagingArea } from "./MessagingArea";
+import { ConversationList } from "./ConversationList";
+import { ChatView } from "./ChatView";
 import { Id } from "../../../convex/_generated/dataModel";
 
 // Force dynamic rendering to prevent static generation issues
@@ -23,40 +24,33 @@ interface SelectedConversationDetails {
 export default function ChatPage() {
   // Authentication hooks
   const { isSignedIn, isLoaded } = useAuth();
-  const searchParams = useSearchParams();
+  const router = useRouter();
 
   // State hooks
   const [mounted, setMounted] = useState(false);
   const [selectedConversationDetails, setSelectedConversationDetails] =
     useState<SelectedConversationDetails | null>(null);
 
-  // Query hooks - always declare these at the top level
+  // Query hooks
   const currentUserId = useQuery(api.users.getMyId);
-  const conversationId = searchParams.get(
-    "conversation"
-  ) as Id<"conversations"> | null;
-  const conversationDetails = useQuery(
-    api.messages.getConversationDetails,
-    conversationId ? { conversationId } : "skip"
-  );
 
   // Effects
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  useEffect(() => {
-    if (conversationDetails) {
-      setSelectedConversationDetails(conversationDetails);
-    }
-  }, [conversationDetails]);
-
   // Event handlers
   const handleSelectConversation = (
     conversationId: Id<"conversations">,
     otherParticipant: SelectedConversationDetails["otherParticipant"]
   ) => {
-    setSelectedConversationDetails({ conversationId, otherParticipant });
+    // On mobile, navigate to the conversation page
+    if (window.innerWidth < 768) {
+      router.push(`/chats/${conversationId}`);
+    } else {
+      // On desktop, show in the side panel
+      setSelectedConversationDetails({ conversationId, otherParticipant });
+    }
   };
 
   const handleBackToConversationList = () => {
@@ -90,7 +84,7 @@ export default function ChatPage() {
     );
   }
 
-  if (currentUserId === undefined) {
+  if (currentUserId === undefined || currentUserId === null) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
@@ -101,15 +95,43 @@ export default function ChatPage() {
     );
   }
 
-  // Main render
+  // Main render - responsive layout
   return (
-    <div className="h-full w-full">
-      <MessagingArea
-        currentUserId={currentUserId}
-        selectedConversationDetails={selectedConversationDetails}
-        onSelectConversation={handleSelectConversation}
-        onBackToConversationList={handleBackToConversationList}
-      />
+    <div className="h-full w-full bg-zinc-950 -mt-44 md:mt-0">
+      {/* Mobile: Full width conversation list */}
+      <div className="block md:hidden h-full w-full">
+        <ConversationList
+          onSelectConversation={handleSelectConversation}
+          currentUserId={currentUserId}
+        />
+      </div>
+
+      {/* Desktop: Two-column layout */}
+      <div className="hidden md:flex relative h-full w-full overflow-hidden">
+        {/* Conversation List (left column) */}
+        <div className="w-1/3 lg:w-1/3 h-full bg-zinc-900 border-r border-zinc-800 overflow-y-auto">
+          <ConversationList
+            onSelectConversation={handleSelectConversation}
+            currentUserId={currentUserId}
+          />
+        </div>
+
+        {/* ChatView (right column) */}
+        <div className="flex-1 h-full bg-zinc-950">
+          {selectedConversationDetails ? (
+            <ChatView
+              conversationId={selectedConversationDetails.conversationId}
+              otherParticipant={selectedConversationDetails.otherParticipant}
+              currentUserId={currentUserId}
+              onBack={handleBackToConversationList}
+            />
+          ) : (
+            <div className="flex items-center justify-center h-full text-zinc-400 text-lg">
+              Select a conversation to start chatting
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

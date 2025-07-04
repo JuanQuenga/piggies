@@ -9,9 +9,27 @@ import {
   ChevronLeft,
   ChevronRight,
   Newspaper,
+  Eye,
+  EyeOff,
+  ChevronDown,
+  Menu,
+  LogOut,
+  Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { WeatherGreeting } from "./WeatherGreeting";
+import { SmartSearch } from "./SmartSearch";
+import { useUnitPreference } from "./UnitPreferenceContext";
+import { SignOutButton } from "@/app/auth";
+import { useClerk } from "@clerk/nextjs";
 
 const navItems = [
   { href: "/profile", icon: User, label: "Profile" },
@@ -20,8 +38,55 @@ const navItems = [
   { href: "/map", icon: Map, label: "Map" },
 ];
 
-// Desktop-only navigation items
-const desktopOnlyNavItems = [{ href: "/blog", icon: Newspaper, label: "Blog" }];
+// Mobile hamburger menu navigation items (not in bottom nav)
+const mobileMenuItems = [{ href: "/blog", icon: Newspaper, label: "Blog" }];
+
+type HostingStatus =
+  | "not-hosting"
+  | "hosting"
+  | "hosting-group"
+  | "gloryhole"
+  | "hotel"
+  | "car"
+  | "cruising";
+
+const hostingStatusConfig = {
+  "not-hosting": {
+    label: "Not hosting",
+    icon: Home,
+    color: "text-zinc-400",
+  },
+  hosting: {
+    label: "I'm hosting",
+    icon: Home,
+    color: "text-green-400",
+  },
+  "hosting-group": {
+    label: "I'm hosting a group",
+    icon: Users,
+    color: "text-purple-400",
+  },
+  gloryhole: {
+    label: "I have a gloryhole set up",
+    icon: Home,
+    color: "text-pink-400",
+  },
+  hotel: {
+    label: "I'm hosting in my hotel room",
+    icon: Home,
+    color: "text-blue-400",
+  },
+  car: {
+    label: "I'm hosting in my car",
+    icon: Home,
+    color: "text-yellow-400",
+  },
+  cruising: {
+    label: "I'm at a cruising spot.",
+    icon: Map,
+    color: "text-red-400",
+  },
+} as const;
 
 interface SidebarProps {
   collapsed: boolean;
@@ -31,6 +96,62 @@ interface SidebarProps {
 export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
   // Mobile nav state (for accessibility, not strictly needed for static nav)
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const { isUSUnits } = useUnitPreference();
+  const { signOut } = useClerk();
+
+  // Status states for mobile header
+  const [isLookingNow, setIsLookingNow] = useState(false);
+  const [hostingStatus, setHostingStatus] =
+    useState<HostingStatus>("not-hosting");
+  const [weather, setWeather] = useState<{
+    temp: number;
+    city: string;
+    condition: string;
+  } | null>(null);
+  const [weatherLoading, setWeatherLoading] = useState(true);
+  const [weatherError, setWeatherError] = useState<string | null>(null);
+
+  // Weather effect for mobile
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      setWeatherError("Geolocation not supported");
+      setWeatherLoading(false);
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
+          const apiKey = process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY;
+          if (!apiKey) {
+            setWeatherError("No weather API key");
+            setWeatherLoading(false);
+            return;
+          }
+          const units = isUSUnits ? "imperial" : "metric";
+          const res = await fetch(
+            `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=${units}&appid=${apiKey}`
+          );
+          if (!res.ok) throw new Error("Weather fetch failed");
+          const data = await res.json();
+          setWeather({
+            temp: Math.round(data.main.temp),
+            city: data.name,
+            condition: data.weather?.[0]?.main || "Unknown",
+          });
+        } catch (e) {
+          setWeatherError("Could not fetch weather");
+        } finally {
+          setWeatherLoading(false);
+        }
+      },
+      (err) => {
+        setWeatherError("Location permission denied");
+        setWeatherLoading(false);
+      }
+    );
+  });
 
   return (
     <>
@@ -53,11 +174,11 @@ export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
           <img
             src="/pig-snout.svg"
             alt="Piggies logo"
-            width={collapsed ? 40 : 48}
-            height={collapsed ? 40 : 48}
+            width={collapsed ? 32 : 32}
+            height={collapsed ? 32 : 32}
           />
           {!collapsed && (
-            <span className="ml-3 text-3xl font-bold text-white">Piggies</span>
+            <span className="ml-3 text-xl font-bold text-white">Piggies</span>
           )}
         </div>
         <div className="flex flex-col gap-2 flex-1 mt-4 items-stretch w-full">
@@ -79,7 +200,7 @@ export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
           ))}
 
           {/* Desktop-only navigation items */}
-          {desktopOnlyNavItems.map(({ href, icon: Icon, label }) => (
+          {mobileMenuItems.map(({ href, icon: Icon, label }) => (
             <Link
               key={href}
               href={href}
@@ -125,46 +246,168 @@ export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
         </div>
       </nav>
 
-      {/* Mobile Topbar (logo + settings) */}
-      <nav className="md:hidden flex items-center justify-between bg-zinc-900 text-white w-full h-14 px-4 border-b border-zinc-800 fixed top-0 left-0 z-30">
-        <div aria-label="Piggies logo">
-          <svg
-            width="32"
-            height="32"
-            viewBox="0 0 72 72"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
+      {/* Mobile Topbar with Header Content */}
+      <nav className="md:hidden flex flex-col bg-zinc-900 text-white w-full border-b border-zinc-800 fixed top-0 left-0 z-30">
+        {/* Top row: Search, Logo, and Hamburger Menu */}
+        <div className="flex items-center justify-between h-14 px-4">
+          {/* Search Icon Button - Left */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-zinc-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500"
+            aria-label="Search"
+            onClick={() => {
+              // TODO: Implement search functionality
+              console.log("Search clicked");
+            }}
           >
-            <ellipse cx="36" cy="44" rx="20" ry="16" fill="#F06277" />
-            <ellipse cx="26" cy="44" rx="4" ry="7" fill="#6D2E1B" />
-            <ellipse cx="46" cy="44" rx="4" ry="7" fill="#6D2E1B" />
-            <ellipse cx="18" cy="28" rx="6" ry="6" fill="#2F3336" />
-            <ellipse cx="54" cy="28" rx="6" ry="6" fill="#2F3336" />
-            <path d="M12 16 Q24 4 36 12 Q48 4 60 16" fill="#F4A7B9" />
-            <path
-              d="M12 16 Q24 8 36 16 Q48 8 60 16"
-              fill="#F06277"
-              opacity="0.2"
+            <Search className="w-5 h-5" aria-hidden="true" />
+          </Button>
+
+          {/* Logo - Center */}
+          <div className="flex items-center gap-3" aria-label="Piggies logo">
+            <img
+              src="/pig-snout.svg"
+              alt="Piggies logo"
+              width={32}
+              height={32}
             />
-            <path
-              d="M36 8 C60 8 68 28 68 44 C68 60 60 68 36 68 C12 68 4 60 4 44 C4 28 12 8 36 8 Z"
-              fill="#F4A7B9"
-            />
-            <path d="M4 24 Q12 4 24 16" fill="#F4A7B9" />
-            <path d="M68 24 Q60 4 48 16" fill="#F4A7B9" />
-            <path d="M4 24 Q12 12 24 24" fill="#F06277" opacity="0.2" />
-            <path d="M68 24 Q60 12 48 24" fill="#F06277" opacity="0.2" />
-          </svg>
+            <span className="text-xl font-bold text-white">Piggies</span>
+          </div>
+
+          {/* Hamburger Menu - Right */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-zinc-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500"
+                aria-label="Menu"
+              >
+                <Menu className="w-6 h-6" aria-hidden="true" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              {/* Mobile hamburger menu navigation items */}
+              {mobileMenuItems.map(({ href, icon: Icon, label }) => (
+                <DropdownMenuItem key={href} asChild>
+                  <Link href={href} className="flex items-center gap-2 w-full">
+                    <Icon className="w-4 h-4" />
+                    <span>{label}</span>
+                  </Link>
+                </DropdownMenuItem>
+              ))}
+
+              {/* Divider */}
+              <div className="h-px bg-zinc-700 my-1" />
+
+              {/* Settings */}
+              <DropdownMenuItem asChild>
+                <Link
+                  href="/settings"
+                  className="flex items-center gap-2 w-full"
+                >
+                  <Settings className="w-4 h-4" />
+                  <span>Settings</span>
+                </Link>
+              </DropdownMenuItem>
+
+              {/* Sign Out */}
+              <DropdownMenuItem
+                onClick={() => signOut()}
+                className="flex items-center gap-2 w-full text-left px-2 py-1.5 text-sm rounded-sm outline-none transition-colors focus:bg-zinc-800 focus:text-zinc-50 data-[disabled]:pointer-events-none data-[disabled]:opacity-50 cursor-pointer"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Sign Out</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
-        <Link
-          href="/settings"
-          className={cn(
-            "flex items-center justify-center w-10 h-10 rounded-lg hover:bg-zinc-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500"
-          )}
-          aria-label="Settings"
-        >
-          <Settings className="w-6 h-6" aria-hidden="true" />
-        </Link>
+
+        {/* Second row: Status Controls */}
+        <div className="flex items-center gap-2 px-4 py-2">
+          {/* Looking Now Toggle */}
+          <Button
+            variant="outline"
+            size="sm"
+            className={cn(
+              "flex items-center gap-1 px-2 py-1 bg-transparent text-xs",
+              isLookingNow
+                ? "text-green-400 border-green-400"
+                : "text-zinc-400 border-zinc-600"
+            )}
+            onClick={() => setIsLookingNow(!isLookingNow)}
+          >
+            {isLookingNow ? (
+              <Eye className="w-3 h-3" />
+            ) : (
+              <EyeOff className="w-3 h-3" />
+            )}
+            <span className="text-xs">
+              {isLookingNow ? "Looking" : "Not Looking"}
+            </span>
+          </Button>
+
+          {/* Hosting Status Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className={cn(
+                  "flex items-center gap-1 px-2 py-1 bg-transparent text-xs",
+                  !isLookingNow && "opacity-50 cursor-not-allowed",
+                  hostingStatusConfig[hostingStatus].color
+                )}
+                disabled={!isLookingNow}
+              >
+                {(() => {
+                  const IconComponent = hostingStatusConfig[hostingStatus].icon;
+                  return (
+                    <IconComponent
+                      className={cn(
+                        "w-3 h-3",
+                        hostingStatusConfig[hostingStatus].color
+                      )}
+                    />
+                  );
+                })()}
+                <span className="text-xs">
+                  {hostingStatusConfig[hostingStatus].label}
+                </span>
+                <ChevronDown
+                  className={cn(
+                    "w-3 h-3 ml-1",
+                    hostingStatusConfig[hostingStatus].color
+                  )}
+                />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-[180px]">
+              {(
+                Object.entries(hostingStatusConfig) as [
+                  HostingStatus,
+                  (typeof hostingStatusConfig)[keyof typeof hostingStatusConfig],
+                ][]
+              ).map(([key, config]) => {
+                const IconComponent = config.icon;
+                return (
+                  <DropdownMenuItem
+                    key={key}
+                    className={cn(
+                      "flex items-center gap-2",
+                      hostingStatus === key && "bg-zinc-800"
+                    )}
+                    onClick={() => setHostingStatus(key)}
+                  >
+                    <IconComponent className={cn("w-4 h-4", config.color)} />
+                    <span className={cn(config.color)}>{config.label}</span>
+                  </DropdownMenuItem>
+                );
+              })}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </nav>
 
       {/* Mobile Bottom Navbar */}

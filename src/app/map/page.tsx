@@ -95,7 +95,7 @@ export default function MapPage() {
   };
 
   return (
-    <div className="h-full w-full flex-1 relative">
+    <div className="h-full w-full flex-1 relative overflow-hidden">
       <MapComponent
         currentUserProfileForMap={currentUserProfile}
         currentUserId={currentUserId}

@@ -176,7 +176,7 @@ export default function Header() {
   const [isHostingDialogOpen, setIsHostingDialogOpen] = useState(false);
 
   return (
-    <header className="w-full bg-zinc-900 border-b border-zinc-800 flex items-center justify-between px-2 md:px-8 py-2 h-20">
+    <header className="hidden md:flex w-full bg-zinc-900 border-b border-zinc-800 items-center justify-between px-2 md:px-8 py-2 h-20">
       {/* Status Controls */}
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-3">
