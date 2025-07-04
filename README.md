@@ -2,6 +2,8 @@
 
 A modern location-based social networking app built with Next.js 15, featuring real-time messaging, user discovery, and interactive maps.
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 ## ✨ Features
 
 ### 🔐 Authentication
