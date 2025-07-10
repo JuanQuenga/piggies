@@ -114,6 +114,22 @@ body {
   transform: scale(1.1);
 }
 
+/* Custom map marker styling */
+.custom-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+.custom-marker img {
+  transition: transform 0.2s ease-in-out;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.custom-marker:hover img {
+  transform: scale(1.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
 /* Line clamp utilities */
 .line-clamp-1 {
   overflow: hidden;

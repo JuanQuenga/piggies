@@ -1,13 +1,18 @@
 "use client";
-import { SignInButton } from "@clerk/nextjs";
-import { Button } from "../../components/ui/button";
 
-export const SignInForm = () => {
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+
+export function SignInForm() {
+  const router = useRouter();
+
+  const handleSignIn = () => {
+    window.location.href = "/login";
+  };
+
   return (
-    <div className="flex flex-col items-center space-y-4">
-      <SignInButton>
-        <Button className="w-full">Sign In</Button>
-      </SignInButton>
-    </div>
+    <Button onClick={handleSignIn} className="w-full">
+      Sign In
+    </Button>
   );
-};
+}

@@ -6,15 +6,11 @@ import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import { usePaginatedQuery } from "convex/react";
 import { Button } from "../../components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../../components/ui/card";
+import { Card, CardContent } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
 import { Separator } from "../../components/ui/separator";
-import { MoreVertical, MessageCircle, ShieldCheck } from "lucide-react";
+import { Pin, Users, Clock, ChevronRight } from "lucide-react";
+import { cn } from "../../lib/utils";
 
 interface ConversationListProps {
   onSelectConversation: (
@@ -38,13 +34,13 @@ export const ConversationList: React.FC<ConversationListProps> = ({
     loadMore,
   } = usePaginatedQuery(
     api.messages.listConversations,
-    {},
+    currentUserId ? { currentUserId } : "skip",
     { initialNumItems: 15 }
   );
 
   if (status === "LoadingFirstPage" || currentUserId === undefined) {
     return (
-      <div className="flex items-center justify-center h-full">
+      <div className="flex items-center justify-center h-full bg-zinc-900">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
           <p className="mt-2 text-zinc-400">Loading conversations...</p>
@@ -55,7 +51,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
 
   if (!currentUserId) {
     return (
-      <div className="flex items-center justify-center h-full">
+      <div className="flex items-center justify-center h-full bg-zinc-900">
         <div className="text-center">
           <h3 className="text-xl font-semibold text-white mb-2">
             Sign in required
@@ -68,7 +64,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
 
   if (!conversations || conversations.length === 0) {
     return (
-      <div className="flex items-center justify-center h-full">
+      <div className="flex items-center justify-center h-full bg-zinc-900">
         <div className="text-center p-4">
           <div className="text-6xl mb-4">💬</div>
           <h3 className="text-xl font-semibold text-white mb-2">
@@ -84,10 +80,8 @@ export const ConversationList: React.FC<ConversationListProps> = ({
 
   return (
     <div className="h-full overflow-y-auto bg-zinc-900">
-      <div className="sticky top-0 z-10 bg-zinc-900 border-b border-zinc-800 px-4 py-3">
-        <h3 className="text-lg font-semibold text-white">Chats</h3>
-      </div>
-      <ul className="divide-y divide-zinc-800">
+      {/* Conversation List */}
+      <div className="">
         {conversations.map((conv) => {
           if (!conv.otherParticipant) return null;
           const otherParticipant = conv.otherParticipant;
@@ -96,40 +90,40 @@ export const ConversationList: React.FC<ConversationListProps> = ({
             `https://ui-avatars.com/api/?name=${encodeURIComponent(otherParticipant.displayName || "U")}&background=8b5cf6&color=fff&size=40`;
 
           return (
-            <li
+            <Card
               key={conv._id}
+              className="mb-2 cursor-pointer hover:bg-zinc-800/50 transition-colors bg-zinc-800/30"
               onClick={() => onSelectConversation(conv._id, otherParticipant)}
-              className="px-4 py-3 hover:bg-zinc-800 cursor-pointer flex items-center space-x-3 transition-colors"
             >
-              <img
-                src={avatar}
-                alt={otherParticipant.displayName || "User"}
-                className="w-10 h-10 rounded-full object-cover border-2 border-zinc-700"
-              />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white truncate">
-                  {otherParticipant.displayName}
-                </p>
-                <p className="text-xs text-zinc-400 truncate">
-                  {conv.lastMessageFormat === "image"
-                    ? "📷 Image"
-                    : conv.lastMessageFormat === "video"
-                      ? "📹 Video"
-                      : conv.lastMessageSnippet || "No messages yet"}
-                </p>
-              </div>
-              {conv.lastMessageTimestamp && (
-                <span className="text-xs text-zinc-500 self-start pt-1">
-                  {new Date(conv.lastMessageTimestamp).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </span>
-              )}
-            </li>
+              <CardContent className="p-3">
+                <div className="flex items-center gap-3">
+                  <img
+                    src={avatar}
+                    alt={otherParticipant.displayName || "User"}
+                    className="w-10 h-10 rounded-full object-cover border-2 border-zinc-600"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium text-white truncate">
+                        {otherParticipant.displayName}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Users className="w-3 h-3 text-zinc-400" />
+                      <p className="text-xs text-zinc-400 truncate">
+                        Click to start chatting
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-zinc-400" />
+                </div>
+              </CardContent>
+            </Card>
           );
         })}
-      </ul>
+      </div>
+
+      {/* Load More Button */}
       {status === "CanLoadMore" && (
         <div className="p-4 border-t border-zinc-800">
           <Button

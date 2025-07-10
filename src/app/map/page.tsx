@@ -1,19 +1,16 @@
 "use client";
 
-import { useQuery, useMutation } from "convex/react";
-import { useAuth } from "@clerk/nextjs";
-import { api } from "../../../convex/_generated/api";
-import { MapComponent } from "../../app/map/MapComponent";
-import { Id } from "../../../convex/_generated/dataModel";
-import { useRouter } from "next/navigation";
+import { useAuth } from "@workos-inc/authkit-nextjs/components";
 import { useEffect, useState } from "react";
-import { ProfileModal } from "../profile/ProfileModal";
-
-// Force dynamic rendering to prevent static generation issues
-export const dynamic = "force-dynamic";
+import { useRouter } from "next/navigation";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../../convex/_generated/api";
+import { Id } from "../../../convex/_generated/dataModel";
+import { MapComponent } from "./MapComponent";
 
 export default function MapPage() {
-  const { isSignedIn, isLoaded } = useAuth();
+  const { user, loading } = useAuth();
+  console.log("MapPage user:", user, "loading:", loading);
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<Id<"users"> | null>(
@@ -25,14 +22,18 @@ export default function MapPage() {
   }, []);
 
   // Now useQuery is called within ConvexProvider context
-  const currentUserProfile = useQuery(api.profiles.getMyProfileWithAvatarUrl);
-  const currentUserId = useQuery(api.users.getMyId);
+  const currentUserProfile = useQuery(api.profiles.getMyProfileWithAvatarUrl, {
+    email: user?.email || "",
+  });
+  const currentUserId = useQuery(api.users.getMyId, {
+    email: user?.email || "",
+  });
   const getOrCreateConversationMutation = useMutation(
     api.messages.getOrCreateConversationWithParticipant
   );
 
   // Show loading state while authentication is being determined
-  if (!isLoaded) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
@@ -44,7 +45,7 @@ export default function MapPage() {
   }
 
   // Redirect to sign in if not authenticated
-  if (!isSignedIn) {
+  if (!user) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
@@ -77,7 +78,14 @@ export default function MapPage() {
 
   const handleStartChat = async (otherParticipantUserId: Id<"users">) => {
     try {
+      if (!currentUserId) {
+        console.error("Current user ID not found");
+        router.push("/chats");
+        return;
+      }
+
       const result = await getOrCreateConversationMutation({
+        currentUserId,
         otherParticipantUserId,
       });
       // Navigate to chat with the conversation ID as a query parameter
@@ -94,28 +102,32 @@ export default function MapPage() {
     setSelectedUserId(userId);
   };
 
+  // Transform the profile data to match the expected interface
+  const transformedProfile = currentUserProfile
+    ? {
+        _id: currentUserProfile._id,
+        latitude: undefined, // This should come from status data
+        longitude: undefined, // This should come from status data
+        status: undefined, // This should come from status data
+        avatarUrl: currentUserProfile.avatarUrl,
+        displayName: currentUserProfile.displayName,
+        description: undefined, // This should come from profile data
+        userName: undefined, // This should come from user data
+        userEmail: undefined, // This should come from user data
+        lastSeen: undefined, // This should come from status data
+        isVisible: undefined, // This should come from status data
+        userId: currentUserProfile.userId,
+      }
+    : null;
+
   return (
     <div className="h-full w-full flex-1 relative overflow-hidden">
       <MapComponent
-        currentUserProfileForMap={currentUserProfile}
+        currentUserProfileForMap={transformedProfile}
         currentUserId={currentUserId}
         onStartChat={handleStartChat}
         onProfileClick={handleProfileClick}
       />
-
-      {/* Profile Modal */}
-      {selectedUserId && (
-        <ProfileModal
-          open={!!selectedUserId}
-          onOpenChange={(open) => {
-            if (!open) setSelectedUserId(null);
-          }}
-          userId={selectedUserId}
-          onBack={() => setSelectedUserId(null)}
-          onStartChat={handleStartChat}
-          currentUserProfileForMap={currentUserProfile}
-        />
-      )}
     </div>
   );
 }

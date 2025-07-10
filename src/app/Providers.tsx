@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ClerkProvider, useAuth } from "@clerk/nextjs";
-import { ConvexProviderWithClerk } from "convex/react-clerk";
+import { ConvexProvider } from "convex/react";
 import { ConvexReactClient } from "convex/react";
 import { ConvexUserBootstrapper } from "./ConvexUserBootstrapper";
 import AppAuthGate from "./AppAuthGate";
@@ -14,10 +13,10 @@ const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
 function ConvexWrapper({ children }: { children: React.ReactNode }) {
   return (
-    <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
+    <ConvexProvider client={convex}>
       <ConvexUserBootstrapper />
       <AppAuthGate>{children}</AppAuthGate>
-    </ConvexProviderWithClerk>
+    </ConvexProvider>
   );
 }
 
@@ -37,14 +36,9 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <ClerkProvider
-      publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY!}
-      signInFallbackRedirectUrl="/"
-    >
-      <UnitPreferenceProvider>
-        <ConvexWrapper>{children}</ConvexWrapper>
-        <PrivacyConsentDialog />
-      </UnitPreferenceProvider>
-    </ClerkProvider>
+    <UnitPreferenceProvider>
+      <ConvexWrapper>{children}</ConvexWrapper>
+      <PrivacyConsentDialog />
+    </UnitPreferenceProvider>
   );
 }

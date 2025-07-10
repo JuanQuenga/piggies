@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   Home,
   MessageCircle,
@@ -25,18 +26,24 @@ import { WeatherGreeting } from "./WeatherGreeting";
 import { SmartSearch } from "./SmartSearch";
 import { useUnitPreference } from "./UnitPreferenceContext";
 import { SignOutButton } from "@/app/auth";
-import { useClerk } from "@clerk/nextjs";
 import { StatusControls } from "./StatusControls";
 
 const navItems = [
-  { href: "/profile", icon: User, label: "Profile" },
-  { href: "/chats", icon: MessageCircle, label: "Chats" },
-  { href: "/people", icon: Users, label: "People" },
-  { href: "/map", icon: Map, label: "Map" },
+  { href: "/profile", icon: User, label: "Profile", color: "text-blue-400" },
+  {
+    href: "/chats",
+    icon: MessageCircle,
+    label: "Chats",
+    color: "text-green-400",
+  },
+  { href: "/people", icon: Users, label: "People", color: "text-purple-400" },
+  { href: "/map", icon: Map, label: "Map", color: "text-orange-400" },
 ];
 
 // Mobile hamburger menu navigation items (not in bottom nav)
-const mobileMenuItems = [{ href: "/blog", icon: Newspaper, label: "Blog" }];
+const mobileMenuItems = [
+  { href: "/blog", icon: Newspaper, label: "Blog", color: "text-pink-400" },
+];
 
 interface SidebarProps {
   collapsed: boolean;
@@ -47,7 +54,8 @@ export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
   // Mobile nav state (for accessibility, not strictly needed for static nav)
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const { isUSUnits } = useUnitPreference();
-  const { signOut } = useClerk();
+  const pathname = usePathname();
+  // REMOVE: const { signOut } = useClerk();
 
   // Weather state for mobile header
   const [weather, setWeather] = useState<{
@@ -129,46 +137,61 @@ export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
           )}
         </div>
         <div className="flex flex-col gap-2 flex-1 mt-4 items-stretch w-full">
-          {navItems.map(({ href, icon: Icon, label }) => (
-            <Link
-              key={href}
-              href={href}
-              className={cn(
-                "flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-zinc-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 transition-all",
-                collapsed ? "justify-center" : "justify-start"
-              )}
-              aria-label={label}
-            >
-              <Icon className="w-6 h-6" aria-hidden="true" />
-              {!collapsed && (
-                <span className="text-base font-medium">{label}</span>
-              )}
-            </Link>
-          ))}
+          {navItems.map(({ href, icon: Icon, label, color }) => {
+            const isActive = pathname === href;
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={cn(
+                  "flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-zinc-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 transition-all",
+                  collapsed ? "justify-center" : "justify-start"
+                )}
+                aria-label={label}
+              >
+                <Icon className={cn("w-6 h-6", color)} aria-hidden="true" />
+                {!collapsed && (
+                  <span
+                    className={cn("text-base font-medium", isActive && color)}
+                  >
+                    {label}
+                  </span>
+                )}
+              </Link>
+            );
+          })}
 
           {/* Desktop-only navigation items */}
-          {mobileMenuItems.map(({ href, icon: Icon, label }) => (
-            <Link
-              key={href}
-              href={href}
-              className={cn(
-                "flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-zinc-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 transition-all",
-                collapsed ? "justify-center" : "justify-start"
-              )}
-              aria-label={label}
-            >
-              <Icon className="w-6 h-6" aria-hidden="true" />
-              {!collapsed && (
-                <span className="text-base font-medium">{label}</span>
-              )}
-            </Link>
-          ))}
+          {mobileMenuItems.map(({ href, icon: Icon, label, color }) => {
+            const isActive = pathname === href;
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={cn(
+                  "flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-zinc-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 transition-all",
+                  collapsed ? "justify-center" : "justify-start"
+                )}
+                aria-label={label}
+              >
+                <Icon className={cn("w-6 h-6", color)} aria-hidden="true" />
+                {!collapsed && (
+                  <span
+                    className={cn("text-base font-medium", isActive && color)}
+                  >
+                    {label}
+                  </span>
+                )}
+              </Link>
+            );
+          })}
         </div>
         {/* Collapse/Expand button */}
-        <button
+        {/* <button
           className={cn(
-            "mb-2 mt-auto flex items-center justify-center w-10 h-10 rounded-lg hover:bg-zinc-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 transition-all",
-            collapsed ? "mx-auto" : "ml-2"
+            "mb-2 mt-auto flex items-center justify-center w-10 h-10 hover:bg-zinc-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 transition-all border-r-2",
+            collapsed ? "mx-auto" : "ml-2",
+            "border-r-2 border-[#a78bfa] rounded-none"
           )}
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           onClick={() => setCollapsed(!collapsed)}
@@ -178,7 +201,7 @@ export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
           ) : (
             <ChevronLeft className="w-6 h-6" />
           )}
-        </button>
+        </button> */}
         {/* Settings button pinned to bottom */}
         <div className={cn("mb-2", collapsed ? "mx-auto" : "ml-2")}>
           <Link
@@ -188,7 +211,7 @@ export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
             )}
             aria-label="Settings"
           >
-            <Settings className="w-6 h-6" aria-hidden="true" />
+            <Settings className="w-6 h-6 text-yellow-400" aria-hidden="true" />
           </Link>
         </div>
       </nav>
@@ -237,13 +260,13 @@ export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
                 {/* Mobile hamburger menu navigation items */}
-                {mobileMenuItems.map(({ href, icon: Icon, label }) => (
+                {mobileMenuItems.map(({ href, icon: Icon, label, color }) => (
                   <DropdownMenuItem key={href} asChild>
                     <Link
                       href={href}
                       className="flex items-center gap-2 w-full"
                     >
-                      <Icon className="w-4 h-4" />
+                      <Icon className={cn("w-4 h-4", color)} />
                       <span>{label}</span>
                     </Link>
                   </DropdownMenuItem>
@@ -258,14 +281,14 @@ export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
                     href="/settings"
                     className="flex items-center gap-2 w-full"
                   >
-                    <Settings className="w-4 h-4" />
+                    <Settings className="w-4 h-4 text-yellow-400" />
                     <span>Settings</span>
                   </Link>
                 </DropdownMenuItem>
 
                 {/* Sign Out */}
                 <DropdownMenuItem
-                  onClick={() => signOut()}
+                  // REMOVE: onClick={() => signOut()}
                   className="flex items-center gap-2 w-full text-left px-2 py-1.5 text-sm rounded-sm outline-none transition-colors focus:bg-zinc-800 focus:text-zinc-50 data-[disabled]:pointer-events-none data-[disabled]:opacity-50 cursor-pointer"
                 >
                   <LogOut className="w-4 h-4" />
@@ -284,19 +307,24 @@ export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
 
       {/* Mobile Bottom Navbar */}
       <nav className="md:hidden flex items-center justify-around bg-zinc-900 text-white w-full h-14 px-2 border-t border-zinc-800 fixed bottom-0 left-0 z-30">
-        {navItems.map(({ href, icon: Icon, label }) => (
-          <Link
-            key={href}
-            href={href}
-            className={cn(
-              "flex flex-col items-center justify-center w-10 h-10 rounded-lg hover:bg-zinc-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500"
-            )}
-            aria-label={label}
-          >
-            <Icon className="w-6 h-6" aria-hidden="true" />
-            <span className="text-xs mt-1">{label}</span>
-          </Link>
-        ))}
+        {navItems.map(({ href, icon: Icon, label, color }) => {
+          const isActive = pathname === href;
+          return (
+            <Link
+              key={href}
+              href={href}
+              className={cn(
+                "flex flex-col items-center justify-center w-10 h-10 rounded-lg hover:bg-zinc-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500"
+              )}
+              aria-label={label}
+            >
+              <Icon className={cn("w-6 h-6", color)} aria-hidden="true" />
+              <span className={cn("text-xs mt-1", isActive && color)}>
+                {label}
+              </span>
+            </Link>
+          );
+        })}
       </nav>
     </>
   );

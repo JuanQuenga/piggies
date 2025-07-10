@@ -71,7 +71,7 @@ export const searchConversations = query({
     v.object({
       _id: v.id("messages"),
       conversationId: v.id("conversations"),
-      content: v.string(),
+      content: v.optional(v.string()),
       timestamp: v.number(),
       sender: v.object({
         _id: v.id("users"),
@@ -102,20 +102,28 @@ export const searchConversations = query({
         .take(5); // Take 5 most recent matches per conversation
 
       for (const message of messages) {
-        const sender = await ctx.db.get(message.senderId);
-        if (!sender) continue;
+        let sender = null;
+        if (message.senderId) {
+          sender = await ctx.db.get(message.senderId);
+          if (!sender) continue;
+        } else {
+          continue;
+        }
 
         results.push({
           _id: message._id,
           conversationId: conversation._id,
-          content: message.content,
+          content: message.content ?? "",
           timestamp: message._creationTime,
           sender: {
             _id: sender._id,
             name: sender.name,
             profilePic: sender.imageUrl,
           },
-          preview: generateMessagePreview(message.content, args.searchTerm),
+          preview: generateMessagePreview(
+            message.content ?? "",
+            args.searchTerm
+          ),
         });
       }
     }
@@ -187,23 +195,41 @@ export const searchUsers = query({
 
 export const searchMessages = query({
   args: {
-    searchTerm: v.string(),
+    query: v.string(),
     conversationId: v.id("conversations"),
   },
-  handler: async (ctx, args) => {
-    const conversation = await ctx.db.get(args.conversationId);
-    if (!conversation) {
-      throw new Error("Conversation not found");
-    }
-
+  handler: async (ctx, { query, conversationId }) => {
     const messages = await ctx.db
       .query("messages")
-      .withSearchIndex("search_content", (q: any) =>
-        q.search("content", args.searchTerm)
+      .withSearchIndex("search_content", (q) =>
+        q.search("content", query).eq("conversationId", conversationId)
       )
-      .filter((q: any) => q.eq("conversationId", args.conversationId))
       .collect();
 
-    return messages;
+    // Attach sender information
+    const messagesWithSenders = await Promise.all(
+      messages.map(async (message) => {
+        // Get the sender ID, preferring senderId over authorId
+        let senderName = "Unknown";
+        if (message.senderId && typeof message.senderId === "string") {
+          const sender = await ctx.db.get(message.senderId as Id<"users">);
+          if (sender) {
+            senderName = sender.name;
+          }
+        } else if (message.authorId && typeof message.authorId === "string") {
+          const sender = await ctx.db.get(message.authorId as Id<"users">);
+          if (sender) {
+            senderName = sender.name;
+          }
+        }
+
+        return {
+          ...message,
+          senderName,
+        };
+      })
+    );
+
+    return messagesWithSenders;
   },
 });

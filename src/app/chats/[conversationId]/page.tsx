@@ -1,106 +1,34 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useQuery } from "convex/react";
-import { useAuth } from "@clerk/nextjs";
-import { useParams, useRouter } from "next/navigation";
-import { api } from "../../../../convex/_generated/api";
+import { useAuth } from "@workos-inc/authkit-nextjs/components";
 import { ChatView } from "../ChatView";
-import { Id } from "../../../../convex/_generated/dataModel";
 
-// Force dynamic rendering to prevent static generation issues
-export const dynamic = "force-dynamic";
+export default function ChatPage({
+  params,
+}: {
+  params: { conversationId: string };
+}) {
+  const { user } = useAuth();
 
-export default function ConversationPage() {
-  // Authentication hooks
-  const { isSignedIn, isLoaded } = useAuth();
-  const params = useParams();
-  const router = useRouter();
-
-  // State hooks
-  const [mounted, setMounted] = useState(false);
-
-  // Query hooks
-  const currentUserId = useQuery(api.users.getMyId);
-  const conversationId = params.conversationId as Id<"conversations">;
-  const conversationDetails = useQuery(
-    api.messages.getConversationDetails,
-    conversationId ? { conversationId } : "skip"
-  );
-
-  // Effects
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // Event handlers
-  const handleBackToConversationList = () => {
-    router.push("/chats");
-  };
-
-  // Render loading states and auth gates
-  if (!isLoaded || !mounted) {
+  if (!user) {
     return (
-      <div className="flex items-center justify-center h-full">
+      <div className="flex items-center justify-center h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
-          <p className="mt-2 text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isSignedIn) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center">
-          <h2 className="text-xl font-semibold text-primary mb-2">
-            Sign in required
-          </h2>
+          <h1 className="text-2xl font-bold mb-4">Please sign in</h1>
           <p className="text-muted-foreground">
-            Please sign in to use messaging.
+            You need to be signed in to view this conversation.
           </p>
         </div>
       </div>
     );
   }
 
-  if (currentUserId === undefined || currentUserId === null) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
-          <p className="mt-2 text-muted-foreground">Loading user data...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!conversationDetails) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center">
-          <h2 className="text-xl font-semibold text-primary mb-2">
-            Conversation not found
-          </h2>
-          <p className="text-muted-foreground">
-            This conversation may have been deleted or you don't have access to
-            it.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  // Main render - full page conversation view for mobile
   return (
-    <div className="h-full w-full -mt-44 md:mt-0">
-      <ChatView
-        conversationId={conversationDetails.conversationId}
-        otherParticipant={conversationDetails.otherParticipant}
-        currentUserId={currentUserId}
-        onBack={handleBackToConversationList}
-      />
-    </div>
+    <ChatView
+      conversationId={params.conversationId as any}
+      otherParticipant={{ _id: "" as any, displayName: null, avatarUrl: null }}
+      currentUserId={"" as any}
+      onBack={() => {}}
+    />
   );
 }

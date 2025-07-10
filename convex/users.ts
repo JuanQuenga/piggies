@@ -11,20 +11,11 @@ import { ConvexError } from "convex/values";
 
 // Query to get the currently logged-in user's full document from the "users" table.
 export const currentLoggedInUser = query({
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      return null;
-    }
-
-    const email = identity.email;
-    if (!email) {
-      return null;
-    }
-
+  args: { email: v.string() },
+  handler: async (ctx, args) => {
     const user = await ctx.db
       .query("users")
-      .withIndex("by_email", (q) => q.eq("email", email))
+      .withIndex("by_email", (q) => q.eq("email", args.email))
       .unique();
 
     return user;
@@ -32,39 +23,29 @@ export const currentLoggedInUser = query({
 });
 
 export const getMyId = query({
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      return null;
-    }
-
-    const email = identity.email;
-    if (!email) {
-      return null;
-    }
-
+  args: { email: v.string() },
+  handler: async (ctx, args) => {
     const user = await ctx.db
       .query("users")
-      .withIndex("by_email", (q) => q.eq("email", email))
+      .withIndex("by_email", (q) => q.eq("email", args.email))
       .unique();
 
     return user?._id || null;
   },
 });
 
-// Mutation to create or get user from Clerk identity
+// Mutation to create or get user from WorkOS AuthKit identity
 export const createOrGetUser = mutation({
-  args: {},
+  args: {
+    email: v.string(),
+    name: v.optional(v.string()),
+    imageUrl: v.optional(v.string()),
+  },
   returns: v.id("users"),
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new ConvexError("Not authenticated");
-    }
-
-    const email = identity.email;
+  handler: async (ctx, args) => {
+    const email = args.email;
     if (!email) {
-      throw new ConvexError("User email not found");
+      throw new ConvexError("Email is required");
     }
 
     // Check if user already exists
@@ -77,12 +58,11 @@ export const createOrGetUser = mutation({
       return existingUser._id;
     }
 
-    // Create new user from Clerk data
+    // Create new user from WorkOS AuthKit data
     return await ctx.db.insert("users", {
       email: email,
-      name: identity.name ?? "Anonymous",
-      imageUrl: identity.pictureUrl,
-      location: [0, 0], // Default location
+      name: args.name ?? "Anonymous",
+      imageUrl: args.imageUrl,
     });
   },
 });
@@ -139,17 +119,17 @@ export const deleteAnonymousUsers = mutation({
   },
 });
 
-// Query to get a user by Clerk user ID (string)
-export const getUserByClerkId = query({
-  args: { clerkUserId: v.string() },
-  handler: async (ctx, { clerkUserId }) => {
+// Query to get a user by WorkOS AuthKit user ID (string)
+export const getUserByWorkOSId = query({
+  args: { workOSUserId: v.string() },
+  handler: async (ctx, { workOSUserId }) => {
     // For now, use email as the mapping since users table only has email
-    // In the future, if you add a clerkId field, use that instead
-    // Try to find by email (assuming clerkUserId is an email for now)
-    // If not, you must add clerkId to users table and index it
+    // In the future, if you add a workOSId field, use that instead
+    // Try to find by email (assuming workOSUserId is an email for now)
+    // If not, you must add workOSId to users table and index it
     const user = await ctx.db
       .query("users")
-      .withIndex("by_email", (q) => q.eq("email", clerkUserId))
+      .withIndex("by_email", (q) => q.eq("email", workOSUserId))
       .unique();
     return user ?? null;
   },

@@ -3,18 +3,16 @@ import { mutation } from "./_generated/server";
 import { ConvexError } from "convex/values";
 
 export const getOrCreateUser = mutation({
-  args: {},
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new ConvexError(
-        "Called getOrCreateUser without authentication present"
-      );
-    }
-
-    const email = identity.email;
+  args: {
+    email: v.string(),
+    name: v.optional(v.string()),
+    imageUrl: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    // For WorkOS AuthKit, we pass user info directly from the client
+    const email = args.email;
     if (!email) {
-      throw new ConvexError("User email not found in identity");
+      throw new ConvexError("Email is required");
     }
 
     // Check if we've already stored this identity before.
@@ -29,9 +27,9 @@ export const getOrCreateUser = mutation({
 
     // If it's a new identity, create a new `User`.
     return await ctx.db.insert("users", {
-      name: identity.name ?? "Anonymous",
+      name: args.name ?? "Anonymous",
       email: email,
-      location: [0, 0], // Default location, should be updated later
+      imageUrl: args.imageUrl,
     });
   },
 });
@@ -67,7 +65,6 @@ export const createUser = mutation({
     return await ctx.db.insert("users", {
       name: args.name ?? defaultName,
       email: args.email,
-      location: args.location,
     });
   },
 });

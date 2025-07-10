@@ -1,7 +1,6 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { Doc, Id } from "./_generated/dataModel";
-import { ConvexError } from "convex/values";
 
 // Helper to get the current authenticated user's Convex ID
 async function getCurrentUserId(ctx: any): Promise<Id<"users"> | null> {
@@ -22,7 +21,7 @@ async function getCurrentUserId(ctx: any): Promise<Id<"users"> | null> {
 
   return user ? user._id : null;
 }
-// TODO
+
 // Helper function to resolve avatar URL (handles both full URLs and storage IDs)
 async function resolveAvatarUrl(
   ctx: any,
@@ -54,102 +53,227 @@ async function resolvePhotoUrlsWithIds(
   if (!photos || photos.length === 0) return [];
   const resolvedPhotos: { id: string; url: string }[] = [];
   for (const photo of photos) {
-    if (photo.startsWith("http")) {
-      resolvedPhotos.push({ id: photo, url: photo });
-    } else {
-      try {
-        const url = await ctx.storage.getUrl(photo as Id<"_storage">);
-        if (url) resolvedPhotos.push({ id: photo, url });
-      } catch (e) {
-        console.log("Invalid storage ID for photo:", photo);
+    try {
+      if (photo.startsWith("http")) {
+        resolvedPhotos.push({ id: photo, url: photo });
+      } else {
+        try {
+          const url = await ctx.storage.getUrl(photo as Id<"_storage">);
+          if (url) resolvedPhotos.push({ id: photo, url });
+        } catch (e) {
+          console.log("Invalid storage ID for photo:", photo, e);
+        }
       }
+    } catch (error) {
+      console.error("Error processing photo:", photo, error);
     }
   }
   return resolvedPhotos;
 }
 
+// Calculate distance between two points in kilometers
+function calculateDistance(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+): number {
+  const R = 6371; // Radius of the earth in km
+  const dLat = deg2rad(lat2 - lat1);
+  const dLon = deg2rad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(deg2rad(lat1)) *
+      Math.cos(deg2rad(lat2)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const d = R * c; // Distance in km
+  return Math.round(d * 10) / 10; // Round to 1 decimal place
+}
+
+function deg2rad(deg: number): number {
+  return deg * (Math.PI / 180);
+}
+
 // Get the current user's profile, or null if not created
 export const getMyProfile = query({
-  args: {},
+  args: { email: v.string() },
   returns: v.union(
     v.object({
       _id: v.id("profiles"),
       _creationTime: v.number(),
       userId: v.id("users"),
       displayName: v.optional(v.string()),
-      description: v.optional(v.string()),
-      latitude: v.optional(v.number()),
-      longitude: v.optional(v.number()),
-      status: v.optional(v.string()),
-      isVisible: v.boolean(),
-      lastSeen: v.optional(v.number()),
-      avatarUrl: v.optional(v.string()),
-      photos: v.optional(v.array(v.string())),
-      mainPhotoIndex: v.optional(v.number()),
-      homeLocation: v.optional(v.string()),
+      headliner: v.optional(v.string()),
+      hometown: v.optional(v.string()),
+      profilePhotos: v.optional(v.array(v.string())),
       age: v.optional(v.number()),
-      isAgeVisible: v.optional(v.boolean()),
       heightInInches: v.optional(v.number()),
-      isHeightVisible: v.optional(v.boolean()),
       weightInLbs: v.optional(v.number()),
-      isWeightVisible: v.optional(v.boolean()),
       endowmentLength: v.optional(v.number()),
       endowmentCut: v.optional(v.string()),
-      isEndowmentVisible: v.optional(v.boolean()),
       bodyType: v.optional(v.string()),
-      isBodyTypeVisible: v.optional(v.boolean()),
       gender: v.optional(v.string()),
       expression: v.optional(v.string()),
-      sexuality: v.optional(v.string()),
       position: v.optional(v.string()),
-      location: v.optional(v.string()),
-      intoPublic: v.optional(v.string()),
-      lookingFor: v.optional(v.string()),
+      lookingFor: v.optional(v.array(v.string())),
+      location: v.optional(v.array(v.string())),
+      intoPublic: v.optional(v.array(v.string())),
       fetishes: v.optional(v.array(v.string())),
       kinks: v.optional(v.array(v.string())),
       into: v.optional(v.array(v.string())),
-      interaction: v.optional(v.string()),
-      practices: v.optional(v.array(v.string())),
+      interaction: v.optional(v.array(v.string())),
       hivStatus: v.optional(v.string()),
-      hivTestedDate: v.optional(v.number()),
-      stiTestedDate: v.optional(v.number()),
-      safeguards: v.optional(v.array(v.string())),
-      comfortLevels: v.optional(v.array(v.string())),
-      carrying: v.optional(v.array(v.string())),
-      hostingStatus: v.optional(v.string()),
+      hivTestedDate: v.optional(v.string()),
+      showBasicInfo: v.optional(v.boolean()),
       showStats: v.optional(v.boolean()),
       showIdentity: v.optional(v.boolean()),
-      showScene: v.optional(v.boolean()),
       showHealth: v.optional(v.boolean()),
+      showScene: v.optional(v.boolean()),
     }),
     v.null()
   ),
-  handler: async (ctx) => {
-    const userId = await getCurrentUserId(ctx);
-    if (!userId) return null;
-    const profile = await ctx.db
-      .query("profiles")
-      .withIndex("by_userId", (q) => q.eq("userId", userId))
-      .unique();
-    return profile ?? null;
+  handler: async (ctx, args) => {
+    try {
+      const user = await ctx.db
+        .query("users")
+        .withIndex("by_email", (q) => q.eq("email", args.email))
+        .unique();
+
+      if (!user) {
+        console.log("[getMyProfile] user not found for email:", args.email);
+        return null;
+      }
+
+      const userId = user._id;
+      console.log("[getMyProfile] userId:", userId);
+
+      const profile = await ctx.db
+        .query("profiles")
+        .withIndex("by_userId", (q) => q.eq("userId", userId))
+        .unique();
+      console.log("[getMyProfile] profile:", profile);
+      if (
+        !profile ||
+        typeof profile !== "object" ||
+        !("_id" in profile) ||
+        !("userId" in profile)
+      ) {
+        console.log(
+          "[getMyProfile] returning null due to missing _id or userId"
+        );
+        return null;
+      }
+      // Only return the fields defined in the validator
+      const {
+        _id,
+        _creationTime,
+        userId: uid,
+        displayName,
+        headliner,
+        hometown,
+        profilePhotos,
+        age,
+        heightInInches,
+        weightInLbs,
+        endowmentLength,
+        endowmentCut,
+        bodyType,
+        gender,
+        expression,
+        position,
+        lookingFor,
+        location,
+        intoPublic,
+        fetishes,
+        kinks,
+        into,
+        interaction,
+        hivStatus,
+        hivTestedDate,
+        showBasicInfo,
+        showStats,
+        showIdentity,
+        showHealth,
+        showScene,
+      } = profile;
+      const result = {
+        _id,
+        _creationTime,
+        userId: uid,
+        displayName,
+        headliner,
+        hometown,
+        profilePhotos,
+        age,
+        heightInInches,
+        weightInLbs,
+        endowmentLength,
+        endowmentCut,
+        bodyType,
+        gender,
+        expression,
+        position,
+        lookingFor,
+        location,
+        intoPublic,
+        fetishes,
+        kinks,
+        into,
+        interaction,
+        hivStatus,
+        hivTestedDate,
+        showBasicInfo,
+        showStats,
+        showIdentity,
+        showHealth,
+        showScene,
+      };
+      console.log("[getMyProfile] returning:", result);
+      return result;
+    } catch (err) {
+      console.error("[getMyProfile] error:", err);
+      return null;
+    }
   },
 });
 
 // Get the current user's profile with avatarUrl resolved to a real URL
 export const getMyProfileWithAvatarUrl = query({
-  args: {},
+  args: { email: v.string() },
   returns: v.union(
     v.object({
       _id: v.id("profiles"),
       _creationTime: v.number(),
       userId: v.id("users"),
       displayName: v.optional(v.string()),
-      description: v.optional(v.string()),
-      latitude: v.optional(v.number()),
-      longitude: v.optional(v.number()),
-      status: v.optional(v.string()),
-      isVisible: v.boolean(),
-      lastSeen: v.optional(v.number()),
+      headliner: v.optional(v.string()),
+      hometown: v.optional(v.string()),
+      profilePhotos: v.optional(v.array(v.string())),
+      age: v.optional(v.number()),
+      heightInInches: v.optional(v.number()),
+      weightInLbs: v.optional(v.number()),
+      endowmentLength: v.optional(v.number()),
+      endowmentCut: v.optional(v.string()),
+      bodyType: v.optional(v.string()),
+      gender: v.optional(v.string()),
+      expression: v.optional(v.string()),
+      position: v.optional(v.string()),
+      lookingFor: v.optional(v.array(v.string())),
+      location: v.optional(v.array(v.string())),
+      intoPublic: v.optional(v.array(v.string())),
+      fetishes: v.optional(v.array(v.string())),
+      kinks: v.optional(v.array(v.string())),
+      into: v.optional(v.array(v.string())),
+      interaction: v.optional(v.array(v.string())),
+      hivStatus: v.optional(v.string()),
+      hivTestedDate: v.optional(v.string()),
+      showBasicInfo: v.optional(v.boolean()),
+      showStats: v.optional(v.boolean()),
+      showIdentity: v.optional(v.boolean()),
+      showHealth: v.optional(v.boolean()),
+      showScene: v.optional(v.boolean()),
       avatarUrl: v.optional(v.string()),
       photos: v.optional(
         v.array(
@@ -159,71 +283,41 @@ export const getMyProfileWithAvatarUrl = query({
           })
         )
       ),
-      mainPhotoIndex: v.optional(v.number()),
-      homeLocation: v.optional(v.string()),
-      age: v.optional(v.number()),
-      isAgeVisible: v.optional(v.boolean()),
-      heightInInches: v.optional(v.number()),
-      isHeightVisible: v.optional(v.boolean()),
-      weightInLbs: v.optional(v.number()),
-      isWeightVisible: v.optional(v.boolean()),
-      endowmentLength: v.optional(v.number()),
-      endowmentCut: v.optional(v.string()),
-      isEndowmentVisible: v.optional(v.boolean()),
-      bodyType: v.optional(v.string()),
-      isBodyTypeVisible: v.optional(v.boolean()),
-      gender: v.optional(v.string()),
-      expression: v.optional(v.string()),
-      sexuality: v.optional(v.string()),
-      position: v.optional(v.string()),
-      location: v.optional(v.string()),
-      intoPublic: v.optional(v.string()),
-      lookingFor: v.optional(v.string()),
-      fetishes: v.optional(v.array(v.string())),
-      kinks: v.optional(v.array(v.string())),
-      into: v.optional(v.array(v.string())),
-      interaction: v.optional(v.string()),
-      practices: v.optional(v.array(v.string())),
-      hivStatus: v.optional(v.string()),
-      hivTestedDate: v.optional(v.number()),
-      stiTestedDate: v.optional(v.number()),
-      safeguards: v.optional(v.array(v.string())),
-      comfortLevels: v.optional(v.array(v.string())),
-      carrying: v.optional(v.array(v.string())),
-      hostingStatus: v.optional(v.string()),
-      showStats: v.optional(v.boolean()),
-      showIdentity: v.optional(v.boolean()),
-      showScene: v.optional(v.boolean()),
-      showHealth: v.optional(v.boolean()),
     }),
     v.null()
   ),
-  handler: async (ctx) => {
-    const userId = await getCurrentUserId(ctx);
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .unique();
+
+    if (!user) {
+      console.log(
+        "[DEBUG] getMyProfileWithAvatarUrl user not found for email:",
+        args.email
+      );
+      return null;
+    }
+
+    const userId = user._id;
     console.log("[DEBUG] getMyProfileWithAvatarUrl userId:", userId);
-    if (!userId) return null;
     const profile = await ctx.db
       .query("profiles")
       .withIndex("by_userId", (q) => q.eq("userId", userId))
       .unique();
     console.log("[DEBUG] getMyProfileWithAvatarUrl profile:", profile);
     if (!profile) return null;
+
+    // Resolve avatar URL from user's imageUrl
     let avatarUrl: string | undefined = undefined;
-    if (profile.avatarUrl) {
-      try {
-        const url = await ctx.storage.getUrl(
-          profile.avatarUrl as Id<"_storage">
-        );
-        if (url) avatarUrl = url;
-      } catch (e) {}
+    const userDoc = await ctx.db.get(userId);
+    if (userDoc && "imageUrl" in userDoc && userDoc.imageUrl) {
+      avatarUrl = userDoc.imageUrl;
     }
-    if (!avatarUrl) {
-      const user = await ctx.db.get(userId);
-      if (user && "imageUrl" in user && user.imageUrl)
-        avatarUrl = user.imageUrl;
-    }
-    // Always resolve photo storage IDs to URLs, and return both id and url
-    const photos = await resolvePhotoUrlsWithIds(ctx, profile.photos);
+
+    // Resolve photo storage IDs to URLs
+    const photos = await resolvePhotoUrlsWithIds(ctx, profile.profilePhotos);
     const result = { ...profile, avatarUrl, photos };
     console.log("[DEBUG] getMyProfileWithAvatarUrl result:", result);
     return result;
@@ -242,129 +336,73 @@ export const generateAvatarUploadUrl = mutation({
 // Create or update the current user's profile
 export const updateMyProfile = mutation({
   args: {
+    email: v.string(),
+    // Basic Info
     displayName: v.optional(v.string()),
-    description: v.optional(v.string()),
-    latitude: v.optional(v.number()),
-    longitude: v.optional(v.number()),
-    status: v.optional(v.string()),
-    isVisible: v.optional(v.boolean()),
-    avatarUrl: v.optional(v.string()),
-    homeLocation: v.optional(v.string()),
+    headliner: v.optional(v.string()),
+    hometown: v.optional(v.string()),
+    profilePhotos: v.optional(v.array(v.string())),
+    // Stats
     age: v.optional(v.number()),
-    heightInCm: v.optional(v.number()),
-    weightInKg: v.optional(v.number()),
-    endowment: v.optional(v.string()),
+    heightInInches: v.optional(v.number()),
+    weightInLbs: v.optional(v.number()),
+    endowmentLength: v.optional(v.number()),
+    endowmentCut: v.optional(v.string()),
     bodyType: v.optional(v.string()),
+    // Identity
     gender: v.optional(v.string()),
     expression: v.optional(v.string()),
-    sexuality: v.optional(v.string()),
     position: v.optional(v.string()),
-    location: v.optional(v.string()),
-    intoPublic: v.optional(v.string()),
-    lookingFor: v.optional(v.string()),
+    // Scene
+    lookingFor: v.optional(v.array(v.string())),
+    location: v.optional(v.array(v.string())),
+    intoPublic: v.optional(v.array(v.string())),
     fetishes: v.optional(v.array(v.string())),
     kinks: v.optional(v.array(v.string())),
     into: v.optional(v.array(v.string())),
-    interaction: v.optional(v.string()),
-    practices: v.optional(v.array(v.string())),
+    interaction: v.optional(v.array(v.string())),
+    // Health
     hivStatus: v.optional(v.string()),
-    hivTestedDate: v.optional(v.number()),
-    stiTestedDate: v.optional(v.number()),
-    safeguards: v.optional(v.array(v.string())),
-    comfortLevels: v.optional(v.array(v.string())),
-    carrying: v.optional(v.array(v.string())),
-    hostingStatus: v.optional(v.string()),
+    hivTestedDate: v.optional(v.string()),
+    // Visibility toggles
+    showBasicInfo: v.optional(v.boolean()),
     showStats: v.optional(v.boolean()),
     showIdentity: v.optional(v.boolean()),
-    showScene: v.optional(v.boolean()),
     showHealth: v.optional(v.boolean()),
-    photos: v.optional(v.array(v.string())),
-    mainPhotoIndex: v.optional(v.number()),
+    showScene: v.optional(v.boolean()),
   },
-  returns: v.id("profiles"),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    console.log("[DEBUG] updateMyProfile identity:", identity);
-    if (!identity) {
-      throw new ConvexError("Not authenticated");
-    }
-    const email = identity.email;
-    console.log("[DEBUG] updateMyProfile email:", email);
-    if (!email) {
-      throw new ConvexError("User email not found");
-    }
-    const userId = await getCurrentUserId(ctx);
-    if (!userId) {
-      throw new ConvexError("User not found in users table");
+    const { email, ...profileData } = args;
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", email))
+      .unique();
+
+    if (!user) {
+      throw new Error("User not found");
     }
 
-    const user = await ctx.db.get(userId);
-    if (!user) {
-      throw new ConvexError("User not found in users table");
-    }
+    const userId = user._id;
 
     const existingProfile = await ctx.db
       .query("profiles")
       .withIndex("by_userId", (q) => q.eq("userId", userId))
       .unique();
 
-    console.log("[DEBUG] updateMyProfile args:", args);
-    console.log("[DEBUG] updateMyProfile latitude:", args.latitude);
-    console.log("[DEBUG] updateMyProfile longitude:", args.longitude);
-
-    const profileData = {
-      userId,
-      displayName: args.displayName,
-      description: args.description,
-      latitude: args.latitude,
-      longitude: args.longitude,
-      status: args.status,
-      isVisible: args.isVisible === undefined ? true : args.isVisible,
-      lastSeen: Date.now(),
-      avatarUrl:
-        args.avatarUrl ??
-        (user && "imageUrl" in user ? user.imageUrl : undefined),
-      homeLocation: args.homeLocation,
-      age: args.age,
-      heightInCm: args.heightInCm,
-      weightInKg: args.weightInKg,
-      endowment: args.endowment,
-      bodyType: args.bodyType,
-      gender: args.gender,
-      expression: args.expression,
-      sexuality: args.sexuality,
-      position: args.position,
-      location: args.location,
-      intoPublic: args.intoPublic,
-      lookingFor: args.lookingFor,
-      fetishes: args.fetishes,
-      kinks: args.kinks,
-      into: args.into,
-      interaction: args.interaction,
-      practices: args.practices,
-      hivStatus: args.hivStatus,
-      hivTestedDate: args.hivTestedDate,
-      stiTestedDate: args.stiTestedDate,
-      safeguards: args.safeguards,
-      comfortLevels: args.comfortLevels,
-      carrying: args.carrying,
-      hostingStatus: args.hostingStatus,
-      showStats: args.showStats,
-      showIdentity: args.showIdentity,
-      showScene: args.showScene,
-      showHealth: args.showHealth,
-      photos: args.photos,
-      mainPhotoIndex: args.mainPhotoIndex,
-    };
-
-    console.log("[DEBUG] updateMyProfile profileData:", profileData);
-
     if (existingProfile) {
+      // Update existing profile
       await ctx.db.patch(existingProfile._id, profileData);
       return existingProfile._id;
-    } else {
-      return await ctx.db.insert("profiles", profileData);
     }
+
+    // Create new profile
+    const newProfileData = {
+      userId,
+      ...profileData,
+    };
+
+    return await ctx.db.insert("profiles", newProfileData);
   },
 });
 
@@ -374,95 +412,63 @@ export const listVisibleUsers = query({
   returns: v.array(
     v.object({
       _id: v.id("profiles"),
-      _creationTime: v.number(),
       userId: v.id("users"),
       displayName: v.optional(v.string()),
-      description: v.optional(v.string()),
       latitude: v.optional(v.number()),
       longitude: v.optional(v.number()),
-      status: v.optional(v.string()),
-      isVisible: v.boolean(),
-      lastSeen: v.optional(v.number()),
       avatarUrl: v.optional(v.string()),
-      photos: v.optional(v.array(v.string())),
-      mainPhotoIndex: v.optional(v.number()),
-      homeLocation: v.optional(v.string()),
-      age: v.optional(v.number()),
-      isAgeVisible: v.optional(v.boolean()),
-      heightInInches: v.optional(v.number()),
-      isHeightVisible: v.optional(v.boolean()),
-      weightInLbs: v.optional(v.number()),
-      isWeightVisible: v.optional(v.boolean()),
-      endowmentLength: v.optional(v.number()),
-      endowmentCut: v.optional(v.string()),
-      isEndowmentVisible: v.optional(v.boolean()),
-      bodyType: v.optional(v.string()),
-      isBodyTypeVisible: v.optional(v.boolean()),
-      gender: v.optional(v.string()),
-      expression: v.optional(v.string()),
-      sexuality: v.optional(v.string()),
-      position: v.optional(v.string()),
-      location: v.optional(v.string()),
-      intoPublic: v.optional(v.string()),
-      lookingFor: v.optional(v.string()),
-      fetishes: v.optional(v.array(v.string())),
-      kinks: v.optional(v.array(v.string())),
-      into: v.optional(v.array(v.string())),
-      interaction: v.optional(v.string()),
-      practices: v.optional(v.array(v.string())),
-      hivStatus: v.optional(v.string()),
-      hivTestedDate: v.optional(v.number()),
-      stiTestedDate: v.optional(v.number()),
-      safeguards: v.optional(v.array(v.string())),
-      comfortLevels: v.optional(v.array(v.string())),
-      carrying: v.optional(v.array(v.string())),
+      distance: v.optional(v.number()),
       hostingStatus: v.optional(v.string()),
-      showStats: v.optional(v.boolean()),
-      showIdentity: v.optional(v.boolean()),
-      showScene: v.optional(v.boolean()),
-      showHealth: v.optional(v.boolean()),
-      userName: v.optional(v.string()),
-      userEmail: v.optional(v.string()),
     })
   ),
-  handler: async (ctx) => {
-    const profiles = await ctx.db
-      .query("profiles")
-      .withIndex("by_visibility_and_lastSeen", (q) => q.eq("isVisible", true))
-      .order("desc") // Show most recently active first
-      .collect();
+  handler: async (ctx, args) => {
+    try {
+      console.log("[listVisibleUsers] Starting query...");
 
-    // Attach user information (name, etc.) from the "users" table
-    // and avatar URL from storage
-    const usersWithProfiles: Array<
-      Doc<"profiles"> & {
-        userName?: string; // from auth table
-        userEmail?: string; // from auth table
-        profileAvatarUrl?: string | null; // actual URL for display
+      // Get all profiles with location data
+      const profiles = await ctx.db.query("profiles").collect();
+      console.log("[listVisibleUsers] Found profiles:", profiles.length);
+
+      const result = [];
+
+      for (const profile of profiles) {
+        // Get the user's status to check if they're visible and get location
+        const status = await ctx.db
+          .query("status")
+          .withIndex("by_userId", (q) => q.eq("userId", profile.userId))
+          .unique();
+
+        // Only include users who are visible and have location enabled
+        if (
+          status &&
+          status.isVisible &&
+          status.isLocationEnabled &&
+          status.latitude &&
+          status.longitude
+        ) {
+          // Get user data for avatar
+          const user = await ctx.db.get(profile.userId);
+          const avatarUrl = user?.imageUrl;
+
+          result.push({
+            _id: profile._id,
+            userId: profile.userId,
+            displayName: profile.displayName,
+            latitude: status.latitude,
+            longitude: status.longitude,
+            avatarUrl,
+            distance: undefined, // Will be calculated on client side
+            hostingStatus: status.hostingStatus,
+          });
+        }
       }
-    > = [];
 
-    for (const profile of profiles) {
-      if (profile.latitude !== undefined && profile.longitude !== undefined) {
-        const user = await ctx.db.get(profile.userId);
-
-        // Resolve avatar URL
-        const profileAvatarFinalUrl = await resolveAvatarUrl(
-          ctx,
-          profile.avatarUrl,
-          profile.userId
-        );
-
-        usersWithProfiles.push({
-          ...profile,
-          userName: user?.name,
-          userEmail: user?.email,
-          // Override profile.avatarUrl with the resolved URL
-          avatarUrl: profileAvatarFinalUrl ?? undefined,
-        });
-      }
+      console.log("[listVisibleUsers] Returning visible users:", result.length);
+      return result;
+    } catch (error) {
+      console.error("[listVisibleUsers] Error:", error);
+      return [];
     }
-    return usersWithProfiles;
   },
 });
 
@@ -475,12 +481,32 @@ export const getProfileWithAvatarUrl = query({
       _creationTime: v.number(),
       userId: v.id("users"),
       displayName: v.optional(v.string()),
-      description: v.optional(v.string()),
-      latitude: v.optional(v.number()),
-      longitude: v.optional(v.number()),
-      status: v.optional(v.string()),
-      isVisible: v.boolean(),
-      lastSeen: v.optional(v.number()),
+      headliner: v.optional(v.string()),
+      hometown: v.optional(v.string()),
+      profilePhotos: v.optional(v.array(v.string())),
+      age: v.optional(v.number()),
+      heightInInches: v.optional(v.number()),
+      weightInLbs: v.optional(v.number()),
+      endowmentLength: v.optional(v.number()),
+      endowmentCut: v.optional(v.string()),
+      bodyType: v.optional(v.string()),
+      gender: v.optional(v.string()),
+      expression: v.optional(v.string()),
+      position: v.optional(v.string()),
+      lookingFor: v.optional(v.array(v.string())),
+      location: v.optional(v.array(v.string())),
+      intoPublic: v.optional(v.array(v.string())),
+      fetishes: v.optional(v.array(v.string())),
+      kinks: v.optional(v.array(v.string())),
+      into: v.optional(v.array(v.string())),
+      interaction: v.optional(v.array(v.string())),
+      hivStatus: v.optional(v.string()),
+      hivTestedDate: v.optional(v.string()),
+      showBasicInfo: v.optional(v.boolean()),
+      showStats: v.optional(v.boolean()),
+      showIdentity: v.optional(v.boolean()),
+      showHealth: v.optional(v.boolean()),
+      showScene: v.optional(v.boolean()),
       avatarUrl: v.optional(v.string()),
       photos: v.optional(
         v.array(
@@ -490,42 +516,6 @@ export const getProfileWithAvatarUrl = query({
           })
         )
       ),
-      mainPhotoIndex: v.optional(v.number()),
-      homeLocation: v.optional(v.string()),
-      age: v.optional(v.number()),
-      isAgeVisible: v.optional(v.boolean()),
-      heightInInches: v.optional(v.number()),
-      isHeightVisible: v.optional(v.boolean()),
-      weightInLbs: v.optional(v.number()),
-      isWeightVisible: v.optional(v.boolean()),
-      endowmentLength: v.optional(v.number()),
-      endowmentCut: v.optional(v.string()),
-      isEndowmentVisible: v.optional(v.boolean()),
-      bodyType: v.optional(v.string()),
-      isBodyTypeVisible: v.optional(v.boolean()),
-      gender: v.optional(v.string()),
-      expression: v.optional(v.string()),
-      sexuality: v.optional(v.string()),
-      position: v.optional(v.string()),
-      location: v.optional(v.string()),
-      intoPublic: v.optional(v.string()),
-      lookingFor: v.optional(v.string()),
-      fetishes: v.optional(v.array(v.string())),
-      kinks: v.optional(v.array(v.string())),
-      into: v.optional(v.array(v.string())),
-      interaction: v.optional(v.string()),
-      practices: v.optional(v.array(v.string())),
-      hivStatus: v.optional(v.string()),
-      hivTestedDate: v.optional(v.number()),
-      stiTestedDate: v.optional(v.number()),
-      safeguards: v.optional(v.array(v.string())),
-      comfortLevels: v.optional(v.array(v.string())),
-      carrying: v.optional(v.array(v.string())),
-      hostingStatus: v.optional(v.string()),
-      showStats: v.optional(v.boolean()),
-      showIdentity: v.optional(v.boolean()),
-      showScene: v.optional(v.boolean()),
-      showHealth: v.optional(v.boolean()),
     }),
     v.null()
   ),
@@ -540,12 +530,12 @@ export const getProfileWithAvatarUrl = query({
     // Resolve avatar URL
     const avatarUrl = await resolveAvatarUrl(
       ctx,
-      profile.avatarUrl,
+      undefined, // No avatarUrl field in profiles table
       args.userId
     );
 
     // Resolve photo URLs and return both id and url
-    const photos = await resolvePhotoUrlsWithIds(ctx, profile.photos);
+    const photos = await resolvePhotoUrlsWithIds(ctx, profile.profilePhotos);
 
     return { ...profile, avatarUrl, photos };
   },
@@ -563,14 +553,137 @@ export const getUser = query({
       imageUrl: v.optional(v.string()),
       bio: v.optional(v.string()),
       tags: v.optional(v.array(v.string())),
-      isHosting: v.optional(v.boolean()),
       lastActive: v.optional(v.number()),
-      displayName: v.optional(v.string()),
-      location: v.array(v.number()),
     }),
     v.null()
   ),
   handler: async (ctx, args) => {
     return await ctx.db.get(args.userId);
+  },
+});
+
+// Test query to check status table data
+export const testStatusTable = query({
+  args: {},
+  returns: v.object({
+    totalStatuses: v.number(),
+    visibleStatuses: v.number(),
+    sampleStatus: v.optional(v.any()),
+  }),
+  handler: async (ctx, args) => {
+    try {
+      const allStatuses = await ctx.db.query("status").collect();
+      const visibleStatuses = allStatuses.filter(
+        (status) => status.isVisible === true
+      );
+
+      return {
+        totalStatuses: allStatuses.length,
+        visibleStatuses: visibleStatuses.length,
+        sampleStatus: allStatuses.length > 0 ? allStatuses[0] : undefined,
+      };
+    } catch (error) {
+      console.error("[testStatusTable] Error:", error);
+      return {
+        totalStatuses: 0,
+        visibleStatuses: 0,
+        sampleStatus: undefined,
+      };
+    }
+  },
+});
+
+// Simple test query to check if basic querying works
+export const testBasicQuery = query({
+  args: {},
+  returns: v.array(
+    v.object({
+      _id: v.id("profiles"),
+      userId: v.id("users"),
+    })
+  ),
+  handler: async (ctx, args) => {
+    try {
+      console.log("[testBasicQuery] Starting...");
+      const profiles = await ctx.db.query("profiles").take(5);
+      console.log("[testBasicQuery] Found profiles:", profiles.length);
+      return profiles.map((p) => ({ _id: p._id, userId: p.userId }));
+    } catch (error) {
+      console.error("[testBasicQuery] Error:", error);
+      return [];
+    }
+  },
+});
+
+// Completely minimal test query
+export const minimalTest = query({
+  args: {},
+  returns: v.array(v.string()),
+  handler: async (ctx, args) => {
+    console.log("[minimalTest] Starting...");
+    return ["test"];
+  },
+});
+
+// Set up user status for map visibility
+export const setupMapStatus = mutation({
+  args: {
+    email: v.string(),
+    latitude: v.number(),
+    longitude: v.number(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    try {
+      console.log("[setupMapStatus] Setting up status for:", args.email);
+
+      // Get user by email
+      const user = await ctx.db
+        .query("users")
+        .withIndex("by_email", (q) => q.eq("email", args.email))
+        .unique();
+
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      const userId = user._id;
+
+      // Check if status already exists
+      const existingStatus = await ctx.db
+        .query("status")
+        .withIndex("by_userId", (q) => q.eq("userId", userId))
+        .unique();
+
+      if (existingStatus) {
+        // Update existing status
+        await ctx.db.patch(existingStatus._id, {
+          isVisible: true,
+          isLocationEnabled: true,
+          latitude: args.latitude,
+          longitude: args.longitude,
+          hostingStatus: "not-hosting",
+          lastSeen: Date.now(),
+        });
+        console.log("[setupMapStatus] Updated existing status");
+      } else {
+        // Create new status
+        await ctx.db.insert("status", {
+          userId,
+          isVisible: true,
+          isLocationEnabled: true,
+          latitude: args.latitude,
+          longitude: args.longitude,
+          hostingStatus: "not-hosting",
+          lastSeen: Date.now(),
+        });
+        console.log("[setupMapStatus] Created new status");
+      }
+
+      return null;
+    } catch (error) {
+      console.error("[setupMapStatus] Error:", error);
+      throw error;
+    }
   },
 });

@@ -8,7 +8,7 @@ A modern location-based social networking app built with Next.js 15, featuring r
 
 ### 🔐 Authentication
 
-- **Clerk Authentication** with multiple sign-in methods
+- **WorkOS AuthKit Authentication** with multiple sign-in methods
 - Secure JWT-based authentication with Convex backend
 - Protected routes and user session management
 
@@ -44,7 +44,7 @@ A modern location-based social networking app built with Next.js 15, featuring r
 - **Frontend**: Next.js 15 (App Router), React 19, TypeScript
 - **Styling**: Tailwind CSS 4, Radix UI
 - **Backend**: Convex (database, real-time, authentication)
-- **Authentication**: Clerk
+- **Authentication**: WorkOS AuthKit
 - **Maps**: Leaflet.js, React-Leaflet
 - **Icons**: Lucide React
 - **Notifications**: Sonner
@@ -65,7 +65,7 @@ A modern location-based social networking app built with Next.js 15, featuring r
 
 1. **Node.js** (v18 or higher)
 2. **npm** or **yarn**
-3. **Clerk account** ([sign up here](https://clerk.com))
+3. **WorkOS account** ([sign up here](https://workos.com))
 4. **Convex account** ([sign up here](https://convex.dev))
 
 ### Installation
@@ -91,17 +91,19 @@ A modern location-based social networking app built with Next.js 15, featuring r
    # Convex
    NEXT_PUBLIC_CONVEX_URL=your_convex_url_here
 
-   # Clerk Authentication
-   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key_here
-   CLERK_FRONTEND_API_URL=your_clerk_frontend_api_url_here
+   # WorkOS Authentication
+   WORKOS_API_KEY=your_workos_api_key_here
+   WORKOS_CLIENT_ID=your_workos_client_id_here
+   WORKOS_COOKIE_PASSWORD=your_secure_cookie_password_here
+   NEXT_PUBLIC_WORKOS_REDIRECT_URI=http://localhost:3000/callback
 
    # Weather API (optional)
    NEXT_PUBLIC_OPENWEATHER_API_KEY=your_openweather_api_key_here
    ```
 
-4. **Configure Clerk Authentication**
+4. **Configure WorkOS AuthKit Authentication**
 
-   Follow the detailed setup guide in [SETUP.md](./SETUP.md) to configure Clerk with Convex.
+   Follow the detailed setup guide in [SETUP.md](./SETUP.md) to configure WorkOS AuthKit with Convex.
 
 5. **Start the development server**
 
@@ -115,12 +117,14 @@ A modern location-based social networking app built with Next.js 15, featuring r
 
 ### Environment Variables
 
-| Variable                            | Description                                | Required |
-| ----------------------------------- | ------------------------------------------ | -------- |
-| `NEXT_PUBLIC_CONVEX_URL`            | Your Convex deployment URL                 | ✅       |
-| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk publishable key                      | ✅       |
-| `CLERK_FRONTEND_API_URL`            | Clerk frontend API URL                     | ✅       |
-| `NEXT_PUBLIC_OPENWEATHER_API_KEY`   | OpenWeatherMap API key for weather feature | ❌       |
+| Variable                          | Description                                | Required |
+| --------------------------------- | ------------------------------------------ | -------- |
+| `NEXT_PUBLIC_CONVEX_URL`          | Your Convex deployment URL                 | ✅       |
+| `WORKOS_API_KEY`                  | WorkOS API key                             | ✅       |
+| `WORKOS_CLIENT_ID`                | WorkOS client ID                           | ✅       |
+| `WORKOS_COOKIE_PASSWORD`          | Secure cookie password (32+ chars)         | ✅       |
+| `NEXT_PUBLIC_WORKOS_REDIRECT_URI` | WorkOS redirect URI                        | ✅       |
+| `NEXT_PUBLIC_OPENWEATHER_API_KEY` | OpenWeatherMap API key for weather feature | ❌       |
 
 ## 🏗️ Project Structure
 
@@ -193,6 +197,7 @@ The app can be deployed to any platform that supports Next.js:
 - **Event Planning**: Create and join local events
 - **Photo Sharing**: Share moments with nearby users
 - **Custom Filters**: Advanced people discovery options
+- **Spotify Integration**: Share what you're listening to live with nearby users
 
 ### Looking Now
 
@@ -255,4 +260,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-Built with ❤️ using Next.js, Convex, and Clerk
+Built with ❤️ using Next.js, Convex, and WorkOS AuthKit

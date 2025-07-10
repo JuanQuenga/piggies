@@ -1,22 +1,22 @@
 "use client";
 
-import React, { useState, useEffect, useRef, FormEvent } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useMutation, usePaginatedQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { Id, Doc } from "../../../convex/_generated/dataModel";
-import { toast } from "sonner";
+import { Id } from "../../../convex/_generated/dataModel";
 import { Button } from "../../components/ui/button";
+import { Card, CardContent } from "../../components/ui/card";
 import { Input } from "../../components/ui/input";
+import { Badge } from "../../components/ui/badge";
+import { Separator } from "../../components/ui/separator";
 import {
   Send,
-  Paperclip,
-  Image as ImageIcon,
-  File,
-  X,
   ArrowLeft,
-  MoreVertical,
-  ShieldCheck,
+  MessageCircle,
+  User,
+  Image as ImageIcon,
 } from "lucide-react";
+import { cn } from "../../lib/utils";
 
 interface ChatViewProps {
   conversationId: Id<"conversations">;
@@ -25,25 +25,9 @@ interface ChatViewProps {
     displayName?: string | null;
     avatarUrl?: string | null;
   };
-  currentUserId: Id<"users">;
+  currentUserId: Id<"users"> | null | undefined;
   onBack: () => void;
 }
-
-type MessageWithAuthorAndUrl = Doc<"messages"> & {
-  author: {
-    _id: Id<"users">;
-    displayName?: string | null;
-    avatarUrl?: string | null;
-  };
-  attachmentUrl?: string | null;
-};
-
-// Helper function to extract YouTube Video ID from various URL formats
-const getYoutubeVideoId = (url: string): string | null => {
-  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
-  const match = url.match(regExp);
-  return match && match[2].length === 11 ? match[2] : null;
-};
 
 export const ChatView: React.FC<ChatViewProps> = ({
   conversationId,
@@ -51,270 +35,311 @@ export const ChatView: React.FC<ChatViewProps> = ({
   currentUserId,
   onBack,
 }) => {
-  const {
-    results: messages,
-    status,
-    loadMore,
-  } = usePaginatedQuery(
-    api.messages.listMessages,
-    { conversationId },
-    { initialNumItems: 20 }
-  );
-
-  const [newMessageText, setNewMessageText] = useState("");
-  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+  const [message, setMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const sendMessageMutation = useMutation(api.messages.sendMessage);
-  const generateUploadUrlMutation = useMutation(
+  const sendMessage = useMutation(api.messages.sendMessage);
+  const generateUploadUrl = useMutation(
     api.messages.generateMessageAttachmentUploadUrl
   );
+  const { results: messages, status } = usePaginatedQuery(
+    api.messages.listMessages,
+    currentUserId
+      ? {
+          conversationId,
+          currentUserId,
+        }
+      : "skip",
+    { initialNumItems: 50 }
+  );
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    scrollToBottom();
   }, [messages]);
 
-  const handleSendMessage = async (e?: FormEvent) => {
-    e?.preventDefault();
-    if (!newMessageText.trim() && !attachmentFile) return;
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  const handleSendMessage = async () => {
+    if ((!message.trim() && !imageFile) || !currentUserId) return;
     setIsSending(true);
-
     try {
-      let body = newMessageText.trim();
-      let format: "text" | "image" | "video" = "text";
-
-      if (attachmentFile) {
-        const uploadUrl = await generateUploadUrlMutation({});
-        const response = await fetch(uploadUrl, {
+      let content = message.trim();
+      let format: "text" | "image" = "text";
+      let storageId: string | undefined = undefined;
+      if (imageFile) {
+        // Validate file size
+        if (imageFile.size > 5 * 1024 * 1024) {
+          alert("Image too large (max 5MB)");
+          setIsSending(false);
+          return;
+        }
+        // Get upload URL
+        const uploadUrl = await generateUploadUrl({ userId: currentUserId });
+        // Upload image
+        const uploadRes = await fetch(uploadUrl, {
           method: "POST",
-          headers: { "Content-Type": attachmentFile.type },
-          body: attachmentFile,
+          headers: { "Content-Type": imageFile.type },
+          body: imageFile,
         });
-        if (!response.ok)
-          throw new Error(`Upload failed: ${await response.text()}`);
-        const { storageId } = await response.json();
-        body = storageId;
-        if (attachmentFile.type.startsWith("image/")) format = "image";
-        else if (attachmentFile.type.startsWith("video/")) format = "video";
-        else {
-          toast.error("Unsupported file type.");
+        if (!uploadRes.ok) {
+          alert("Image upload failed");
           setIsSending(false);
           return;
         }
+        const { storageId: uploadedStorageId } = await uploadRes.json();
+        storageId = uploadedStorageId;
+        format = "image";
+        content = "";
       }
-
-      if (!body && format === "text") {
-        if (!attachmentFile) {
-          setIsSending(false);
-          return;
-        }
-      }
-
-      await sendMessageMutation({
+      await sendMessage({
+        senderId: currentUserId,
         receiverId: otherParticipant._id,
-        body,
+        content,
         format,
+        storageId: storageId as any,
       });
-
-      setNewMessageText("");
-      setAttachmentFile(null);
+      setMessage("");
+      setImageFile(null);
+      setImagePreview(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
-      toast.success(format === "text" ? "Message sent!" : "File sent!");
     } catch (error) {
       console.error("Failed to send message:", error);
-      toast.error(
-        `Failed to send: ${error instanceof Error ? error.message : String(error)}`
-      );
     } finally {
       setIsSending(false);
     }
   };
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      if (file.size > 10 * 1024 * 1024) {
-        toast.error("File is too large (max 10MB).");
-        if (fileInputRef.current) fileInputRef.current.value = "";
-        return;
-      }
-      setAttachmentFile(file);
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey && !imageFile) {
+      e.preventDefault();
+      handleSendMessage();
     }
   };
 
-  const otherParticipantAvatar =
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type.startsWith("image/")) {
+      if (file.size > 5 * 1024 * 1024) {
+        alert("Image too large (max 5MB)");
+        return;
+      }
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
+    } else {
+      setImageFile(null);
+      setImagePreview(null);
+    }
+  };
+
+  if (currentUserId === undefined) {
+    return (
+      <div className="flex items-center justify-center h-full bg-zinc-900">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
+          <p className="mt-2 text-zinc-400">Loading user...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!currentUserId) {
+    return (
+      <div className="flex items-center justify-center h-full bg-zinc-900">
+        <div className="text-center">
+          <h3 className="text-xl font-semibold text-white mb-2">
+            Sign in required
+          </h3>
+          <p className="text-zinc-400">Please sign in to use messaging.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const avatar =
     otherParticipant.avatarUrl ||
-    `https://ui-avatars.com/api/?name=${encodeURIComponent(otherParticipant.displayName || "U")}&background=random&size=32`;
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(otherParticipant.displayName || "U")}&background=8b5cf6&color=fff&size=40`;
 
   return (
-    <div className="flex flex-col h-full bg-zinc-950">
-      <div className="flex items-center p-3 border-b border-zinc-800 bg-zinc-900">
+    <div className="flex flex-col h-full bg-zinc-900">
+      {/* Header */}
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-zinc-800 bg-zinc-900">
         <Button
-          onClick={onBack}
           variant="ghost"
-          size="sm"
-          className="mr-2 text-white hover:bg-zinc-800"
+          size="icon"
+          onClick={onBack}
+          className="p-2 hover:bg-zinc-800"
         >
-          <ArrowLeft className="w-4 h-4 mr-1" />
-          Back
+          <ArrowLeft className="w-5 h-5 text-zinc-400" />
         </Button>
         <img
-          src={otherParticipantAvatar}
+          src={avatar}
           alt={otherParticipant.displayName || "User"}
-          className="w-8 h-8 rounded-full object-cover mr-2 border border-zinc-700"
+          className="w-8 h-8 rounded-full object-cover border-2 border-zinc-600"
         />
-        <h3 className="text-md font-semibold text-white">
-          {otherParticipant.displayName || "Chat"}
-        </h3>
+        <div className="flex-1 min-w-0">
+          <h3 className="text-sm font-semibold text-white truncate">
+            {otherParticipant.displayName || "Unknown User"}
+          </h3>
+          <p className="text-xs text-zinc-400">Active now</p>
+        </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-zinc-950">
-        {status === "CanLoadMore" && (
-          <Button
-            onClick={() => loadMore(10)}
-            variant="outline"
-            size="sm"
-            className="w-full bg-zinc-800 border-zinc-700 text-white hover:bg-zinc-700"
-          >
-            Load older messages
-          </Button>
-        )}
-        {(messages as MessageWithAuthorAndUrl[])
-          .slice()
-          .reverse()
-          .map((msg) => {
-            const isCurrentUser = msg.authorId === currentUserId;
-            const authorAvatar =
-              msg.author.avatarUrl ||
-              `https://ui-avatars.com/api/?name=${encodeURIComponent(msg.author.displayName || "U")}&background=random&size=24`;
-            const youtubeVideoId =
-              msg.format === "text" ? getYoutubeVideoId(msg.body) : null;
-
-            return (
-              <div
-                key={msg._id}
-                className={`flex ${isCurrentUser ? "justify-end" : "justify-start"}`}
-              >
+      {/* Messages Area */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        {status === "LoadingFirstPage" ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600"></div>
+          </div>
+        ) : messages.length === 0 ? (
+          <div className="text-center py-8">
+            <MessageCircle className="w-12 h-12 text-zinc-400 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-white mb-2">
+              Start a conversation
+            </h3>
+            <p className="text-zinc-400">
+              Send a message to begin chatting with{" "}
+              {otherParticipant.displayName || "this user"}
+            </p>
+          </div>
+        ) : (
+          messages
+            .slice()
+            .reverse()
+            .map((msg) => {
+              const isOwnMessage = msg.senderId === currentUserId;
+              const senderAvatar =
+                msg.author?.avatarUrl ||
+                `https://ui-avatars.com/api/?name=${encodeURIComponent(msg.author?.name || "U")}&background=8b5cf6&color=fff&size=32`;
+              return (
                 <div
-                  className={`flex items-end max-w-xs lg:max-w-md ${isCurrentUser ? "flex-row-reverse" : "flex-row"}`}
-                >
-                  {!isCurrentUser && (
-                    <img
-                      src={authorAvatar}
-                      alt="author"
-                      className="w-6 h-6 rounded-full object-cover mr-2 self-start"
-                    />
+                  key={msg._id}
+                  className={cn(
+                    "flex items-end gap-2 mb-2",
+                    isOwnMessage ? "flex-row-reverse" : "flex-row"
                   )}
+                >
+                  <img
+                    src={senderAvatar}
+                    alt={msg.author?.name || "User"}
+                    className="w-8 h-8 rounded-full object-cover border-2 border-zinc-600 flex-shrink-0"
+                  />
                   <div
-                    className={`p-2 rounded-lg shadow ${isCurrentUser ? "bg-primary text-primary-foreground rounded-br-none" : "bg-card text-card-foreground rounded-bl-none border"}`}
-                  >
-                    {!isCurrentUser && (
-                      <p className="text-xs font-semibold mb-0.5 text-primary">
-                        {msg.author.displayName}
-                      </p>
+                    className={cn(
+                      "max-w-[70%] flex flex-col",
+                      isOwnMessage ? "items-end" : "items-start"
                     )}
-                    {youtubeVideoId ? (
-                      <div className="aspect-video w-full max-w-xs">
-                        <iframe
-                          className="w-full h-full rounded"
-                          src={`https://www.youtube.com/embed/${youtubeVideoId}`}
-                          title="YouTube video player"
-                          frameBorder="0"
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                          allowFullScreen
-                        ></iframe>
-                      </div>
-                    ) : msg.format === "text" ? (
-                      <p className="text-sm whitespace-pre-wrap break-words">
-                        {msg.body}
-                      </p>
-                    ) : msg.format === "image" && msg.attachmentUrl ? (
-                      <img
-                        src={msg.attachmentUrl}
-                        alt="Sent image"
-                        className="max-w-full h-auto rounded-md my-1 max-h-64"
-                      />
-                    ) : msg.format === "video" && msg.attachmentUrl ? (
-                      <video
-                        src={msg.attachmentUrl}
-                        controls
-                        className="max-w-full h-auto rounded-md my-1 max-h-64"
-                      />
-                    ) : null}
-                    <p
-                      className={`text-xs mt-1 ${isCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground"} text-right`}
+                  >
+                    <Card
+                      className={cn(
+                        "inline-block rounded-lg px-4 py-2",
+                        isOwnMessage
+                          ? "bg-purple-600 text-white border-purple-600"
+                          : "bg-zinc-100 text-zinc-900 border-zinc-200"
+                      )}
                     >
-                      {new Date(msg._creationTime).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </p>
+                      <CardContent className="p-0">
+                        {msg.format === "image" && msg.attachmentUrl ? (
+                          <img
+                            src={msg.attachmentUrl}
+                            alt="Sent image"
+                            className="max-w-xs max-h-64 rounded-lg mb-2 mx-auto"
+                          />
+                        ) : null}
+                        <p className="text-sm whitespace-pre-wrap break-words">
+                          {msg.content}
+                        </p>
+                      </CardContent>
+                    </Card>
+                    <div
+                      className={cn(
+                        "flex items-center gap-1 mt-1 text-xs text-zinc-400",
+                        isOwnMessage ? "justify-end" : "justify-start"
+                      )}
+                    >
+                      <span>
+                        {new Date(msg._creationTime).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        <div ref={messagesEndRef} />
-        {status === "LoadingFirstPage" && (
-          <p className="text-center text-muted-foreground">
-            Loading messages...
-          </p>
+              );
+            })
         )}
+        <div ref={messagesEndRef} />
       </div>
 
-      <div className="p-3 border-t border-border bg-background">
-        {attachmentFile && (
-          <div className="text-xs text-muted-foreground mb-1">
-            Selected: {attachmentFile.name} (
-            {(attachmentFile.size / 1024).toFixed(1)} KB)
+      {/* Message Input */}
+      <div className="p-4 border-t border-zinc-800 bg-zinc-900">
+        {imagePreview && (
+          <div className="mb-2 flex items-center gap-2">
+            <img
+              src={imagePreview}
+              alt="Preview"
+              className="w-20 h-20 rounded-lg object-cover border border-zinc-700"
+            />
             <Button
+              variant="ghost"
+              size="icon"
               onClick={() => {
-                setAttachmentFile(null);
-                if (fileInputRef.current) fileInputRef.current.value = "";
+                setImageFile(null);
+                setImagePreview(null);
               }}
-              variant="link"
-              size="sm"
-              className="ml-2 text-destructive h-auto p-0"
             >
-              [remove]
+              ✕
             </Button>
           </div>
         )}
-        <form
-          onSubmit={handleSendMessage}
-          className="flex items-center space-x-2"
-        >
+        <div className="flex gap-2 items-center">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="p-2"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isSending}
+          >
+            <ImageIcon className="w-5 h-5 text-purple-400" />
+          </Button>
           <input
             type="file"
+            accept="image/*"
             ref={fileInputRef}
-            onChange={handleFileChange}
-            accept="image/*,video/*"
             className="hidden"
-            id="file-upload"
+            onChange={handleImageChange}
+            disabled={isSending}
           />
-          <label
-            htmlFor="file-upload"
-            className="p-2 rounded-full hover:bg-muted cursor-pointer text-muted-foreground"
-          >
-            📎
-          </label>
           <Input
-            type="text"
-            value={newMessageText}
-            onChange={(e) => setNewMessageText(e.target.value)}
-            placeholder="Type a message or paste a YouTube link..."
-            className="flex-1"
+            ref={inputRef}
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder="Type a message..."
+            className="flex-1 bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-400 focus:border-purple-500"
             disabled={isSending}
           />
           <Button
-            type="submit"
-            disabled={isSending || (!newMessageText.trim() && !attachmentFile)}
+            onClick={handleSendMessage}
+            disabled={(!message.trim() && !imageFile) || isSending}
+            size="icon"
+            className="bg-purple-600 hover:bg-purple-700 text-white"
           >
-            Send
+            <Send className="w-4 h-4" />
           </Button>
-        </form>
+        </div>
       </div>
     </div>
   );

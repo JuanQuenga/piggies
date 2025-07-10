@@ -3,15 +3,26 @@
 import { ProfileEditor } from "./ProfileEditor";
 import { useEffect, useState } from "react";
 import { useQuery } from "convex/react";
+import { useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
+import { useAuth } from "@workos-inc/authkit-nextjs/components";
 
 // Force dynamic rendering to prevent static generation issues
 export const dynamic = "force-dynamic";
 
 export default function ProfilePage() {
   const [mounted, setMounted] = useState(false);
-  const profile = useQuery(api.profiles.getMyProfile);
-  const convexUser = useQuery(api.users.currentLoggedInUser);
+  const { user } = useAuth();
+  const profile = useQuery(api.profiles.getMyProfile, {
+    email: user?.email || "",
+  });
+  const status = useQuery(api.status.getMyStatus, {
+    email: user?.email || "",
+  });
+  const convexUser = useQuery(api.users.currentLoggedInUser, {
+    email: user?.email || "",
+  });
+  const updateStatus = useMutation(api.status.updateMyStatus);
 
   useEffect(() => {
     setMounted(true);
@@ -29,15 +40,32 @@ export default function ProfilePage() {
   }
 
   const handleUpdateProfile = async (data: any) => {
-    // TODO: Implement profile update
+    // Handle profile update
     console.log("Updating profile:", data);
+  };
+
+  const handleUpdateStatus = async (data: {
+    isVisible?: boolean;
+    isLocationEnabled?: boolean;
+    latitude?: number;
+    longitude?: number;
+    locationRandomization?: number;
+    hostingStatus?: string;
+  }) => {
+    // Handle status update
+    await updateStatus({
+      email: user?.email || "",
+      ...data,
+    });
   };
 
   return (
     <div className="h-full w-full bg-zinc-950">
       <ProfileEditor
         profile={profile}
+        status={status}
         updateProfile={handleUpdateProfile}
+        updateStatus={handleUpdateStatus}
         convexUser={convexUser}
       />
     </div>

@@ -1,25 +1,24 @@
 "use client";
-import { useAuth } from "@clerk/nextjs";
-import { useState } from "react";
+import { useAuth } from "@workos-inc/authkit-nextjs/components";
 import { usePathname } from "next/navigation";
 import FullScreenAuth from "./auth/FullScreenAuth";
 import Sidebar from "@/components/common/Sidebar";
 import Header from "@/components/common/Header";
+import { BottomNav } from "@/components/common/BottomNav";
 
 export default function AppAuthGate({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const { isSignedIn, isLoaded } = useAuth();
+  const { user, loading } = useAuth();
   const pathname = usePathname();
 
   // Allow the landing page to be shown when not signed in
   const isLandingPage = pathname === "/";
   const isAuthPage = pathname === "/auth";
 
-  if (!isLoaded) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -33,31 +32,24 @@ export default function AppAuthGate({
   }
 
   // Show landing page or auth page without the authenticated layout
-  if (!isSignedIn && (isLandingPage || isAuthPage)) {
+  if (!user && (isLandingPage || isAuthPage)) {
     return <>{children}</>;
   }
 
   // Show auth gate for all other pages when not signed in
-  if (!isSignedIn) {
+  if (!user) {
     return <FullScreenAuth />;
   }
 
   return (
     <div className="min-h-screen flex flex-row bg-zinc-950">
-      <Sidebar
-        collapsed={sidebarCollapsed}
-        setCollapsed={setSidebarCollapsed}
-      />
-      <div
-        className={
-          `flex-1 flex flex-col min-h-screen transition-all duration-300 bg-zinc-950` +
-          (sidebarCollapsed ? " md:ml-16" : " md:ml-48")
-        }
-      >
+      <Sidebar collapsed={false} setCollapsed={() => {}} />
+      <div className="flex-1 flex flex-col min-h-screen bg-zinc-950 md:ml-48">
         <Header />
-        <main className="flex-1 flex flex-col min-h-0 pt-24 md:pt-0">
+        <main className="flex-1 flex flex-col min-h-0 pt-20 pb-16 md:pt-0 md:pb-0">
           {children}
         </main>
+        <BottomNav />
       </div>
     </div>
   );

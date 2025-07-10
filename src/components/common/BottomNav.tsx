@@ -1,41 +1,47 @@
-import { Map, User, MessageCircle } from "lucide-react";
-import { Button } from "../ui/button";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { User, MessageCircle, Users, MapPin } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-interface BottomNavProps {
-  activeTab: "map" | "profile" | "chat";
-  setActiveTab: (tab: "map" | "profile" | "chat") => void;
-}
-
-export function BottomNav({ activeTab, setActiveTab }: BottomNavProps) {
+export function BottomNav() {
+  const pathname = usePathname();
+  const routes = [
+    {
+      label: "Profile",
+      icon: User,
+      href: "/profile",
+    },
+    {
+      label: "Chats",
+      icon: MessageCircle,
+      href: "/chats",
+    },
+    {
+      label: "People",
+      icon: Users,
+      href: "/people",
+    },
+    {
+      label: "Map",
+      icon: MapPin,
+      href: "/map",
+    },
+  ];
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-card/90 border-t border-border flex justify-around items-center h-16 md:hidden shadow-2xl">
-      <Button
-        variant={activeTab === "map" ? "default" : "ghost"}
-        size="icon"
-        onClick={() => setActiveTab("map")}
-        className="flex flex-col items-center gap-0"
-      >
-        <Map className="w-6 h-6" />
-        <span className="text-xs">Map</span>
-      </Button>
-      <Button
-        variant={activeTab === "profile" ? "default" : "ghost"}
-        size="icon"
-        onClick={() => setActiveTab("profile")}
-        className="flex flex-col items-center gap-0"
-      >
-        <User className="w-6 h-6" />
-        <span className="text-xs">Profile</span>
-      </Button>
-      <Button
-        variant={activeTab === "chat" ? "default" : "ghost"}
-        size="icon"
-        onClick={() => setActiveTab("chat")}
-        className="flex flex-col items-center gap-0"
-      >
-        <MessageCircle className="w-6 h-6" />
-        <span className="text-xs">Chat</span>
-      </Button>
+    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-zinc-900 border-t border-zinc-800 flex justify-around items-center h-16 md:hidden">
+      {routes.map((route) => (
+        <Link
+          key={route.href}
+          href={route.href}
+          className={cn(
+            "flex flex-col items-center gap-1 px-2 py-1 text-xs font-medium transition-colors",
+            pathname === route.href ? "text-white" : "text-zinc-400"
+          )}
+        >
+          <route.icon className="w-6 h-6 mb-0.5" />
+          {route.label}
+        </Link>
+      ))}
     </nav>
   );
 }

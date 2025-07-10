@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useMutation } from "convex/react";
-import { useAuth } from "@clerk/nextjs";
+import { useAuth } from "@workos-inc/authkit-nextjs/components";
 import { api } from "../../../../convex/_generated/api";
 import { ProfilePage } from "../../../app/profile/ProfilePage";
 import { Id } from "../../../../convex/_generated/dataModel";
@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 
 // Separate component that uses Convex hooks - will be wrapped in ConvexProvider
 function UserProfilePageContent() {
-  const { isSignedIn, isLoaded } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
   const params = useParams();
   const [mounted, setMounted] = useState(false);
@@ -26,14 +26,18 @@ function UserProfilePageContent() {
   const userId = params.userId as Id<"users">;
 
   // Now useQuery is called within ConvexProvider context
-  const currentUserProfile = useQuery(api.profiles.getMyProfileWithAvatarUrl);
-  const currentUserId = useQuery(api.users.getMyId);
+  const currentUserProfile = useQuery(api.profiles.getMyProfileWithAvatarUrl, {
+    email: user?.email || "",
+  });
+  const currentUserId = useQuery(api.users.getMyId, {
+    email: user?.email || "",
+  });
   const getOrCreateConversationMutation = useMutation(
     api.messages.getOrCreateConversationWithParticipant
   );
 
   // Show loading state while authentication is being determined
-  if (!isLoaded) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
@@ -45,7 +49,7 @@ function UserProfilePageContent() {
   }
 
   // Redirect to sign in if not authenticated
-  if (!isSignedIn) {
+  if (!user) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
@@ -82,7 +86,14 @@ function UserProfilePageContent() {
 
   const handleStartChat = async (otherParticipantUserId: Id<"users">) => {
     try {
+      if (!currentUserId) {
+        console.error("Current user ID not found");
+        router.push("/chats");
+        return;
+      }
+
       const result = await getOrCreateConversationMutation({
+        currentUserId,
         otherParticipantUserId,
       });
       // Navigate to chat with the conversation ID as a query parameter
@@ -94,12 +105,20 @@ function UserProfilePageContent() {
     }
   };
 
+  // Transform the profile data to match the expected interface
+  const transformedProfile = currentUserProfile
+    ? {
+        latitude: undefined, // This should come from status data
+        longitude: undefined, // This should come from status data
+      }
+    : null;
+
   return (
     <ProfilePage
       userId={userId}
       onBack={handleBack}
       onStartChat={handleStartChat}
-      currentUserProfileForMap={currentUserProfile}
+      currentUserProfileForMap={transformedProfile}
     />
   );
 }

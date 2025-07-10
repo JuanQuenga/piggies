@@ -1,7 +1,6 @@
 "use client";
 
-import { SignIn, SignUp } from "@clerk/nextjs";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
@@ -10,13 +9,13 @@ export default function AuthPage() {
   const [tab, setTab] = useState<"sign-in" | "sign-up">("sign-in");
   const router = useRouter();
 
-  // Debug: Check if Clerk environment variables are set
-  useEffect(() => {
-    console.log(
-      "Clerk Publishable Key:",
-      process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ? "Set" : "Not set"
-    );
-  }, []);
+  const handleSignIn = () => {
+    window.location.href = "/login";
+  };
+
+  const handleSignUp = () => {
+    router.push("/login?signup=true");
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-zinc-900 to-black flex flex-col">
@@ -53,7 +52,7 @@ export default function AuthPage() {
               : "Create your account"}
           </p>
         </div>
-        {/* Tab + Clerk Card Group */}
+        {/* Tab + Auth Card Group */}
         <div className="relative flex flex-col items-center max-w-fit mx-auto min-w-[320px]">
           {/* Tab Switcher */}
           <div className="flex gap-2 mb-4">
@@ -80,40 +79,22 @@ export default function AuthPage() {
               Sign Up
             </button>
           </div>
-          {/* Clerk Components */}
-          <div>
+          {/* Auth Forms */}
+          <div className="w-full">
             {tab === "sign-in" ? (
-              <SignIn
-                appearance={{
-                  elements: {
-                    formButtonPrimary:
-                      "bg-purple-600 hover:bg-purple-700 text-white",
-                    card: "bg-zinc-900 border border-zinc-800",
-                    headerTitle: "text-white",
-                    headerSubtitle: "text-zinc-400",
-                    formFieldLabel: "text-zinc-300",
-                    formFieldInput: "bg-zinc-800 border-zinc-700 text-white",
-                    footerActionLink: "text-purple-400 hover:text-purple-300",
-                    footerActionText: "text-zinc-400",
-                  },
-                }}
-              />
+              <button
+                onClick={handleSignIn}
+                className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
+              >
+                Sign In with WorkOS
+              </button>
             ) : (
-              <SignUp
-                appearance={{
-                  elements: {
-                    formButtonPrimary:
-                      "bg-purple-600 hover:bg-purple-700 text-white",
-                    card: "bg-zinc-900 border border-zinc-800",
-                    headerTitle: "text-white",
-                    headerSubtitle: "text-zinc-400",
-                    formFieldLabel: "text-zinc-300",
-                    formFieldInput: "bg-zinc-800 border-zinc-700 text-white",
-                    footerActionLink: "text-purple-400 hover:text-purple-300",
-                    footerActionText: "text-zinc-400",
-                  },
-                }}
-              />
+              <button
+                onClick={handleSignUp}
+                className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
+              >
+                Sign Up with WorkOS
+              </button>
             )}
           </div>
         </div>

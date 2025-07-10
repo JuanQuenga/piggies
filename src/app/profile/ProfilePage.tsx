@@ -122,11 +122,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
     );
   }
 
-  const finalAvatarUrl =
-    profile.avatarUrl ||
-    `https://ui-avatars.com/api/?name=${encodeURIComponent(
-      profile.displayName || user.name || user.email || "U"
-    )}&background=8b5cf6&color=fff&size=256`;
+  const finalAvatarUrl = profile.avatarUrl || "/default-avatar.png";
 
   const lastSeenText = profile.lastSeen
     ? new Date(profile.lastSeen).toLocaleString()
@@ -246,7 +242,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
       className={
         modalMode
           ? "h-full flex flex-col min-h-0 max-w-lg w-full mx-auto bg-zinc-900"
-          : "h-full flex flex-col min-h-0 max-w-md w-full mx-auto"
+          : "h-full flex flex-col min-h-0 max-w-md w-full mx-auto border-purple-500 border-2 rounded-lg overflow-hidden"
       }
     >
       {/* Top Bar (above photo) */}

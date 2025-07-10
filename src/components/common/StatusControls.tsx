@@ -140,7 +140,7 @@ export function StatusControls({ variant = "desktop" }: StatusControlsProps) {
         variant="outline"
         size={buttonSize}
         className={cn(
-          "flex items-center gap-2 bg-transparent",
+          "flex items-center gap-2 bg-transparent cursor-pointer",
           padding,
           isLookingNow
             ? "text-green-400 border-green-400"
@@ -165,7 +165,7 @@ export function StatusControls({ variant = "desktop" }: StatusControlsProps) {
             variant="outline"
             size={buttonSize}
             className={cn(
-              "flex items-center gap-2 bg-transparent",
+              "flex items-center gap-2 bg-transparent cursor-pointer",
               padding,
               !isLookingNow && "opacity-50 cursor-not-allowed",
               hostingStatusConfig[hostingStatus].color
@@ -210,7 +210,7 @@ export function StatusControls({ variant = "desktop" }: StatusControlsProps) {
               <DropdownMenuItem
                 key={key}
                 className={cn(
-                  "flex items-center gap-2",
+                  "flex items-center gap-2 cursor-pointer",
                   hostingStatus === key && "bg-zinc-800"
                 )}
                 onClick={() => setHostingStatus(key)}
@@ -229,7 +229,7 @@ export function StatusControls({ variant = "desktop" }: StatusControlsProps) {
           variant="outline"
           size={buttonSize}
           className={cn(
-            "flex items-center gap-2 bg-transparent",
+            "flex items-center gap-2 bg-transparent cursor-pointer",
             padding,
             "text-blue-400 border-blue-400"
           )}
@@ -248,7 +248,7 @@ export function StatusControls({ variant = "desktop" }: StatusControlsProps) {
           variant="outline"
           size={buttonSize}
           className={cn(
-            "flex items-center gap-2 bg-transparent",
+            "flex items-center gap-2 bg-transparent cursor-pointer",
             padding,
             isLocationEnabled
               ? "text-blue-400 border-blue-400"
@@ -272,7 +272,7 @@ export function StatusControls({ variant = "desktop" }: StatusControlsProps) {
         variant="outline"
         size={buttonSize}
         className={cn(
-          "flex items-center gap-2 bg-transparent",
+          "flex items-center gap-2 bg-transparent cursor-pointer",
           padding,
           locationRandomization[0] > 0
             ? "text-purple-400 border-purple-400"

@@ -14,6 +14,15 @@ function formatTemp(temp: number, isUSUnits: boolean): string {
   return `${temp}${unit}`;
 }
 
+function getTimeOfDay(): "morning" | "afternoon" | "evening" | "night" {
+  const hour = new Date().getHours();
+
+  if (hour >= 5 && hour < 12) return "morning";
+  if (hour >= 12 && hour < 17) return "afternoon";
+  if (hour >= 17 && hour < 21) return "evening";
+  return "night";
+}
+
 function pickGreeting(
   temp: number | null,
   condition: string,
@@ -23,7 +32,52 @@ function pickGreeting(
 
   // Use Celsius for logic
   const tC = isUSUnits && temp !== null ? ((temp - 32) * 5) / 9 : temp;
+  const timeOfDay = getTimeOfDay();
 
+  // Try to use time-of-day specific greetings first
+  const timeGreetings = weatherGreetings[timeOfDay];
+  if (timeGreetings) {
+    if (condition === "Rain" || condition === "Drizzle") {
+      return timeGreetings.rainy[
+        Math.floor(Math.random() * timeGreetings.rainy.length)
+      ];
+    }
+    if (condition === "Snow") {
+      return timeGreetings.snowy[
+        Math.floor(Math.random() * timeGreetings.snowy.length)
+      ];
+    }
+    if (condition === "Thunderstorm") {
+      return timeGreetings.stormy[
+        Math.floor(Math.random() * timeGreetings.stormy.length)
+      ];
+    }
+    if (condition === "Wind" || condition === "Squall") {
+      return timeGreetings.windy[
+        Math.floor(Math.random() * timeGreetings.windy.length)
+      ];
+    }
+    if (tC <= 0) {
+      return timeGreetings.cold[
+        Math.floor(Math.random() * timeGreetings.cold.length)
+      ];
+    }
+    if (tC >= 30) {
+      return timeGreetings.hot[
+        Math.floor(Math.random() * timeGreetings.hot.length)
+      ];
+    }
+    if (condition === "Clear") {
+      return timeGreetings.clear[
+        Math.floor(Math.random() * timeGreetings.clear.length)
+      ];
+    }
+    return timeGreetings.neutral[
+      Math.floor(Math.random() * timeGreetings.neutral.length)
+    ];
+  }
+
+  // Fallback to legacy greetings if time-of-day specific ones aren't available
   if (condition === "Rain" || condition === "Drizzle") {
     return weatherGreetings.rainy[
       Math.floor(Math.random() * weatherGreetings.rainy.length)

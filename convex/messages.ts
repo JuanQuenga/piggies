@@ -18,10 +18,10 @@ type ConversationDoc = Doc<"conversations">;
 type UserDoc = Doc<"users">;
 type ProfileDoc = Doc<"profiles">;
 
-// TEMP: Mock userId for development. Replace with Clerk integration in production.
+// TEMP: Mock userId for development. Replace with WorkOS AuthKit integration in production.
 const MOCK_USER_ID = "mock_user_id" as Id<"users">;
 
-// Temporary authentication function - will be replaced with proper Clerk integration
+// Temporary authentication function - will be replaced with proper WorkOS AuthKit integration
 async function getAuthenticatedUserId(ctx: any): Promise<Id<"users"> | null> {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) {
@@ -66,7 +66,7 @@ export const getOrCreateConversation = internalMutation({
     const conversationId: Id<"conversations"> = await ctx.db.insert(
       "conversations",
       {
-        participants: sortedParticipantIds,
+        participantIds: sortedParticipantIds,
         participantSet: sortedParticipantIds,
         lastMessageTime: Date.now(),
       }
@@ -77,21 +77,18 @@ export const getOrCreateConversation = internalMutation({
 
 export const getOrCreateConversationWithParticipant = mutation({
   args: {
+    currentUserId: v.id("users"),
     otherParticipantUserId: v.id("users"),
   },
   handler: async (ctx, args) => {
-    const currentUserId = await getAuthenticatedUserId(ctx);
-    if (!currentUserId) {
-      throw new Error("User not authenticated");
-    }
-    if (currentUserId === args.otherParticipantUserId) {
+    if (args.currentUserId === args.otherParticipantUserId) {
       throw new Error("Cannot start a conversation with oneself.");
     }
 
     const conversationId: Id<"conversations"> = await ctx.runMutation(
       internal.messages.getOrCreateConversation,
       {
-        participantOneId: currentUserId,
+        participantOneId: args.currentUserId,
         participantTwoId: args.otherParticipantUserId,
       }
     );
@@ -136,33 +133,39 @@ export const getOrCreateConversationWithParticipant = mutation({
 
 export const sendMessage = mutation({
   args: {
+    senderId: v.id("users"),
     receiverId: v.id("users"),
     content: v.string(),
     format: v.union(v.literal("text"), v.literal("image"), v.literal("video")),
+    storageId: v.optional(v.id("_storage")),
   },
   handler: async (ctx, args): Promise<Id<"messages">> => {
-    const senderId = await getAuthenticatedUserId(ctx);
-    if (!senderId) {
-      throw new Error("User not authenticated");
-    }
-    if (senderId === args.receiverId) {
+    if (args.senderId === args.receiverId) {
       throw new Error("Cannot send a message to oneself in this context.");
     }
 
     const conversationId: Id<"conversations"> = await ctx.runMutation(
       internal.messages.getOrCreateConversation,
       {
-        participantOneId: senderId,
+        participantOneId: args.senderId,
         participantTwoId: args.receiverId,
       }
     );
 
-    const messageId: Id<"messages"> = await ctx.db.insert("messages", {
+    const messageDoc: any = {
       conversationId,
-      senderId,
+      senderId: args.senderId,
       content: args.content,
       format: args.format,
-    });
+    };
+    if (args.format === "image" && args.storageId) {
+      messageDoc.storageId = args.storageId;
+    }
+
+    const messageId: Id<"messages"> = await ctx.db.insert(
+      "messages",
+      messageDoc
+    );
 
     await ctx.db.patch(conversationId, { lastMessageId: messageId });
     return messageId;
@@ -170,12 +173,10 @@ export const sendMessage = mutation({
 });
 
 export const generateMessageAttachmentUploadUrl = mutation({
-  args: {},
-  handler: async (ctx): Promise<string> => {
-    const userId = await getAuthenticatedUserId(ctx);
-    if (!userId) {
-      throw new Error("User not authenticated");
-    }
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args): Promise<string> => {
     return await ctx.storage.generateUploadUrl();
   },
 });
@@ -183,14 +184,10 @@ export const generateMessageAttachmentUploadUrl = mutation({
 export const listMessages = query({
   args: {
     conversationId: v.id("conversations"),
+    currentUserId: v.id("users"),
     paginationOpts: paginationOptsValidator,
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthenticatedUserId(ctx);
-    if (!userId) {
-      throw new Error("User not authenticated");
-    }
-
     const result = await ctx.db
       .query("messages")
       .withIndex("by_conversation", (q: any) =>
@@ -206,7 +203,10 @@ export const listMessages = query({
           .withIndex("by_userId", (q: any) => q.eq("userId", message.senderId))
           .unique();
 
-        const authorUser = await ctx.db.get(message.senderId);
+        let authorUser = null;
+        if (message.senderId) {
+          authorUser = await ctx.db.get(message.senderId);
+        }
 
         let attachmentUrl: string | null = null;
         if (message.format === "image" || message.format === "video") {
@@ -253,142 +253,179 @@ export const listMessages = query({
 });
 
 export const listConversations = query({
-  args: { paginationOpts: paginationOptsValidator },
+  args: {
+    currentUserId: v.id("users"),
+    paginationOpts: paginationOptsValidator,
+  },
   handler: async (ctx, args) => {
-    const userId = await getAuthenticatedUserId(ctx);
-    if (!userId) {
-      throw new Error("User not authenticated");
-    }
-    console.log("Fetching conversations for user:", userId);
+    console.log("listConversations called for user:", args.currentUserId);
 
-    // Query conversations using the new index
-    const result = await ctx.db
-      .query("conversations")
-      .withIndex("by_participant_time", (q: any) =>
-        q.eq("participantSet", [userId])
-      )
-      .order("desc")
-      .paginate(args.paginationOpts);
+    try {
+      // Get all conversations and filter by participant
+      const allConversations = await ctx.db
+        .query("conversations")
+        .order("desc")
+        .collect();
 
-    const conversationsWithDetails = await Promise.all(
-      result.page.map(async (conv) => {
-        const otherParticipantId = conv.participants.find(
-          (id) => id !== userId
-        )!;
-        console.log("Processing conversation with:", otherParticipantId);
+      // Filter conversations where the current user is a participant
+      const userConversations = allConversations.filter((conversation) =>
+        conversation.participantIds.includes(args.currentUserId)
+      );
 
-        // Get other participant's profile and auth info
-        const otherUserProfile = await ctx.db
-          .query("profiles")
-          .withIndex("by_userId", (q: any) =>
-            q.eq("userId", otherParticipantId)
-          )
-          .unique();
-        const otherUserAuth = await ctx.db.get(otherParticipantId);
+      // Apply pagination manually
+      const startIndex = 0;
+      const endIndex = args.paginationOpts.numItems;
+      const paginatedConversations = userConversations.slice(
+        startIndex,
+        endIndex
+      );
 
-        let lastMessage = null;
-        if (conv.lastMessageId) {
-          lastMessage = await ctx.db.get(conv.lastMessageId);
-        }
+      // For each conversation, get the other participant's details
+      const conversationsWithParticipants = await Promise.all(
+        paginatedConversations.map(async (conversation) => {
+          // Find the other participant (not the current user)
+          const otherParticipantId = conversation.participantIds.find(
+            (id) => id !== args.currentUserId
+          );
 
-        let avatarUrl = null;
-        if (otherUserProfile?.avatarUrl) {
-          try {
-            avatarUrl = await ctx.storage.getUrl(
-              otherUserProfile.avatarUrl as Id<"_storage">
-            );
-          } catch (e) {
-            console.error(
-              `Failed to get URL for avatar storageId ${otherUserProfile.avatarUrl}`,
-              e
-            );
+          if (!otherParticipantId) {
+            return null;
           }
-        } else if (otherUserAuth?.imageUrl) {
-          avatarUrl = otherUserAuth.imageUrl;
-        }
 
-        return {
-          _id: conv._id,
-          participants: conv.participants,
-          otherParticipant: {
-            _id: otherParticipantId,
-            displayName:
-              otherUserProfile?.displayName ??
-              otherUserAuth?.name ??
-              "Unknown User",
-            avatarUrl,
-          },
-          lastMessageSnippet: lastMessage?.content ?? null,
-          lastMessageFormat: lastMessage?.format ?? "text",
-          lastMessageTimestamp: conv.lastMessageTime,
-        };
-      })
-    );
+          // Get the other participant's user details
+          const otherUser = await ctx.db.get(otherParticipantId);
+          if (!otherUser) {
+            return null;
+          }
 
-    console.log(
-      "Returning conversations with details:",
-      conversationsWithDetails.length
-    );
-    return {
-      isDone: result.isDone,
-      continueCursor: result.continueCursor,
-      page: conversationsWithDetails,
-    };
+          // Get the other participant's profile
+          const otherProfile = await ctx.db
+            .query("profiles")
+            .withIndex("by_userId", (q) => q.eq("userId", otherParticipantId))
+            .unique();
+
+          return {
+            _id: conversation._id,
+            _creationTime: conversation._creationTime,
+            lastMessage: null, // Simplified for now
+            otherParticipant: {
+              _id: otherParticipantId,
+              displayName:
+                otherProfile?.displayName ?? otherUser.name ?? "Unknown User",
+              avatarUrl: otherProfile?.avatarUrl ?? otherUser.imageUrl ?? null,
+            },
+          };
+        })
+      );
+
+      const validConversations = conversationsWithParticipants.filter(
+        (conv): conv is NonNullable<typeof conv> => conv !== null
+      );
+
+      return {
+        isDone: endIndex >= userConversations.length,
+        continueCursor:
+          endIndex < userConversations.length ? endIndex.toString() : "",
+        page: validConversations,
+      };
+    } catch (error) {
+      console.error("Error in listConversations:", error);
+      throw error;
+    }
   },
 });
 
+// Get conversation details
 export const getConversationDetails = query({
   args: {
     conversationId: v.id("conversations"),
   },
-  handler: async (ctx, args) => {
-    const currentUserId = await getAuthenticatedUserId(ctx);
-    if (!currentUserId) {
-      throw new Error("User not authenticated");
-    }
-
-    const conversation = await ctx.db.get(args.conversationId);
+  handler: async (ctx, { conversationId }) => {
+    const conversation = await ctx.db.get(conversationId);
     if (!conversation) {
-      throw new Error("Conversation not found");
+      return null;
     }
 
-    // Make sure the current user is a participant
-    if (!conversation.participants.includes(currentUserId)) {
-      throw new Error("User is not a participant in this conversation");
+    // Get the last message
+    let lastMessage = null;
+    if (conversation.lastMessageId) {
+      const message = await ctx.db.get(conversation.lastMessageId);
+      if (message) {
+        // Get the sender ID, preferring senderId over authorId
+        let authorName = "Unknown";
+        if (message.senderId && typeof message.senderId === "string") {
+          const authorUser = await ctx.db.get(message.senderId as Id<"users">);
+          if (authorUser) {
+            authorName = authorUser.name;
+          }
+        } else if (message.authorId && typeof message.authorId === "string") {
+          const authorUser = await ctx.db.get(message.authorId as Id<"users">);
+          if (authorUser) {
+            authorName = authorUser.name;
+          }
+        }
+
+        lastMessage = {
+          ...message,
+          authorName,
+        };
+      }
     }
 
-    // Get the other participant's ID
-    const otherParticipantId = conversation.participants.find(
-      (id: Id<"users">) => id !== currentUserId
+    // Get participant details
+    const participants = await Promise.all(
+      conversation.participantIds.map(async (participantId) => {
+        const user = await ctx.db.get(participantId);
+        if (!user) return null;
+
+        const profile = await ctx.db
+          .query("profiles")
+          .withIndex("by_userId", (q) => q.eq("userId", participantId))
+          .unique();
+
+        return {
+          userId: participantId,
+          name: user.name,
+          email: user.email,
+          imageUrl: user.imageUrl,
+          profile,
+        };
+      })
     );
-    if (!otherParticipantId) {
-      throw new Error("Other participant not found");
-    }
-
-    // Get the other participant's profile and auth info
-    const otherUserProfile = await ctx.db
-      .query("profiles")
-      .withIndex("by_userId", (q: any) => q.eq("userId", otherParticipantId))
-      .unique();
-    const otherUserAuth = await ctx.db.get(otherParticipantId);
-
-    let otherUserAvatarFinalUrl: string | null = null;
-    if (otherUserProfile?.avatarUrl) {
-      otherUserAvatarFinalUrl = otherUserProfile.avatarUrl;
-    } else if (otherUserAuth?.imageUrl) {
-      otherUserAvatarFinalUrl = otherUserAuth.imageUrl;
-    }
 
     return {
-      conversationId: args.conversationId,
-      otherParticipant: {
-        _id: otherParticipantId,
-        displayName:
-          otherUserProfile?.displayName ??
-          otherUserAuth?.name ??
-          "Unknown User",
-        avatarUrl: otherUserAvatarFinalUrl,
-      },
+      ...conversation,
+      lastMessage,
+      participants: participants.filter(
+        (p): p is NonNullable<typeof p> => p !== null
+      ),
     };
+  },
+});
+
+export const markMessagesRead = mutation({
+  args: {
+    conversationId: v.id("conversations"),
+    userId: v.id("users"),
+  },
+  handler: async (ctx, { conversationId, userId }) => {
+    // Get all messages in the conversation
+    const messages = await ctx.db
+      .query("messages")
+      .withIndex("by_conversation", (q) =>
+        q.eq("conversationId", conversationId)
+      )
+      .collect();
+
+    let updatedCount = 0;
+    for (const message of messages) {
+      if (!message.readBy || !message.readBy.includes(userId)) {
+        await ctx.db.patch(message._id, {
+          readBy: [...(message.readBy || []), userId],
+        });
+        updatedCount++;
+      }
+    }
+    return { updated: updatedCount };
   },
 });

@@ -24,6 +24,7 @@ interface ProfileModalProps {
   onBack: () => void;
   onStartChat: (userId: Id<"users">) => void;
   currentUserProfileForMap?: { latitude?: number; longitude?: number } | null;
+  columnMode?: boolean;
 }
 
 export const ProfileModal: React.FC<ProfileModalProps> = ({
@@ -33,9 +34,33 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   onBack,
   onStartChat,
   currentUserProfileForMap,
+  columnMode = false,
 }) => {
   const isMobile = useIsMobile();
+
+  // Swipe-to-close state (must be outside conditional)
+  const touchStartX = React.useRef<number | null>(null);
+  const touchStartY = React.useRef<number | null>(null);
+  const touchDeltaX = React.useRef<number>(0);
+  const touchDeltaY = React.useRef<number>(0);
+  const [swiped, setSwiped] = React.useState(false);
+
   if (!open) return null;
+
+  // Column mode - render as a column without backdrop or header
+  if (columnMode) {
+    return (
+      <div className="h-full bg-zinc-900 overflow-y-auto">
+        <ProfilePage
+          userId={userId}
+          onBack={onBack}
+          onStartChat={onStartChat}
+          currentUserProfileForMap={currentUserProfileForMap}
+          modalMode={true}
+        />
+      </div>
+    );
+  }
 
   // Shared sticky header
   const Header = (
@@ -57,9 +82,42 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   );
 
   if (isMobile) {
+    const handleTouchStart = (e: React.TouchEvent) => {
+      touchStartX.current = e.touches[0].clientX;
+      touchStartY.current = e.touches[0].clientY;
+      touchDeltaX.current = 0;
+      touchDeltaY.current = 0;
+      setSwiped(false);
+    };
+    const handleTouchMove = (e: React.TouchEvent) => {
+      if (touchStartX.current !== null && touchStartY.current !== null) {
+        touchDeltaX.current = e.touches[0].clientX - touchStartX.current;
+        touchDeltaY.current = e.touches[0].clientY - touchStartY.current;
+      }
+    };
+    const handleTouchEnd = () => {
+      if (
+        !swiped &&
+        touchDeltaX.current > 40 &&
+        Math.abs(touchDeltaX.current) > 2 * Math.abs(touchDeltaY.current)
+      ) {
+        setSwiped(true);
+        onOpenChange(false);
+      }
+      touchStartX.current = null;
+      touchStartY.current = null;
+      touchDeltaX.current = 0;
+      touchDeltaY.current = 0;
+    };
+
     // Full-page overlay for mobile
     return (
-      <div className="fixed inset-0 z-[9999] bg-black/90 flex flex-col h-full w-full">
+      <div
+        className="fixed inset-0 z-[9999] bg-black/90 flex flex-col h-full w-full"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
         {Header}
         <div className="flex-1 overflow-y-auto">
           <ProfilePage

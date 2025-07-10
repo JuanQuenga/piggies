@@ -28,6 +28,7 @@ interface UserMarkerDisplayData {
   lastSeen?: number | null;
   isVisible?: boolean;
   userId: Id<"users">;
+  locationRandomization?: number;
 }
 
 interface PeopleNearbyProps {
@@ -74,46 +75,7 @@ export const PeopleNearby: React.FC<PeopleNearbyProps> = ({
   );
 
   return (
-    <div className="relative flex flex-col w-full h-full bg-zinc-950">
-      {/* Desktop Filter Bar */}
-      <div className="hidden md:flex flex-col gap-4 p-4 bg-zinc-950/80 backdrop-blur-sm border-b border-zinc-800">
-        <div className="flex items-center gap-4">
-          <Input
-            type="text"
-            placeholder="Search people..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="max-w-md"
-          />
-          <Separator orientation="vertical" className="h-8" />
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Label>Online Only</Label>
-              <Switch
-                checked={showOnlineOnly}
-                onCheckedChange={setShowOnlineOnly}
-              />
-            </div>
-            <Separator orientation="vertical" className="h-8" />
-            <div className="flex items-center gap-2">
-              <Label>Distance:</Label>
-              {[5, 10, 25, 50].map((miles) => (
-                <Button
-                  key={miles}
-                  variant={showWithinMiles === miles ? "default" : "outline"}
-                  size="sm"
-                  onClick={() =>
-                    setShowWithinMiles(showWithinMiles === miles ? null : miles)
-                  }
-                >
-                  {miles}mi
-                </Button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
+    <div className="relative flex flex-col w-full h-full bg-transparent">
       {/* Mobile Filter Bar */}
       <div className="md:hidden sticky top-0 z-10 p-4 bg-zinc-950/80 backdrop-blur-sm border-b border-zinc-800">
         <div className="flex items-center gap-2">
@@ -172,6 +134,10 @@ export const PeopleNearby: React.FC<PeopleNearbyProps> = ({
             <div>
               Your visibility:{" "}
               {currentUserProfileForMap?.isVisible ? "Visible" : "Hidden"}
+            </div>
+            <div>
+              Location Randomization:{" "}
+              {currentUserProfileForMap?.locationRandomization || 0} feet
             </div>
           </div>
         </SheetContent>
