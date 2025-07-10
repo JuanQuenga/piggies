@@ -26,9 +26,7 @@ function UserProfilePageContent() {
   const userId = params.userId as Id<"users">;
 
   // Now useQuery is called within ConvexProvider context
-  const currentUserProfile = useQuery(api.profiles.getMyProfileWithAvatarUrl, {
-    email: user?.email || "",
-  });
+  const currentUserProfile = useQuery(api.profiles.getMyProfileWithAvatarUrl);
   const currentUserId = useQuery(api.users.getMyId, {
     email: user?.email || "",
   });

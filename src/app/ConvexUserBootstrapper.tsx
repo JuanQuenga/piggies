@@ -8,9 +8,7 @@ export function ConvexUserBootstrapper() {
   const { user, loading } = useAuth();
   const getOrCreateUser = useMutation(api.auth.getOrCreateUser);
   const updateMyProfile = useMutation(api.profiles.updateMyProfile);
-  const profile = useQuery(api.profiles.getMyProfile, {
-    email: user?.email || "",
-  });
+  const profile = useQuery(api.profiles.getMyProfile);
 
   useEffect(() => {
     if (!loading && user) {

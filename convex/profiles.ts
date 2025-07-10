@@ -98,7 +98,7 @@ function deg2rad(deg: number): number {
 
 // Get the current user's profile, or null if not created
 export const getMyProfile = query({
-  args: { email: v.string() },
+  args: {},
   returns: v.union(
     v.object({
       _id: v.id("profiles"),
@@ -136,13 +136,25 @@ export const getMyProfile = query({
   ),
   handler: async (ctx, args) => {
     try {
+      const identity = await ctx.auth.getUserIdentity();
+      if (!identity) {
+        console.log("[getMyProfile] no authenticated user");
+        return null;
+      }
+
+      const email = identity.email;
+      if (!email) {
+        console.log("[getMyProfile] no email in identity");
+        return null;
+      }
+
       const user = await ctx.db
         .query("users")
-        .withIndex("by_email", (q) => q.eq("email", args.email))
+        .withIndex("by_email", (q) => q.eq("email", email))
         .unique();
 
       if (!user) {
-        console.log("[getMyProfile] user not found for email:", args.email);
+        console.log("[getMyProfile] user not found for email:", email);
         return null;
       }
 
@@ -241,7 +253,7 @@ export const getMyProfile = query({
 
 // Get the current user's profile with avatarUrl resolved to a real URL
 export const getMyProfileWithAvatarUrl = query({
-  args: { email: v.string() },
+  args: {},
   returns: v.union(
     v.object({
       _id: v.id("profiles"),
@@ -287,15 +299,27 @@ export const getMyProfileWithAvatarUrl = query({
     v.null()
   ),
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      console.log("[getMyProfileWithAvatarUrl] no authenticated user");
+      return null;
+    }
+
+    const email = identity.email;
+    if (!email) {
+      console.log("[getMyProfileWithAvatarUrl] no email in identity");
+      return null;
+    }
+
     const user = await ctx.db
       .query("users")
-      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .withIndex("by_email", (q) => q.eq("email", email))
       .unique();
 
     if (!user) {
       console.log(
         "[DEBUG] getMyProfileWithAvatarUrl user not found for email:",
-        args.email
+        email
       );
       return null;
     }
