@@ -24,8 +24,14 @@ export function ConvexUserBootstrapper() {
   }, [loading, user, getOrCreateUser]);
 
   useEffect(() => {
-    if (!loading && user && profile === null && user.email) {
-      updateMyProfile({});
+    // Only call updateMyProfile when user is fully loaded and authenticated
+    if (!loading && user && user.email && profile === null) {
+      // Add a small delay to ensure authentication is fully established
+      const timer = setTimeout(() => {
+        updateMyProfile({});
+      }, 1000);
+
+      return () => clearTimeout(timer);
     }
   }, [loading, user, profile, updateMyProfile]);
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useAuth } from "@workos-inc/authkit-nextjs/components";
@@ -154,8 +154,8 @@ export default function MapComponentClient({
     setMounted(true);
   }, []);
 
-  // Get user's location
-  useEffect(() => {
+  // Get user's location - only when user explicitly requests it
+  const requestLocation = useCallback(async () => {
     if (navigator.geolocation && user?.email) {
       console.log("Geolocation supported. Requesting location...");
       navigator.geolocation.getCurrentPosition(
@@ -185,6 +185,9 @@ export default function MapComponentClient({
       console.warn("Geolocation not supported or user not logged in.");
     }
   }, [user?.email, setupMapStatus]);
+
+  // Don't automatically request location on mount
+  // User will need to click the "My Location" button
 
   const handleStartChat = (userId: string) => {
     // Navigate to chat with this user
@@ -290,12 +293,7 @@ export default function MapComponentClient({
       {/* Location Controls */}
       <div className="absolute top-4 left-4 z-[1000]">
         <Button
-          onClick={() => {
-            if (userLocation) {
-              // The MapUpdater component will handle centering
-              setUserLocation({ ...userLocation });
-            }
-          }}
+          onClick={requestLocation}
           variant="secondary"
           size="sm"
           className="bg-white/90 backdrop-blur-sm"
