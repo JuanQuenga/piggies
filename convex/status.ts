@@ -27,7 +27,38 @@ async function getCurrentUserId(ctx: {
   return user ? user._id : null;
 }
 
-// Get the current user's status
+// Get the current user's status (no userId required)
+export const getCurrentUserStatus = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getCurrentUserId(ctx);
+    if (!userId) {
+      return null;
+    }
+
+    const status = await ctx.db
+      .query("status")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .unique();
+
+    if (!status) {
+      // Return default status if none exists
+      return {
+        _id: null as any,
+        userId,
+        isVisible: false,
+        isLocationEnabled: false,
+        hostingStatus: "not-hosting" as const,
+        locationRandomization: 0,
+        lastSeen: Date.now(),
+      };
+    }
+
+    return status;
+  },
+});
+
+// Get the current user's status (with userId parameter)
 export const getMyStatus = query({
   args: {
     userId: v.id("users"),
@@ -58,7 +89,17 @@ export const updateMyStatus = mutation({
     latitude: v.optional(v.number()),
     longitude: v.optional(v.number()),
     locationRandomization: v.optional(v.number()),
-    hostingStatus: v.optional(v.string()),
+    hostingStatus: v.optional(
+      v.union(
+        v.literal("not-hosting"),
+        v.literal("hosting"),
+        v.literal("hosting-group"),
+        v.literal("gloryhole"),
+        v.literal("hotel"),
+        v.literal("car"),
+        v.literal("cruising")
+      )
+    ),
   },
   handler: async (ctx, args) => {
     const { userId, ...statusData } = args;
@@ -75,43 +116,75 @@ export const updateMyStatus = mutation({
       .unique();
 
     if (!status) {
-      const allowedHostingStatuses = [
-        "not-hosting",
-        "can-host",
-        "cannot-host",
-      ] as const;
-      const safeHostingStatus = allowedHostingStatuses.includes(
-        statusData.hostingStatus as any
-      )
-        ? (statusData.hostingStatus as (typeof allowedHostingStatuses)[number])
-        : "not-hosting";
       // Create new status
       return await ctx.db.insert("status", {
         userId,
-        isVisible: statusData.isVisible ?? true,
+        isVisible: statusData.isVisible ?? false,
         isLocationEnabled: statusData.isLocationEnabled ?? false,
         latitude: statusData.latitude,
         longitude: statusData.longitude,
-        locationRandomization: statusData.locationRandomization,
-        hostingStatus: safeHostingStatus,
+        locationRandomization: statusData.locationRandomization ?? 0,
+        hostingStatus: statusData.hostingStatus ?? "not-hosting",
         lastSeen: Date.now(),
       });
     }
 
-    const allowedHostingStatuses = [
-      "not-hosting",
-      "can-host",
-      "cannot-host",
-    ] as const;
-    const safeHostingStatus = allowedHostingStatuses.includes(
-      statusData.hostingStatus as any
-    )
-      ? (statusData.hostingStatus as (typeof allowedHostingStatuses)[number])
-      : undefined;
     // Update existing status
     return await ctx.db.patch(status._id, {
       ...statusData,
-      hostingStatus: safeHostingStatus,
+      lastSeen: Date.now(),
+    });
+  },
+});
+
+// Update the current user's status (no userId required)
+export const updateCurrentUserStatus = mutation({
+  args: {
+    isVisible: v.optional(v.boolean()),
+    isLocationEnabled: v.optional(v.boolean()),
+    latitude: v.optional(v.number()),
+    longitude: v.optional(v.number()),
+    locationRandomization: v.optional(v.number()),
+    hostingStatus: v.optional(
+      v.union(
+        v.literal("not-hosting"),
+        v.literal("hosting"),
+        v.literal("hosting-group"),
+        v.literal("gloryhole"),
+        v.literal("hotel"),
+        v.literal("car"),
+        v.literal("cruising")
+      )
+    ),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getCurrentUserId(ctx);
+    if (!userId) {
+      throw new ConvexError("Not authenticated");
+    }
+
+    const status = await ctx.db
+      .query("status")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .unique();
+
+    if (!status) {
+      // Create new status
+      return await ctx.db.insert("status", {
+        userId,
+        isVisible: args.isVisible ?? false,
+        isLocationEnabled: args.isLocationEnabled ?? false,
+        latitude: args.latitude,
+        longitude: args.longitude,
+        locationRandomization: args.locationRandomization ?? 0,
+        hostingStatus: args.hostingStatus ?? "not-hosting",
+        lastSeen: Date.now(),
+      });
+    }
+
+    // Update existing status
+    return await ctx.db.patch(status._id, {
+      ...args,
       lastSeen: Date.now(),
     });
   },

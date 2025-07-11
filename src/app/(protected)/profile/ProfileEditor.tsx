@@ -18,7 +18,7 @@ import {
   GripVertical,
   Check,
 } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
@@ -106,6 +106,125 @@ export function ProfileEditor({
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // File input ref and handler for photo uploads
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log("[ProfileEditor] File select triggered");
+    const files = e.target.files;
+    console.log("[ProfileEditor] Files selected:", files?.length || 0);
+
+    if (!files || files.length === 0) {
+      console.log("[ProfileEditor] No files selected");
+      return;
+    }
+
+    // Convert to array and capture files before clearing input
+    const filesArray = Array.from(files);
+    console.log(
+      "[ProfileEditor] Files array created with",
+      filesArray.length,
+      "files"
+    );
+
+    // Reset the input after capturing files
+    e.target.value = "";
+
+    // Process files in a separate async function to avoid blocking
+    console.log("[ProfileEditor] Starting to process files...");
+    processFiles(filesArray);
+  };
+
+  const processFiles = async (files: File[]) => {
+    console.log(
+      "[ProfileEditor] processFiles called with",
+      files.length,
+      "files"
+    );
+    setIsUploading(true);
+
+    try {
+      const newPhotos = [...formData.profilePhotos];
+      const maxPhotos = 5;
+      const remainingSlots = maxPhotos - newPhotos.length;
+
+      console.log("[ProfileEditor] Current photos:", newPhotos.length);
+      console.log("[ProfileEditor] Remaining slots:", remainingSlots);
+
+      if (remainingSlots <= 0) {
+        console.log("Maximum photos reached");
+        return;
+      }
+
+      // Process files one by one
+      for (let i = 0; i < Math.min(files.length, remainingSlots); i++) {
+        const file = files[i];
+
+        // Basic validation
+        if (!file.type.startsWith("image/")) {
+          console.warn(`Skipping non-image file: ${file.name}`);
+          continue;
+        }
+
+        try {
+          console.log(
+            `[ProfileEditor] Processing file: ${file.name} (${file.size} bytes)`
+          );
+
+          // Compress the image using browser-image-compression
+          console.log(`[ProfileEditor] Compressing image...`);
+          const compressedFile = await compressImage(file);
+          console.log(
+            `[ProfileEditor] Image compressed to ${compressedFile.file.size} bytes`
+          );
+
+          // Upload to Convex storage
+          console.log(`[ProfileEditor] Uploading to Convex storage...`);
+          console.log(`[ProfileEditor] Calling generateUploadUrl...`);
+          const storageId = await uploadImageToConvex(
+            compressedFile.file,
+            async () => {
+              console.log(`[ProfileEditor] generateUploadUrl called`);
+              const url = await generateUploadUrl();
+              console.log(`[ProfileEditor] generateUploadUrl returned:`, url);
+              return url;
+            }
+          );
+          console.log(
+            `[ProfileEditor] Upload successful, storage ID:`,
+            storageId
+          );
+
+          // Add to photos array
+          newPhotos.push(storageId);
+          console.log(
+            `[ProfileEditor] Added to photos array, total:`,
+            newPhotos.length
+          );
+
+          // Clean up the temporary URL
+          cleanupImageUrl(compressedFile.url);
+
+          // Update form data
+          handleInputChange("profilePhotos", [...newPhotos]);
+          console.log(`[ProfileEditor] Form data updated`);
+        } catch (error) {
+          console.error(`Error processing file ${file.name}:`, error);
+          // Show user-friendly error message
+          alert(`Failed to upload ${file.name}. Please try again.`);
+        }
+      }
+    } catch (error) {
+      console.error("Error in file processing:", error);
+      alert("Failed to process files. Please try again.");
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   // Add mutation for generating upload URLs
   const generateUploadUrl = useMutation(
@@ -131,6 +250,7 @@ export function ProfileEditor({
     headliner: "",
     hometown: "",
     profilePhotos: [] as string[],
+    photos: [] as { id: string; url: string | null }[],
     age: undefined as number | undefined,
     heightInInches: undefined as number | undefined,
     weightInLbs: undefined as number | undefined,
@@ -159,13 +279,58 @@ export function ProfileEditor({
     interaction: [] as string[], // Choose up to 3
   });
 
+  // Filter out base64 data URLs from profilePhotos before querying
+  // Use formData.profilePhotos as the primary source since it includes newly uploaded photos
+  const validStorageIds =
+    formData.profilePhotos?.filter(
+      (photo: string) =>
+        !photo.startsWith("data:") && !photo.startsWith("blob:")
+    ) || [];
+
+  const photoUrls = useQuery(
+    api.profiles.getPhotoUrls,
+    validStorageIds.length > 0 ? { storageIds: validStorageIds } : "skip"
+  );
+
   useEffect(() => {
-    if (profile) {
-      setFormData({
+    console.log("[ProfileEditor] Profile data received:", profile);
+    console.log("[ProfileEditor] Current formData:", formData);
+    console.log("[ProfileEditor] isInitialized:", isInitialized);
+
+    // Only update form data if profile is loaded and form is not already initialized
+    if (profile && !isInitialized) {
+      console.log("[ProfileEditor] Setting form data with profile:", {
+        displayName: profile.displayName,
+        age: profile.age,
+        heightInInches: profile.heightInInches,
+        weightInLbs: profile.weightInLbs,
+        gender: profile.gender,
+        expression: profile.expression,
+        position: profile.position,
+        lookingFor: profile.lookingFor,
+        location: profile.location,
+        intoPublic: profile.intoPublic,
+        fetishes: profile.fetishes,
+        kinks: profile.kinks,
+        into: profile.into,
+        interaction: profile.interaction,
+        hivStatus: profile.hivStatus,
+        hivTestedDate: profile.hivTestedDate,
+        showBasicInfo: profile.showBasicInfo,
+        showStats: profile.showStats,
+        showIdentity: profile.showIdentity,
+        showHealth: profile.showHealth,
+        showScene: profile.showScene,
+        profilePhotos: profile.profilePhotos,
+        photos: profile.photos,
+      });
+
+      const newFormData = {
         displayName: profile.displayName || "",
         headliner: profile.headliner || "",
         hometown: profile.hometown || "",
         profilePhotos: profile.profilePhotos || [],
+        photos: profile.photos || [], // Assuming photos is the same as profilePhotos for now
         age: profile.age,
         heightInInches: profile.heightInInches,
         weightInLbs: profile.weightInLbs,
@@ -193,15 +358,125 @@ export function ProfileEditor({
         showIdentity: profile.showIdentity ?? true,
         showHealth: profile.showHealth ?? true,
         showScene: profile.showScene ?? true,
-      });
+      };
+
+      console.log("[ProfileEditor] New form data to be set:", newFormData);
+      setFormData(newFormData);
+      setIsInitialized(true);
+      setHasUnsavedChanges(false);
+    } else if (profile === null && !isInitialized) {
+      console.log(
+        "[ProfileEditor] No profile exists yet, initializing with empty form"
+      );
+      // Initialize with empty form when no profile exists
+      const emptyFormData = {
+        displayName: "",
+        headliner: "",
+        hometown: "",
+        profilePhotos: [],
+        photos: [],
+        age: undefined,
+        heightInInches: undefined,
+        weightInLbs: undefined,
+        endowmentLength: undefined,
+        endowmentCut: "",
+        bodyType: "",
+        gender: "",
+        expression: "",
+        position: "",
+        lookingFor: [],
+        location: [],
+        intoPublic: [],
+        into: [],
+        interaction: [],
+        hivStatus: "",
+        hivTestedDate: "",
+        kinks: [],
+        fetishes: [],
+        showBasicInfo: true,
+        showStats: true,
+        showIdentity: true,
+        showHealth: true,
+        showScene: true,
+      };
+      console.log("[ProfileEditor] Empty form data to be set:", emptyFormData);
+      setFormData(emptyFormData);
+      setIsInitialized(true);
+      setHasUnsavedChanges(false);
+    } else if (profile === undefined) {
+      console.log("[ProfileEditor] Profile data still loading...");
     }
   }, [profile]);
+
+  useEffect(() => {
+    if (photoUrls && isInitialized) {
+      console.log("[ProfileEditor] photoUrls received:", photoUrls);
+      setFormData((prev) => ({
+        ...prev,
+        photos: photoUrls, // [{id, url}, ...]
+      }));
+    }
+  }, [photoUrls, isInitialized]);
+
+  // Clean up any base64 data URLs from profilePhotos array
+  useEffect(() => {
+    if (
+      isInitialized &&
+      formData.profilePhotos &&
+      formData.profilePhotos.length > 0
+    ) {
+      const hasBase64Data = formData.profilePhotos.some(
+        (photo: string) =>
+          photo.startsWith("data:") || photo.startsWith("blob:")
+      );
+
+      if (hasBase64Data) {
+        console.warn("Found base64 data URLs in profilePhotos, cleaning up...");
+        const cleanPhotos = formData.profilePhotos.filter(
+          (photo: string) =>
+            !photo.startsWith("data:") && !photo.startsWith("blob:")
+        );
+        setFormData((prev) => ({
+          ...prev,
+          profilePhotos: cleanPhotos,
+        }));
+      }
+    }
+  }, [formData.profilePhotos, isInitialized]);
+
+  // Debug: Log when form data changes
+  useEffect(() => {
+    if (isInitialized) {
+      console.log("[ProfileEditor] Form data updated:", {
+        displayName: formData.displayName,
+        age: formData.age,
+        gender: formData.gender,
+        expression: formData.expression,
+        position: formData.position,
+        lookingFor: formData.lookingFor,
+        location: formData.location,
+        intoPublic: formData.intoPublic,
+        fetishes: formData.fetishes,
+        kinks: formData.kinks,
+        into: formData.into,
+        interaction: formData.interaction,
+        hivStatus: formData.hivStatus,
+        hivTestedDate: formData.hivTestedDate,
+        showBasicInfo: formData.showBasicInfo,
+        showStats: formData.showStats,
+        showIdentity: formData.showIdentity,
+        showHealth: formData.showHealth,
+        showScene: formData.showScene,
+      });
+    }
+  }, [formData, isInitialized]);
 
   const handleInputChange = (field: string, value: any) => {
     setFormData((prev) => ({
       ...prev,
       [field]: value,
     }));
+    setHasUnsavedChanges(true);
   };
 
   // Drag and drop handlers for photo reordering
@@ -1458,12 +1733,21 @@ export function ProfileEditor({
   // Helper to robustly resolve photo URLs
   const getPhotoUrl = (photo: string) => {
     if (!photo) return undefined;
-    // If it's a data URL or blob, use as is
-    if (photo.startsWith("data:") || photo.startsWith("blob:")) return photo;
-    // Try to find a resolved URL from profile.photos
-    const resolved = profile.photos?.find((p: any) => p.id === photo)?.url;
+
+    // Skip base64 data URLs - they shouldn't be in the array anymore
+    if (photo.startsWith("data:") || photo.startsWith("blob:")) {
+      console.warn(
+        "Found base64 data URL in profilePhotos array:",
+        photo.substring(0, 50) + "..."
+      );
+      return "/default-avatar.png";
+    }
+
+    // Try to find a resolved URL from the photoUrls query
+    const resolved = formData.photos?.find((p: any) => p.id === photo)?.url;
     if (resolved) return resolved;
-    // Show a default placeholder if not available
+
+    // If no resolved URL found, show a default placeholder
     return "/default-avatar.png";
   };
 
@@ -1549,43 +1833,35 @@ export function ProfileEditor({
 
           {/* Upload Button */}
           <div className="flex items-center gap-2">
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              ref={fileInputRef}
+              onChange={handleFileSelect}
+              style={{ display: "none" }}
+            />
             <Button
               type="button"
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2 bg-transparent px-3 py-1.5 text-xs text-zinc-300 border-zinc-600 hover:bg-zinc-800"
               onClick={() => {
-                const input = document.createElement("input");
-                input.type = "file";
-                input.accept = "image/*";
-                input.multiple = true;
-                input.onchange = (e) => {
-                  const files = (e.target as HTMLInputElement).files;
-                  if (files) {
-                    const newPhotos = [...formData.profilePhotos];
-                    const maxPhotos = 5;
-
-                    Array.from(files).forEach((file) => {
-                      if (newPhotos.length < maxPhotos) {
-                        const reader = new FileReader();
-                        reader.onload = (e) => {
-                          const photoUrl = e.target?.result as string;
-                          newPhotos.push(photoUrl);
-                          if (newPhotos.length <= maxPhotos) {
-                            handleInputChange("profilePhotos", [...newPhotos]);
-                          }
-                        };
-                        reader.readAsDataURL(file);
-                      }
-                    });
-                  }
-                };
-                input.click();
+                if (fileInputRef.current) {
+                  fileInputRef.current.click();
+                }
               }}
-              disabled={formData.profilePhotos.length >= 5}
+              disabled={isUploading || formData.profilePhotos.length >= 5}
+              className="flex items-center gap-2 bg-transparent px-3 py-1.5 text-xs text-zinc-300 border-zinc-600 hover:bg-zinc-800"
             >
-              <Upload className="w-3 h-3" />
-              Add Photos ({formData.profilePhotos.length}/5)
+              {isUploading ? (
+                <>
+                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current" />
+                  <span>Uploading...</span>
+                </>
+              ) : (
+                <>
+                  <Upload className="w-3 h-3" />
+                  <span>Upload Photos</span>
+                </>
+              )}
             </Button>
 
             {formData.profilePhotos.length > 0 && (
@@ -1753,64 +2029,45 @@ export function ProfileEditor({
 
             {/* Upload Button */}
             <div className="flex items-center gap-2">
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                ref={fileInputRef}
+                onChange={handleFileSelect}
+                style={{ display: "none" }}
+              />
               <Button
                 type="button"
-                variant="outline"
-                size="sm"
-                className="flex items-center gap-2 bg-transparent px-3 py-1.5 text-xs text-zinc-300 border-zinc-600 hover:bg-zinc-800"
-                onClick={async () => {
-                  const input = document.createElement("input");
-                  input.type = "file";
-                  input.accept = "image/*";
-                  input.multiple = true;
-                  input.onchange = async (e) => {
-                    const files = (e.target as HTMLInputElement).files;
-                    if (files && !isUploading) {
-                      setIsUploading(true);
-                      try {
-                        const newPhotos = [...formData.profilePhotos];
-                        const maxPhotos = 5;
-
-                        for (const file of Array.from(files)) {
-                          if (newPhotos.length >= maxPhotos) break;
-
-                          try {
-                            // Compress the image
-                            const compressedImage = await compressImage(file);
-
-                            // Upload to Convex storage
-                            const storageId = await uploadImageToConvex(
-                              compressedImage.file,
-                              () => generateUploadUrl()
-                            );
-
-                            // Add the storage ID to the photos array
-                            newPhotos.push(storageId);
-
-                            // Clean up the temporary URL
-                            cleanupImageUrl(compressedImage.url);
-                          } catch (error) {
-                            console.error("Error processing image:", error);
-                            // Continue with other images even if one fails
-                          }
-                        }
-
-                        handleInputChange("profilePhotos", newPhotos);
-                      } catch (error) {
-                        console.error("Error uploading photos:", error);
-                      } finally {
-                        setIsUploading(false);
-                      }
-                    }
-                  };
-                  input.click();
+                onClick={() => {
+                  console.log("[ProfileEditor] Upload button clicked");
+                  console.log(
+                    "[ProfileEditor] fileInputRef.current:",
+                    fileInputRef.current
+                  );
+                  if (fileInputRef.current) {
+                    console.log("[ProfileEditor] Triggering file input click");
+                    fileInputRef.current.click();
+                  } else {
+                    console.error(
+                      "[ProfileEditor] fileInputRef.current is null"
+                    );
+                  }
                 }}
-                disabled={formData.profilePhotos.length >= 5 || isUploading}
+                disabled={isUploading || formData.profilePhotos.length >= 5}
+                className="flex items-center gap-2 bg-transparent px-3 py-1.5 text-xs text-zinc-300 border-zinc-600 hover:bg-zinc-800"
               >
-                <Upload className="w-3 h-3" />
-                {isUploading
-                  ? "Uploading..."
-                  : `Add Photos (${formData.profilePhotos.length}/5)`}
+                {isUploading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current" />
+                    <span>Uploading...</span>
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-3 h-3" />
+                    <span>Upload Photos</span>
+                  </>
+                )}
               </Button>
 
               {formData.profilePhotos.length > 0 && (
@@ -1840,7 +2097,66 @@ export function ProfileEditor({
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      await updateProfile(formData);
+      // Filter out fields that shouldn't be sent to the server
+      const {
+        photos, // Remove this field as it's only for display
+        ...profileDataToSave
+      } = formData;
+
+      // Clean profilePhotos array to remove any base64 data URLs (they should be storage IDs only)
+      const cleanProfilePhotos =
+        profileDataToSave.profilePhotos?.filter(
+          (photo: string) =>
+            !photo.startsWith("data:") && !photo.startsWith("blob:")
+        ) || [];
+
+      // Only include fields that are expected by the updateMyProfile mutation
+      // Filter out undefined values to avoid validation issues
+      const cleanProfileData = Object.fromEntries(
+        Object.entries({
+          displayName: profileDataToSave.displayName,
+          headliner: profileDataToSave.headliner,
+          hometown: profileDataToSave.hometown,
+          profilePhotos: cleanProfilePhotos,
+          age: profileDataToSave.age,
+          heightInInches: profileDataToSave.heightInInches,
+          weightInLbs: profileDataToSave.weightInLbs,
+          endowmentLength: profileDataToSave.endowmentLength,
+          endowmentCut: profileDataToSave.endowmentCut,
+          bodyType: profileDataToSave.bodyType,
+          gender: profileDataToSave.gender,
+          expression: profileDataToSave.expression,
+          position: profileDataToSave.position,
+          lookingFor: profileDataToSave.lookingFor,
+          location: profileDataToSave.location,
+          intoPublic: profileDataToSave.intoPublic,
+          fetishes: profileDataToSave.fetishes,
+          kinks: profileDataToSave.kinks,
+          into: profileDataToSave.into,
+          interaction: profileDataToSave.interaction,
+          hivStatus: profileDataToSave.hivStatus,
+          hivTestedDate: profileDataToSave.hivTestedDate,
+          showBasicInfo: profileDataToSave.showBasicInfo,
+          showStats: profileDataToSave.showStats,
+          showIdentity: profileDataToSave.showIdentity,
+          showHealth: profileDataToSave.showHealth,
+          showScene: profileDataToSave.showScene,
+        }).filter(([_, value]) => value !== undefined && value !== null)
+      );
+
+      console.log("[ProfileEditor] Saving profile data:", cleanProfileData);
+      console.log(
+        "[ProfileEditor] Clean data keys:",
+        Object.keys(cleanProfileData)
+      );
+      console.log(
+        "[ProfileEditor] Clean data has userId:",
+        "userId" in cleanProfileData
+      );
+      await updateProfile(cleanProfileData);
+      setSaveSuccess(true);
+      setHasUnsavedChanges(false);
+      setTimeout(() => setSaveSuccess(false), 3000); // Hide success message after 3 seconds
     } catch (error) {
       console.error("Error updating profile:", error);
     } finally {
@@ -1850,74 +2166,151 @@ export function ProfileEditor({
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 h-full p-4 md:p-8">
+      {/* Loading State */}
+      {profile === undefined && (
+        <div className="flex items-center justify-center h-full w-full">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
+            <p className="mt-2 text-zinc-400">Loading profile data...</p>
+          </div>
+        </div>
+      )}
+
+      {/* Form Initializing State */}
+      {profile !== undefined && !isInitialized && (
+        <div className="flex items-center justify-center h-full w-full">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
+            <p className="mt-2 text-zinc-400">Initializing form...</p>
+          </div>
+        </div>
+      )}
+
+      {/* Debug Info - Remove this after testing */}
+      {profile && (
+        <div className="fixed top-4 right-4 bg-black/80 text-white p-2 rounded text-xs z-50 max-w-xs">
+          <div className="font-bold mb-1">Debug Info:</div>
+          <div>Profile loaded: {profile.displayName || "No name"}</div>
+          <div>Age: {profile.age || "Not set"}</div>
+          <div>Form initialized: {isInitialized ? "Yes" : "No"}</div>
+          <div>Form age: {formData.age || "Not set"}</div>
+          <div>Form displayName: {formData.displayName || "Not set"}</div>
+          <div>
+            Profile === formData.age:{" "}
+            {profile.age === formData.age ? "Yes" : "No"}
+          </div>
+        </div>
+      )}
+
+      {profile === null && (
+        <div className="fixed top-4 right-4 bg-orange-800 text-white p-2 rounded text-xs z-50">
+          <div className="font-bold mb-1">Debug Info:</div>
+          <div>Profile: null (no profile exists)</div>
+          <div>Form initialized: {isInitialized ? "Yes" : "No"}</div>
+        </div>
+      )}
+
+      {profile === undefined && (
+        <div className="fixed top-4 right-4 bg-blue-800 text-white p-2 rounded text-xs z-50">
+          <div className="font-bold mb-1">Debug Info:</div>
+          <div>Profile: undefined (still loading)</div>
+        </div>
+      )}
+
       {/* Form Section (2/3 on desktop) */}
-      <div className="flex-1 lg:w-2/3">
-        <form onSubmit={handleFormSubmit} className="space-y-6">
-          {renderBasicInfoSection()}
-          {renderStatsSection()}
-          {renderIdentitySection()}
-          {renderHealthSection()}
-          <Separator className="my-8 bg-zinc-700/80 h-px" />
-          {renderSceneSection()}
-        </form>
-      </div>
+      {profile !== undefined && isInitialized && (
+        <div className="flex-1 lg:w-2/3">
+          <form
+            onSubmit={handleFormSubmit}
+            className="space-y-6"
+            key={`form-${isInitialized}-${formData.displayName}`}
+          >
+            {renderBasicInfoSection()}
+            {renderStatsSection()}
+            {renderIdentitySection()}
+            {renderHealthSection()}
+            <Separator className="my-8 bg-zinc-700/80 h-px" />
+            {renderSceneSection()}
+          </form>
+        </div>
+      )}
 
       {/* Live Profile Preview (1/3, desktop only) */}
-      <div className="hidden lg:block lg:w-1/3">
-        <div className="h-[80vh] overflow-y-auto  sticky top-8">
-          {convexUser?._id && (
+      {profile !== undefined && isInitialized && convexUser?._id && (
+        <div className="hidden lg:block lg:w-1/3">
+          <div className="h-[80vh] overflow-y-auto  sticky top-8">
             <ProfilePage
               userId={convexUser._id}
-              isOwnProfile={true}
+              onBack={() => {}}
+              onStartChat={() => {}}
+              currentUserProfileForMap={null}
+              modalMode={false}
               profile={formData}
             />
-          )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Floating Sticky Save Button */}
-      <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-4xl px-4">
-        <div className="bg-zinc-900/95 backdrop-blur-sm border border-zinc-700 rounded-lg p-4 shadow-xl">
-          <Button
-            type="submit"
-            disabled={isSubmitting}
-            onClick={handleFormSubmit}
-            className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-lg shadow-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2"
-          >
-            {isSubmitting ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save className="w-4 h-4" />
-                Save Profile
-              </>
-            )}
-          </Button>
+      {profile !== undefined && isInitialized && (
+        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-4xl px-4">
+          <div className="bg-zinc-900/95 backdrop-blur-sm border border-zinc-700 rounded-lg p-4 shadow-xl">
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              onClick={handleFormSubmit}
+              className={cn(
+                "w-full py-3 rounded-lg shadow-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2",
+                saveSuccess
+                  ? "bg-green-600 hover:bg-green-700 text-white"
+                  : hasUnsavedChanges
+                    ? "bg-orange-600 hover:bg-orange-700 text-white"
+                    : "bg-purple-600 hover:bg-purple-700 text-white"
+              )}
+            >
+              {isSubmitting ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Saving...
+                </>
+              ) : saveSuccess ? (
+                <>
+                  <Check className="w-4 h-4" />
+                  Profile Saved!
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  {hasUnsavedChanges ? "Save Changes" : "Save Profile"}
+                </>
+              )}
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Mobile Preview Button */}
-      <div className="lg:hidden fixed bottom-20 right-6 z-50">
-        <Button
-          onClick={() => setIsPreviewOpen(true)}
-          className="bg-purple-600 hover:bg-purple-700 text-white p-3 rounded-full shadow-lg"
-          size="icon"
-        >
-          <Eye className="w-5 h-5" />
-        </Button>
-      </div>
+      {profile !== undefined && isInitialized && (
+        <div className="lg:hidden fixed bottom-20 right-6 z-50">
+          <Button
+            onClick={() => setIsPreviewOpen(true)}
+            className="bg-purple-600 hover:bg-purple-700 text-white p-3 rounded-full shadow-lg"
+            size="icon"
+          >
+            <Eye className="w-5 h-5" />
+          </Button>
+        </div>
+      )}
 
       {/* Mobile Preview Modal */}
       {isPreviewOpen && (
         <ProfileModal
-          isOpen={isPreviewOpen}
-          onClose={() => setIsPreviewOpen(false)}
+          open={isPreviewOpen}
+          onOpenChange={setIsPreviewOpen}
           userId={convexUser?._id}
-          isOwnProfile={true}
-          profile={formData}
+          onBack={() => setIsPreviewOpen(false)}
+          onStartChat={() => {}}
+          currentUserProfileForMap={null}
         />
       )}
     </div>

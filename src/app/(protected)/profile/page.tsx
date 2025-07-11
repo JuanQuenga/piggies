@@ -17,13 +17,70 @@ export default function ProfilePage() {
     api.users.currentLoggedInUser,
     user?.email ? { email: user.email } : "skip"
   );
-  const profile = useQuery(api.profiles.getMyProfile, convexUser ? {} : "skip");
+  const profile = useQuery(
+    api.profiles.getMyProfile,
+    convexUser ? { userId: convexUser._id } : "skip"
+  );
   const status = useQuery(
     api.status.getMyStatus,
     convexUser ? { userId: convexUser._id } : "skip"
   );
   const updateStatus = useMutation(api.status.updateMyStatus);
   const updateProfile = useMutation(api.profiles.updateMyProfile);
+
+  // Debug logging
+  useEffect(() => {
+    console.log("[ProfilePage] Debug state:", {
+      mounted,
+      user: user ? "authenticated" : "not authenticated",
+      convexUser: convexUser ? `ID: ${convexUser._id}` : "not loaded",
+      profile: profile
+        ? "loaded"
+        : profile === null
+          ? "null (no profile)"
+          : "loading",
+      status: status
+        ? "loaded"
+        : status === null
+          ? "null (no status)"
+          : "loading",
+    });
+
+    // Log the actual profile data when it's available
+    if (profile) {
+      console.log("[ProfilePage] Profile data content:", {
+        displayName: profile.displayName,
+        age: profile.age,
+        heightInInches: profile.heightInInches,
+        weightInLbs: profile.weightInLbs,
+        endowmentLength: profile.endowmentLength,
+        endowmentCut: profile.endowmentCut,
+        bodyType: profile.bodyType,
+        gender: profile.gender,
+        expression: profile.expression,
+        position: profile.position,
+        lookingFor: profile.lookingFor,
+        location: profile.location,
+        intoPublic: profile.intoPublic,
+        fetishes: profile.fetishes,
+        kinks: profile.kinks,
+        into: profile.into,
+        interaction: profile.interaction,
+        hivStatus: profile.hivStatus,
+        hivTestedDate: profile.hivTestedDate,
+        showBasicInfo: profile.showBasicInfo,
+        showStats: profile.showStats,
+        showIdentity: profile.showIdentity,
+        showHealth: profile.showHealth,
+        showScene: profile.showScene,
+        profilePhotos: profile.profilePhotos,
+      });
+    } else if (profile === null) {
+      console.log("[ProfilePage] Profile is null - no profile exists");
+    } else if (profile === undefined) {
+      console.log("[ProfilePage] Profile is undefined - still loading");
+    }
+  }, [mounted, user, convexUser, profile, status]);
 
   useEffect(() => {
     setMounted(true);
@@ -61,6 +118,11 @@ export default function ProfilePage() {
 
     try {
       console.log("[ProfilePage] Updating profile for user:", convexUser._id);
+      console.log("[ProfilePage] Profile data being sent:", data);
+      console.log("[ProfilePage] Data keys:", Object.keys(data));
+      console.log("[ProfilePage] Data has userId:", "userId" in data);
+
+      // Pass userId from convexUser
       await updateProfile({
         userId: convexUser._id,
         ...data,
@@ -69,6 +131,10 @@ export default function ProfilePage() {
       // Optionally show a toast or notification here
     } catch (error) {
       console.error("Error updating profile:", error);
+      console.error("Error details:", {
+        message: error instanceof Error ? error.message : "Unknown error",
+        stack: error instanceof Error ? error.stack : undefined,
+      });
 
       // If it's an authentication error, try again after a short delay
       if (

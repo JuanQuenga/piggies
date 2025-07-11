@@ -28,6 +28,7 @@ import {
   Map,
   Search,
   Filter,
+  Eye,
 } from "lucide-react";
 import { cn } from "../../../lib/utils";
 import { formatDistanceToNow } from "date-fns";
@@ -41,9 +42,9 @@ interface UserMarkerDisplayData {
   userName?: string | null;
   userEmail?: string | null;
   avatarUrl?: string | null;
-  // Status fields from userStatus table
+  // Status fields from status table
   status?: {
-    _id: Id<"userStatus">;
+    _id: Id<"status">;
     isVisible: boolean;
     isLocationEnabled: boolean;
     latitude?: number;
@@ -156,9 +157,11 @@ export const TileView: React.FC<TileViewProps> = ({
 
   const visibleUsers = useQuery(api.profiles.listVisibleUsers) || [];
 
-  let filteredUsers = visibleUsers.filter(
-    (user) => user.userId !== currentUserId
-  );
+  // For debugging: show current user too
+  let filteredUsers = visibleUsers;
+  // let filteredUsers = visibleUsers.filter(
+  //   (user) => user.userId !== currentUserId
+  // );
 
   // Apply search filter
   if (searchQuery) {
@@ -183,10 +186,10 @@ export const TileView: React.FC<TileViewProps> = ({
     );
   }
 
-  const currentLat = currentUserProfileForMap?.latitude;
-  const currentLon = currentUserProfileForMap?.longitude;
+  const currentLat = currentUserProfileForMap?.status?.latitude;
+  const currentLon = currentUserProfileForMap?.status?.longitude;
   const currentRandomization =
-    currentUserProfileForMap?.locationRandomization || 0;
+    currentUserProfileForMap?.status?.locationRandomization || 0;
 
   // Apply randomization to current user's coordinates
   const randomizedCoords =
@@ -273,74 +276,127 @@ export const TileView: React.FC<TileViewProps> = ({
   return (
     <div className="flex h-full">
       {/* Left: Tiles */}
-      <div className="flex-1 p-2 overflow-y-auto">
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-2">
+      <div className="flex-1 overflow-hidden">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {usersWithDistance.map((user: any) => {
             const finalAvatarUrl =
               user.avatarUrl ||
               `https://ui-avatars.com/api/?name=${encodeURIComponent(
                 user.displayName || user.userName || user.userEmail || "U"
-              )}&background=8b5cf6&color=fff&size=128`;
+              )}&background=8b5cf6&color=fff&size=512`;
 
             const isOnline =
               user.lastSeen && user.lastSeen > Date.now() - 5 * 60 * 1000;
 
+            // Hosting status configuration (matching StatusControls.tsx)
+            const hostingStatusConfig = {
+              "not-hosting": {
+                label: "Not hosting",
+                color: "text-zinc-400",
+              },
+              hosting: {
+                label: "I'm hosting",
+                color: "text-green-400",
+              },
+              "hosting-group": {
+                label: "I'm hosting a group",
+                color: "text-purple-400",
+              },
+              gloryhole: {
+                label: "I have a gloryhole set up",
+                color: "text-pink-400",
+              },
+              hotel: {
+                label: "I'm hosting in my hotel room",
+                color: "text-blue-400",
+              },
+              car: {
+                label: "I'm hosting in my car",
+                color: "text-yellow-400",
+              },
+              cruising: {
+                label: "I'm at a cruising spot.",
+                color: "text-red-400",
+              },
+            };
+
+            const statusConfig =
+              hostingStatusConfig[
+                user.hostingStatus as keyof typeof hostingStatusConfig
+              ] || hostingStatusConfig["not-hosting"];
+
             return (
               <div
                 key={user._id}
-                className="group cursor-pointer rounded-lg border border-zinc-800 bg-zinc-900/50 hover:bg-zinc-800/50 hover:border-zinc-700 transition-all duration-200 overflow-hidden"
+                className="group relative cursor-pointer hover:bg-zinc-800/20 transition-all duration-200"
                 onClick={() => setSelectedUserId(user.userId)}
               >
-                <div className="aspect-square relative">
+                {/* Avatar Section - Edge to edge */}
+                <div className="relative aspect-square">
                   <img
                     src={finalAvatarUrl}
                     alt={user.displayName || user.userName || "User"}
                     className="w-full h-full object-cover"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                  <div className="absolute bottom-0 left-0 right-0 p-2">
-                    <h3 className="text-white font-semibold truncate">
-                      {user.displayName || user.userName || "Anonymous User"}
-                    </h3>
+
+                  {/* Overlay gradient */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+
+                  {/* Status indicators */}
+                  <div className="absolute top-3 right-3 flex items-center gap-2">
+                    {/* Online indicator */}
+                    {isOnline && (
+                      <div className="w-3 h-3 bg-green-500 rounded-full ring-2 ring-white/20 animate-pulse" />
+                    )}
+
+                    {/* Distance badge */}
                     {user._distance !== undefined && (
-                      <p className="text-xs text-white/80">
-                        {user._distance.toFixed(1)} miles away
+                      <div className="px-2 py-1 bg-black/70 backdrop-blur-sm rounded-md">
+                        <span className="text-xs font-medium text-white">
+                          {user._distance.toFixed(1)} mi
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Content Section - Overlaid on image */}
+                  <div className="absolute bottom-0 left-0 right-0 p-4">
+                    {/* Name with looking indicator */}
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-semibold text-white text-lg truncate">
+                        {user.displayName || user.userName || "Anonymous User"}
+                      </h3>
+                      {isOnline && (
+                        <Eye className="w-4 h-4 text-green-400 flex-shrink-0" />
+                      )}
+                    </div>
+
+                    {/* Description */}
+                    {user.description && (
+                      <p className="text-white/90 text-sm mb-2 line-clamp-2">
+                        {user.description}
                       </p>
                     )}
-                  </div>
-                  {isOnline && (
-                    <div className="absolute top-2 right-2">
-                      <div className="w-3 h-3 bg-green-500 rounded-full ring-2 ring-white" />
-                    </div>
-                  )}
-                </div>
-                <CardContent className="p-2">
-                  <div className="flex items-center justify-between">
-                    {user.status && (
-                      <Badge variant="secondary" className="text-xs">
-                        {user.status.hostingStatus}
-                      </Badge>
+
+                    {/* Hosting status */}
+                    {user.hostingStatus && (
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`text-sm font-medium ${statusConfig.color}`}
+                        >
+                          {statusConfig.label}
+                        </span>
+                      </div>
                     )}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onStartChat(user.userId);
-                      }}
-                    >
-                      <MessageCircle className="h-4 w-4" />
-                    </Button>
                   </div>
-                </CardContent>
+                </div>
               </div>
             );
           })}
         </div>
       </div>
       {/* Right: Profile Panel */}
-      <div className="w-full max-w-lg h-full border-l border-zinc-800 bg-zinc-900/95 backdrop-blur hidden md:block">
+      <div className="w-full max-w-lg h-full border-l border-zinc-800/50 bg-zinc-900/95 backdrop-blur hidden md:block">
         {selectedUserId && (
           <ProfileModal
             open={true}
@@ -348,7 +404,14 @@ export const TileView: React.FC<TileViewProps> = ({
             userId={selectedUserId}
             onBack={() => setSelectedUserId(null)}
             onStartChat={onStartChat}
-            currentUserProfileForMap={currentUserProfileForMap}
+            currentUserProfileForMap={
+              currentUserProfileForMap?.status
+                ? {
+                    latitude: currentUserProfileForMap.status.latitude,
+                    longitude: currentUserProfileForMap.status.longitude,
+                  }
+                : null
+            }
             columnMode={true}
           />
         )}

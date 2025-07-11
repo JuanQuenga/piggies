@@ -4,13 +4,30 @@ import { Doc, Id } from "./_generated/dataModel";
 
 // Helper to get the current authenticated user's Convex ID
 async function getCurrentUserId(ctx: any): Promise<Id<"users"> | null> {
-  const identity = await ctx.auth.getUserIdentity();
+  console.log("[getCurrentUserId] Starting...");
+
+  // Try to get identity from auth context first
+  let identity = await ctx.auth.getUserIdentity();
+  console.log(
+    "[getCurrentUserId] Auth identity:",
+    identity ? "found" : "not found"
+  );
+
+  // If no auth identity, try to get from the request context
   if (!identity) {
+    console.log(
+      "[getCurrentUserId] No auth identity, checking request context"
+    );
+    // For WorkOS AuthKit, the user info might be passed differently
+    // We'll need to handle this case by checking if there's a user in the request
     return null;
   }
 
   const email = identity.email;
+  console.log("[getCurrentUserId] Email:", email);
+
   if (!email) {
+    console.log("[getCurrentUserId] No email in identity");
     return null;
   }
 
@@ -18,6 +35,11 @@ async function getCurrentUserId(ctx: any): Promise<Id<"users"> | null> {
     .query("users")
     .withIndex("by_email", (q: any) => q.eq("email", email))
     .unique();
+
+  console.log("[getCurrentUserId] User found:", user ? "yes" : "no");
+  if (user) {
+    console.log("[getCurrentUserId] User ID:", user._id);
+  }
 
   return user ? user._id : null;
 }
@@ -110,7 +132,9 @@ function deg2rad(deg: number): number {
 
 // Get the current user's profile, or null if not created
 export const getMyProfile = query({
-  args: {},
+  args: {
+    userId: v.id("users"),
+  },
   returns: v.union(
     v.object({
       _id: v.id("profiles"),
@@ -156,18 +180,27 @@ export const getMyProfile = query({
   ),
   handler: async (ctx, args) => {
     try {
-      const userId = await getCurrentUserId(ctx);
+      console.log("[getMyProfile] Starting query...");
+      const userId = args.userId;
       if (!userId) {
-        console.log("[getMyProfile] No authenticated user found");
+        console.log("[getMyProfile] No userId provided");
         return null;
       }
       console.log("[getMyProfile] userId:", userId);
+
+      // Let's also check if there are any profiles in the database
+      const allProfiles = await ctx.db.query("profiles").collect();
+      console.log(
+        "[getMyProfile] Total profiles in database:",
+        allProfiles.length
+      );
 
       const profile = await ctx.db
         .query("profiles")
         .withIndex("by_userId", (q) => q.eq("userId", userId))
         .unique();
-      console.log("[getMyProfile] profile:", profile);
+      console.log("[getMyProfile] profile found:", profile);
+
       if (
         !profile ||
         typeof profile !== "object" ||
@@ -405,32 +438,73 @@ export const updateMyProfile = mutation({
     showScene: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const { userId, ...profileData } = args;
+    try {
+      console.log("[updateMyProfile] Starting mutation with args:", args);
+      console.log("[updateMyProfile] Args type:", typeof args);
+      console.log("[updateMyProfile] Args keys:", Object.keys(args));
 
-    // Verify the user exists
-    const user = await ctx.db.get(userId);
-    if (!user) {
-      throw new Error("User not found");
+      // Use userId from args instead of authentication
+      const userId = args.userId;
+      if (!userId) {
+        console.error("[updateMyProfile] No userId provided");
+        throw new Error("userId is required");
+      }
+      console.log("[updateMyProfile] User ID from args:", userId);
+
+      const existingProfile = await ctx.db
+        .query("profiles")
+        .withIndex("by_userId", (q) => q.eq("userId", userId))
+        .unique();
+
+      console.log(
+        "[updateMyProfile] Existing profile:",
+        existingProfile ? "found" : "not found"
+      );
+
+      if (existingProfile) {
+        // Update existing profile
+        console.log(
+          "[updateMyProfile] Updating existing profile with data:",
+          args
+        );
+        await ctx.db.patch(existingProfile._id, args);
+        console.log("[updateMyProfile] Profile updated successfully");
+        return existingProfile._id;
+      }
+
+      // Create new profile
+      const { userId: _, ...profileData } = args; // Remove userId from args to avoid duplication
+      const newProfileData = {
+        userId,
+        ...profileData,
+      };
+      console.log(
+        "[updateMyProfile] Creating new profile with data:",
+        newProfileData
+      );
+      const newProfileId = await ctx.db.insert("profiles", newProfileData);
+      console.log(
+        "[updateMyProfile] New profile created with ID:",
+        newProfileId
+      );
+      return newProfileId;
+    } catch (error) {
+      console.error("[updateMyProfile] Error in mutation:", error);
+      console.error("[updateMyProfile] Error details:", {
+        message: error instanceof Error ? error.message : "Unknown error",
+        stack: error instanceof Error ? error.stack : undefined,
+        name: error instanceof Error ? error.name : "Unknown",
+      });
+      console.error(
+        "[updateMyProfile] Error constructor:",
+        (error as any).constructor?.name || "Unknown"
+      );
+      console.error(
+        "[updateMyProfile] Full error object:",
+        JSON.stringify(error, null, 2)
+      );
+      throw error;
     }
-
-    const existingProfile = await ctx.db
-      .query("profiles")
-      .withIndex("by_userId", (q) => q.eq("userId", userId))
-      .unique();
-
-    if (existingProfile) {
-      // Update existing profile
-      await ctx.db.patch(existingProfile._id, profileData);
-      return existingProfile._id;
-    }
-
-    // Create new profile
-    const newProfileData = {
-      userId,
-      ...profileData,
-    };
-
-    return await ctx.db.insert("profiles", newProfileData);
   },
 });
 
@@ -474,9 +548,36 @@ export const listVisibleUsers = query({
           status.latitude &&
           status.longitude
         ) {
-          // Get user data for avatar
-          const user = await ctx.db.get(profile.userId);
-          const avatarUrl = user?.imageUrl;
+          // Get the main profile photo (first photo in the array)
+          let avatarUrl: string | undefined = undefined;
+
+          if (profile.profilePhotos && profile.profilePhotos.length > 0) {
+            const mainPhotoId = profile.profilePhotos[0];
+            try {
+              // Try to resolve the storage ID to a URL
+              if (
+                mainPhotoId &&
+                !mainPhotoId.startsWith("data:") &&
+                !mainPhotoId.startsWith("blob:")
+              ) {
+                const resolvedUrl = await ctx.storage.getUrl(
+                  mainPhotoId as Id<"_storage">
+                );
+                avatarUrl = resolvedUrl || undefined;
+              }
+            } catch (error) {
+              console.log(
+                `[listVisibleUsers] Could not resolve photo URL for ${mainPhotoId}:`,
+                error
+              );
+            }
+          }
+
+          // Fallback to AuthKit avatar if no profile photo
+          if (!avatarUrl) {
+            const user = await ctx.db.get(profile.userId);
+            avatarUrl = user?.imageUrl;
+          }
 
           result.push({
             _id: profile._id,
@@ -656,6 +757,7 @@ export const minimalTest = query({
 // Set up user status for map visibility
 export const setupMapStatus = mutation({
   args: {
+    userId: v.id("users"),
     latitude: v.number(),
     longitude: v.number(),
   },
@@ -664,34 +766,8 @@ export const setupMapStatus = mutation({
     try {
       console.log("[setupMapStatus] Starting with args:", args);
 
-      const identity = await ctx.auth.getUserIdentity();
-      if (!identity) {
-        console.error("[setupMapStatus] Not authenticated");
-        throw new Error("Not authenticated");
-      }
-
-      const email = identity.email;
-      if (!email) {
-        console.error("[setupMapStatus] No email in identity");
-        throw new Error("No email in identity");
-      }
-
-      console.log("[setupMapStatus] Setting up status for:", email);
-
-      // Get user by email
-      const user = await ctx.db
-        .query("users")
-        .withIndex("by_email", (q) => q.eq("email", email))
-        .unique();
-
-      if (!user) {
-        console.error("[setupMapStatus] User not found for email:", email);
-        throw new Error("User not found");
-      }
-
-      console.log("[setupMapStatus] Found user:", user._id);
-
-      const userId = user._id;
+      const userId = args.userId;
+      console.log("[setupMapStatus] Setting up status for user:", userId);
 
       // Check if status already exists
       const existingStatus = await ctx.db
@@ -728,6 +804,59 @@ export const setupMapStatus = mutation({
     } catch (error) {
       console.error("[setupMapStatus] Error:", error);
       throw error;
+    }
+  },
+});
+
+export const getPhotoUrls = query({
+  args: { storageIds: v.array(v.string()) },
+  returns: v.array(
+    v.object({
+      id: v.string(),
+      url: v.union(v.string(), v.null()),
+    })
+  ),
+  handler: async (ctx, args) => {
+    try {
+      console.log("[getPhotoUrls] Processing storage IDs:", args.storageIds);
+
+      if (!args.storageIds || args.storageIds.length === 0) {
+        console.log(
+          "[getPhotoUrls] No storage IDs provided, returning empty array"
+        );
+        return [];
+      }
+
+      const results = await Promise.all(
+        args.storageIds.map(async (id) => {
+          try {
+            // Skip invalid IDs
+            if (!id || typeof id !== "string") {
+              console.log("[getPhotoUrls] Invalid ID:", id);
+              return { id, url: null };
+            }
+
+            // Skip if it's already a URL
+            if (id.startsWith("http")) {
+              console.log("[getPhotoUrls] ID is already a URL:", id);
+              return { id, url: id };
+            }
+
+            const url = await ctx.storage.getUrl(id as Id<"_storage">);
+            console.log("[getPhotoUrls] Resolved URL for ID:", id, "URL:", url);
+            return { id, url };
+          } catch (error) {
+            console.error("[getPhotoUrls] Error processing ID:", id, error);
+            return { id, url: null };
+          }
+        })
+      );
+
+      console.log("[getPhotoUrls] Returning results:", results);
+      return results;
+    } catch (error) {
+      console.error("[getPhotoUrls] Error in query:", error);
+      return [];
     }
   },
 });

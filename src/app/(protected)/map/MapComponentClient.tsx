@@ -188,13 +188,26 @@ export default function MapComponentClient({
       return;
     }
 
+    console.log("[DEBUG] Requesting geolocation...");
     navigator.geolocation.getCurrentPosition(
       async (position) => {
+        console.log("[DEBUG] Geolocation success:", position);
         const { latitude, longitude } = position.coords;
         setUserLocation({ lat: latitude, lng: longitude });
         setIsLocationEnabled(true);
+        console.log("[DEBUG] setUserLocation:", {
+          lat: latitude,
+          lng: longitude,
+        });
         try {
-          await setupMapStatus({ latitude, longitude });
+          if (!convexUser?._id) {
+            throw new Error("No Convex user ID available");
+          }
+          await setupMapStatus({
+            userId: convexUser._id,
+            latitude,
+            longitude,
+          });
           console.log("Status set up for map visibility");
         } catch (error) {
           console.error("Error setting up map status:", error);
@@ -202,17 +215,70 @@ export default function MapComponentClient({
         }
       },
       (error) => {
-        console.error("Error getting location:", error);
-        setIsLocationEnabled(false);
-        alert(
-          "Could not get your location. Please check your browser permissions."
+        // Improved error handling
+        console.error(
+          "[DEBUG] Error getting location:",
+          error,
+          error?.code,
+          error?.message,
+          JSON.stringify(error)
         );
+        // Log known properties of GeolocationPositionError
+        if (error) {
+          console.log(`[DEBUG] error.code =`, error.code);
+          console.log(`[DEBUG] error.message =`, error.message);
+          console.log(
+            `[DEBUG] error.PERMISSION_DENIED =`,
+            error.PERMISSION_DENIED
+          );
+          console.log(
+            `[DEBUG] error.POSITION_UNAVAILABLE =`,
+            error.POSITION_UNAVAILABLE
+          );
+          console.log(`[DEBUG] error.TIMEOUT =`, error.TIMEOUT);
+        }
+        let message =
+          "Could not get your location. Please check your browser permissions.";
+        if (error && typeof error === "object") {
+          switch (error.code) {
+            case 1:
+              message =
+                "Location permission denied. Please allow location access in your browser settings.";
+              break;
+            case 2:
+              message =
+                "Location unavailable. This can happen if you're on a desktop without WiFi, using a VPN, or your device can't determine your location. Try on a phone with GPS, enable WiFi, or enter your location manually if possible.";
+              break;
+            case 3:
+              message = "Location request timed out. Please try again.";
+              break;
+            default:
+              if (error.message) message = error.message;
+          }
+        }
+        setIsLocationEnabled(false);
+        alert(message);
       }
     );
   }, [canRequestLocation, setupMapStatus, ensureConvexUser]);
 
-  // Don't automatically request location on mount
-  // User will need to click the "My Location" button
+  // Debug: log userLocation state changes
+  useEffect(() => {
+    console.log("[DEBUG] userLocation state:", userLocation);
+  }, [userLocation]);
+
+  // Debug: log visibleUsers when loaded
+  useEffect(() => {
+    console.log("[DEBUG] visibleUsers:", visibleUsers);
+  }, [visibleUsers]);
+
+  // Automatically request location when component is ready
+  useEffect(() => {
+    if (canRequestLocation && mounted) {
+      console.log("Auto-requesting location on mount");
+      requestLocation();
+    }
+  }, [canRequestLocation, mounted, requestLocation]);
 
   const handleStartChat = (userId: string) => {
     // Navigate to chat with this user
@@ -287,19 +353,19 @@ export default function MapComponentClient({
                   <img 
                     src="${user.avatarUrl || "/default-avatar.png"}" 
                     alt="${user.displayName || "User"}"
-                    class="w-12 h-12 rounded-lg object-cover border-2 ${statusConfig.color} shadow-lg"
+                    class="w-16 h-16 rounded-lg object-cover border-2 ${statusConfig.color} shadow-lg"
                     onerror="this.src='/default-avatar.png'"
                   />
-                  <div class="absolute -bottom-1 -right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-white"></div>
-                  <div class="absolute -bottom-1 -left-1 w-4 h-4 ${statusConfig.iconColor} bg-black/80 rounded-full flex items-center justify-center">
-                    <svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20">
+                  <div class="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white"></div>
+                  <div class="absolute -bottom-1 -left-1 w-5 h-5 ${statusConfig.iconColor} bg-black/80 rounded-full flex items-center justify-center">
+                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                       ${getIconSVG(IconComponent)}
                     </svg>
                   </div>
                 </div>
               `,
-              iconSize: [48, 48],
-              iconAnchor: [24, 24],
+              iconSize: [64, 64],
+              iconAnchor: [32, 32],
             });
 
             return (

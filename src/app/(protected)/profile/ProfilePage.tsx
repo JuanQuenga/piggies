@@ -24,6 +24,9 @@ import {
   MessageCircle,
   MoreVertical,
   ShieldCheck,
+  ChevronLeft,
+  ChevronRight,
+  X,
 } from "lucide-react";
 
 interface ProfilePageProps {
@@ -35,6 +38,7 @@ interface ProfilePageProps {
     longitude?: number;
   } | null;
   modalMode?: boolean;
+  profile?: any; // Optional profile prop for preview
 }
 
 function haversineDistance(
@@ -64,9 +68,15 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   onStartChat,
   currentUserProfileForMap,
   modalMode = false,
+  profile: profileProp,
 }) => {
-  const profile = useQuery(api.profiles.getProfileWithAvatarUrl, { userId });
+  const profile =
+    profileProp ?? useQuery(api.profiles.getProfileWithAvatarUrl, { userId });
   const user = useQuery(api.profiles.getUser, { userId });
+
+  // Photo gallery state
+  const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
 
   // Show loading state while queries are in progress
   if (profile === undefined || user === undefined) {
@@ -248,31 +258,46 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
           : "h-full flex flex-col min-h-0 max-w-md w-full mx-auto border-purple-500 border-2 rounded-lg overflow-hidden"
       }
     >
-      {/* Top Bar (above photo) */}
+      {/* Unified Top Bar */}
       <div
         className={
           modalMode
-            ? "sticky top-0 z-20 w-full bg-zinc-900/95 border-b border-zinc-800 px-4 py-2 flex flex-col gap-0 shadow-lg"
-            : "sticky top-0 z-20 w-full bg-black/95 border-b border-zinc-800 px-4 py-2 flex flex-col gap-0 shadow-lg"
+            ? "sticky top-0 z-20 w-full bg-zinc-900/95 border-b border-zinc-800 px-4 py-3 shadow-lg"
+            : "sticky top-0 z-20 w-full bg-black/95 border-b border-zinc-800 px-4 py-3 shadow-lg"
         }
       >
-        <div className="flex items-center gap-2">
-          <span className="text-lg font-bold text-white drop-shadow flex items-center">
-            {/* Verified badge example, adjust as needed */}
-            <span className="mr-1">
-              {profile.displayName || user.name || "Anonymous User"}
-            </span>
-            {profile.status && (
-              <Badge
-                variant="secondary"
-                className="text-xs bg-white/80 text-black ml-2"
-              >
-                {profile.status}
-              </Badge>
-            )}
-          </span>
+        <div className="flex items-center justify-between">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-lg font-bold text-white drop-shadow">
+                {profile.displayName || user.name || "Anonymous User"}
+              </span>
+              {profile.status && (
+                <Badge
+                  variant="secondary"
+                  className="text-xs bg-white/80 text-black"
+                >
+                  {profile.status}
+                </Badge>
+              )}
+            </div>
+            <div className="text-white text-sm font-medium drop-shadow">
+              {[
+                profile.age && `${profile.age}`,
+                heightInCm && `${heightInCm}cm`,
+                weightInKg && `${weightInKg}kg`,
+                endowmentCm && `${endowmentCm}cm`,
+                profile.bodyType,
+                profile.gender,
+                profile.sexuality,
+                profile.position,
+              ]
+                .filter(Boolean)
+                .join(", ")}
+            </div>
+          </div>
           {/* Actions */}
-          <div className="ml-auto flex gap-2">
+          <div className="flex gap-2 ml-4">
             <button className="bg-black/60 hover:bg-black/80 text-white rounded-full p-2 shadow-lg">
               <ShieldCheck size={20} />
             </button>
@@ -281,27 +306,17 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
             </button>
           </div>
         </div>
-        <div className="text-white text-sm font-medium drop-shadow mt-0.5">
-          {[
-            profile.age && `${profile.age}`,
-            heightInCm && `${heightInCm}cm`,
-            weightInKg && `${weightInKg}kg`,
-            endowmentCm && `${endowmentCm}cm`,
-            profile.bodyType,
-            profile.gender,
-            profile.sexuality,
-            profile.position,
-          ]
-            .filter(Boolean)
-            .join(", ")}
-        </div>
       </div>
       {/* Profile Photo with overlays */}
-      <div className="relative w-full aspect-[4/5] bg-black overflow-hidden flex items-center justify-center">
+      <div className="relative w-full aspect-[6/9] bg-black overflow-hidden">
         <img
           src={mainPhoto}
           alt="Profile cover"
-          className="w-48 h-48 rounded-full object-cover object-center border-4 border-white shadow-xl mx-auto mt-6 mb-4 bg-zinc-200"
+          className="w-full h-full object-cover object-center cursor-pointer"
+          onClick={() => {
+            setCurrentPhotoIndex(0);
+            setIsGalleryOpen(true);
+          }}
         />
         {/* Overlay additional photos */}
         {additionalPhotos.length > 0 && (
@@ -311,8 +326,12 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                 key={idx}
                 src={photo}
                 alt={`Gallery photo ${idx + 1}`}
-                className="w-14 h-14 rounded-full border-2 border-white shadow-lg object-cover bg-gray-200"
+                className="w-14 h-14 rounded-lg border-2 border-white shadow-lg object-cover bg-gray-200 cursor-pointer"
                 style={{ marginTop: idx === 0 ? 0 : -12 }}
+                onClick={() => {
+                  setCurrentPhotoIndex(idx + 1);
+                  setIsGalleryOpen(true);
+                }}
               />
             ))}
           </div>
@@ -335,6 +354,134 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
           </button>
         )}
       </div>
+
+      {/* Profile Content Sections */}
+      <div className="bg-zinc-900 text-white px-4 py-6 space-y-6">
+        {/* Basic Info Section */}
+        {(profile.displayName || profile.headliner || profile.hometown) && (
+          <div className="space-y-3">
+            <h3 className="text-lg font-semibold text-purple-400 flex items-center gap-2">
+              <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+              Basic Information
+            </h3>
+            <div className="space-y-2">
+              {profile.headliner && (
+                <p className="text-lg font-medium text-white">
+                  {profile.headliner}
+                </p>
+              )}
+              {profile.hometown && (
+                <div className="flex items-center gap-2 text-zinc-300">
+                  <MapPin className="w-4 h-4" />
+                  <span>{profile.hometown}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Stats Section */}
+        {(profile.age ||
+          profile.heightInInches ||
+          profile.weightInLbs ||
+          profile.endowmentLength ||
+          profile.endowmentCut ||
+          profile.bodyType) && (
+          <div className="space-y-3">
+            <h3 className="text-lg font-semibold text-purple-400 flex items-center gap-2">
+              <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+              Stats
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              {renderField("Age", profile.age)}
+              {renderField("Height", heightInCm, "cm")}
+              {renderField("Weight", weightInKg, "kg")}
+              {renderField("Endowment", endowmentCm, "cm")}
+              {renderField("Cut", profile.endowmentCut)}
+              {renderField("Body Type", profile.bodyType)}
+            </div>
+          </div>
+        )}
+
+        {/* Identity Section */}
+        {(profile.gender || profile.expression || profile.position) && (
+          <div className="space-y-3">
+            <h3 className="text-lg font-semibold text-purple-400 flex items-center gap-2">
+              <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+              Identity
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              {renderField("Gender", profile.gender)}
+              {renderField("Expression", profile.expression)}
+              {renderField("Position", profile.position)}
+            </div>
+          </div>
+        )}
+
+        {/* Looking For Section */}
+        {profile.lookingFor && profile.lookingFor.length > 0 && (
+          <div className="space-y-3">
+            <h3 className="text-lg font-semibold text-purple-400 flex items-center gap-2">
+              <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+              Looking For
+            </h3>
+            {renderMultiField("", profile.lookingFor)}
+          </div>
+        )}
+
+        {/* Location Section */}
+        {profile.location && profile.location.length > 0 && (
+          <div className="space-y-3">
+            <h3 className="text-lg font-semibold text-purple-400 flex items-center gap-2">
+              <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+              Location
+            </h3>
+            {renderMultiField("", profile.location)}
+          </div>
+        )}
+
+        {/* Scene Section */}
+        {(profile.into ||
+          profile.interaction ||
+          profile.fetishes ||
+          profile.kinks) && (
+          <div className="space-y-3">
+            <h3 className="text-lg font-semibold text-purple-400 flex items-center gap-2">
+              <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+              Scene
+            </h3>
+            <div className="space-y-4">
+              {profile.into &&
+                profile.into.length > 0 &&
+                renderMultiField("Into", profile.into)}
+              {profile.interaction &&
+                profile.interaction.length > 0 &&
+                renderMultiField("Interaction", profile.interaction)}
+              {profile.fetishes &&
+                profile.fetishes.length > 0 &&
+                renderMultiField("Fetishes", profile.fetishes)}
+              {profile.kinks &&
+                profile.kinks.length > 0 &&
+                renderMultiField("Kinks", profile.kinks)}
+            </div>
+          </div>
+        )}
+
+        {/* Health Section */}
+        {(profile.hivStatus || profile.hivTestedDate) && (
+          <div className="space-y-3">
+            <h3 className="text-lg font-semibold text-purple-400 flex items-center gap-2">
+              <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+              Health
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              {renderField("HIV Status", profile.hivStatus)}
+              {renderField("Tested Date", profile.hivTestedDate)}
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Sticky Bottom Bar */}
       <div className="w-full bg-black/90 text-white flex items-center justify-between px-4 py-3 border-t border-black/40 sticky bottom-0 z-30">
         <div className="flex items-center gap-2 text-xs">
@@ -356,6 +503,65 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
           <MessageCircle size={18} />
         </button>
       </div>
+
+      {/* Photo Gallery Modal */}
+      {isGalleryOpen && (
+        <div
+          className="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center"
+          onClick={() => setIsGalleryOpen(false)}
+        >
+          <div className="relative w-full h-full flex items-center justify-center">
+            {/* Close button */}
+            <button
+              onClick={() => setIsGalleryOpen(false)}
+              className="absolute top-4 right-4 z-10 bg-black/60 hover:bg-black/80 text-white rounded-full p-2"
+            >
+              <X className="w-6 h-6" />
+            </button>
+
+            {/* Photo counter */}
+            <div className="absolute top-4 left-4 z-10 bg-black/60 text-white px-3 py-1 rounded-full text-sm">
+              {currentPhotoIndex + 1} / {photos.length}
+            </div>
+
+            {/* Main photo */}
+            <img
+              src={photos[currentPhotoIndex] || finalAvatarUrl}
+              alt={`Photo ${currentPhotoIndex + 1}`}
+              className="max-w-full max-h-full object-contain"
+              onClick={(e) => e.stopPropagation()}
+            />
+
+            {/* Navigation arrows */}
+            {photos.length > 1 && (
+              <>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCurrentPhotoIndex((prev) =>
+                      prev === 0 ? photos.length - 1 : prev - 1
+                    );
+                  }}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 z-10 bg-black/60 hover:bg-black/80 text-white rounded-full p-3"
+                >
+                  <ChevronLeft className="w-6 h-6" />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCurrentPhotoIndex((prev) =>
+                      prev === photos.length - 1 ? 0 : prev + 1
+                    );
+                  }}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 z-10 bg-black/60 hover:bg-black/80 text-white rounded-full p-3"
+                >
+                  <ChevronRight className="w-6 h-6" />
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

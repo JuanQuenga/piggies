@@ -108,8 +108,12 @@ export default defineSchema({
     // Hosting Status (from StatusControls)
     hostingStatus: v.union(
       v.literal("not-hosting"),
-      v.literal("can-host"),
-      v.literal("cannot-host")
+      v.literal("hosting"),
+      v.literal("hosting-group"),
+      v.literal("gloryhole"),
+      v.literal("hotel"),
+      v.literal("car"),
+      v.literal("cruising")
     ),
 
     // Location Settings (from StatusControls)

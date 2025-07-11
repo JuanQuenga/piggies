@@ -91,25 +91,6 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
     );
   }
 
-  // Shared sticky header
-  const Header = (
-    <div className="sticky top-0 z-10 flex items-center justify-between bg-zinc-900/95 backdrop-blur px-4 py-3 border-b border-zinc-800">
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => onOpenChange(false)}
-        aria-label="Close"
-        className="mr-2"
-      >
-        <X className="w-6 h-6" />
-      </Button>
-      <div className="flex-1 flex items-center justify-center">
-        {/* Name will be rendered by ProfilePage header */}
-      </div>
-      <div className="w-8" /> {/* Spacer for symmetry */}
-    </div>
-  );
-
   if (isMobile) {
     const handleTouchStart = (e: React.TouchEvent) => {
       touchStartX.current = e.touches[0].clientX;
@@ -147,7 +128,6 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
-        {Header}
         <div className="flex-1 overflow-y-auto">
           <ProfilePage
             userId={userId}
@@ -168,7 +148,6 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
         className="relative w-full max-w-lg max-h-[90vh] rounded-2xl shadow-2xl bg-zinc-900/95 backdrop-blur border border-zinc-800 flex flex-col"
         style={{ margin: 0 }}
       >
-        {Header}
         <div className="flex-1 overflow-y-auto">
           <ProfilePage
             userId={userId}

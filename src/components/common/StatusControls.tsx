@@ -1,6 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useQuery, useMutation } from "convex/react";
+import { useAuth } from "@workos-inc/authkit-nextjs/components";
+import { api } from "../../../convex/_generated/api";
 import {
   Eye,
   EyeOff,
@@ -75,15 +78,50 @@ interface StatusControlsProps {
 }
 
 export function StatusControls({ variant = "desktop" }: StatusControlsProps) {
+  const { user } = useAuth();
+
+  // Get current user's Convex ID using email
+  const convexUser = useQuery(
+    api.users.currentLoggedInUser,
+    user?.email ? { email: user.email } : "skip"
+  );
+
+  // Get current user's status from Convex (using Convex userId)
+  const userStatus = useQuery(
+    api.status.getMyStatus,
+    convexUser?._id ? { userId: convexUser._id } : "skip"
+  );
+  const updateStatus = useMutation(api.status.updateMyStatus);
+
+  // Local state (will be initialized from Convex data)
   const [isLookingNow, setIsLookingNow] = useState(false);
   const [hostingStatus, setHostingStatus] =
     useState<HostingStatus>("not-hosting");
-  const [isLocationEnabled, setIsLocationEnabled] = useState(true);
   const [locationRandomization, setLocationRandomization] = useState([0]);
+
+  // Location enabled is stored in localStorage for privacy
+  const [isLocationEnabled, setIsLocationEnabled] = useState(false);
   const [currentCity, setCurrentCity] = useState<string>("Unknown");
   const [geoPermission, setGeoPermission] = useState<
     "prompt" | "granted" | "denied"
   >("prompt");
+
+  // Initialize state from Convex data
+  useEffect(() => {
+    if (userStatus) {
+      setIsLookingNow(userStatus.isVisible);
+      setHostingStatus(userStatus.hostingStatus as HostingStatus);
+      setLocationRandomization([userStatus.locationRandomization || 0]);
+    }
+  }, [userStatus]);
+
+  // Initialize location enabled from localStorage
+  useEffect(() => {
+    const savedLocationEnabled = localStorage.getItem("locationEnabled");
+    if (savedLocationEnabled !== null) {
+      setIsLocationEnabled(savedLocationEnabled === "true");
+    }
+  }, []);
 
   // Track geolocation permission
   useEffect(() => {
@@ -95,38 +133,98 @@ export function StatusControls({ variant = "desktop" }: StatusControlsProps) {
     }
   }, []);
 
-  // Get current city from weather API - only when location is enabled
+  // Get current city from weather API - only when location is enabled and user has granted permission
   useEffect(() => {
-    if (!isLocationEnabled || !navigator.geolocation) {
+    if (
+      !isLocationEnabled ||
+      !navigator.geolocation ||
+      geoPermission !== "granted"
+    ) {
       setCurrentCity("Unknown");
       return;
     }
 
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        try {
-          const lat = position.coords.latitude;
-          const lon = position.coords.longitude;
-          const apiKey = process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY;
-          if (!apiKey) {
+    // Don't automatically request geolocation in useEffect to avoid browser violations
+    // Instead, we'll request it only when the user explicitly enables location
+    setCurrentCity("Loading...");
+  }, [isLocationEnabled, geoPermission]); // Run when location is enabled or permission changes
+
+  // Save status to Convex when it changes
+  const saveStatus = async (updates: {
+    isVisible?: boolean;
+    hostingStatus?: HostingStatus;
+    locationRandomization?: number;
+  }) => {
+    if (!convexUser?._id) {
+      console.error("No Convex user ID available");
+      return;
+    }
+
+    try {
+      await updateStatus({
+        userId: convexUser._id,
+        ...updates,
+      });
+    } catch (error) {
+      console.error("Failed to save status:", error);
+    }
+  };
+
+  // Handle looking now toggle
+  const handleLookingNowToggle = async () => {
+    const newValue = !isLookingNow;
+    setIsLookingNow(newValue);
+    await saveStatus({ isVisible: newValue });
+  };
+
+  // Handle hosting status change
+  const handleHostingStatusChange = async (newStatus: HostingStatus) => {
+    setHostingStatus(newStatus);
+    await saveStatus({ hostingStatus: newStatus });
+  };
+
+  // Handle location randomization change
+  const handleLocationRandomizationChange = async (newValue: number[]) => {
+    setLocationRandomization(newValue);
+    await saveStatus({ locationRandomization: newValue[0] });
+  };
+
+  // Handle location enabled toggle
+  const handleLocationToggle = async () => {
+    const newLocationEnabled = !isLocationEnabled;
+    setIsLocationEnabled(newLocationEnabled);
+
+    // Save to localStorage
+    localStorage.setItem("locationEnabled", newLocationEnabled.toString());
+
+    // If enabling location and permission is granted, get current city
+    if (newLocationEnabled && geoPermission === "granted") {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          try {
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+            const apiKey = process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY;
+            if (!apiKey) {
+              setCurrentCity("Unknown");
+              return;
+            }
+            const res = await fetch(
+              `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${apiKey}`
+            );
+            if (!res.ok) throw new Error("Weather fetch failed");
+            const data = await res.json();
+            setCurrentCity(data.name);
+          } catch (e) {
             setCurrentCity("Unknown");
-            return;
           }
-          const res = await fetch(
-            `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${apiKey}`
-          );
-          if (!res.ok) throw new Error("Weather fetch failed");
-          const data = await res.json();
-          setCurrentCity(data.name);
-        } catch (e) {
+        },
+        (err) => {
           setCurrentCity("Unknown");
         }
-      },
-      (err) => {
-        setCurrentCity("Unknown");
-      }
-    );
-  }, [isLocationEnabled]); // Only run when location is enabled
+      );
+    }
+  };
 
   const isMobile = variant === "mobile";
   const buttonSize = isMobile ? "sm" : "sm";
@@ -147,7 +245,7 @@ export function StatusControls({ variant = "desktop" }: StatusControlsProps) {
             ? "text-green-400 border-green-400"
             : "text-zinc-400 border-zinc-600"
         )}
-        onClick={() => setIsLookingNow(!isLookingNow)}
+        onClick={handleLookingNowToggle}
       >
         {isLookingNow ? (
           <Eye className={iconSize} />
@@ -214,7 +312,7 @@ export function StatusControls({ variant = "desktop" }: StatusControlsProps) {
                   "flex items-center gap-2 cursor-pointer",
                   hostingStatus === key && "bg-zinc-800"
                 )}
-                onClick={() => setHostingStatus(key)}
+                onClick={() => handleHostingStatusChange(key)}
               >
                 <IconComponent className={cn("w-4 h-4", config.color)} />
                 <span className={cn(config.color)}>{config.label}</span>
@@ -255,7 +353,7 @@ export function StatusControls({ variant = "desktop" }: StatusControlsProps) {
               ? "text-blue-400 border-blue-400"
               : "text-zinc-400 border-zinc-600"
           )}
-          onClick={() => setIsLocationEnabled(!isLocationEnabled)}
+          onClick={handleLocationToggle}
         >
           {isLocationEnabled ? (
             <MapPin className={iconSize} />
@@ -291,7 +389,7 @@ export function StatusControls({ variant = "desktop" }: StatusControlsProps) {
           <span className="text-xs text-zinc-400">Less</span>
           <Slider
             value={locationRandomization}
-            onValueChange={setLocationRandomization}
+            onValueChange={handleLocationRandomizationChange}
             max={5280} // 1 mile in feet
             step={100} // 100 feet increments
             className={isMobile ? "w-12" : "w-16"}

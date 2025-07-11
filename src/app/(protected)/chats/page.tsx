@@ -13,7 +13,7 @@ import { Badge } from "../../../components/ui/badge";
 import { Separator } from "../../../components/ui/separator";
 import { MessageCircle, Users, ArrowLeft, Pin } from "lucide-react";
 import { cn } from "../../../lib/utils";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 
 interface SelectedConversationDetails {
   conversationId: Id<"conversations">;
@@ -27,6 +27,7 @@ interface SelectedConversationDetails {
 export default function ChatsPage() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [selectedConversationDetails, setSelectedConversationDetails] =
     useState<SelectedConversationDetails | null>(null);
   const [isMobile, setIsMobile] = useState(false);
@@ -81,6 +82,12 @@ export default function ChatsPage() {
       conversationId,
       otherParticipant,
     });
+
+    // Update the URL to reflect the selected conversation
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("conversation", conversationId);
+    router.push(`/chats?${params.toString()}`);
+
     // Auto-open profile modal on desktop when conversation is selected
     if (!isMobile) {
       setProfileModalUserId(otherParticipant._id);
@@ -91,6 +98,11 @@ export default function ChatsPage() {
   const handleBackToConversationList = () => {
     setSelectedConversationDetails(null);
     setProfileModalOpen(false);
+
+    // Clear the conversation parameter from URL
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("conversation");
+    router.push(`/chats?${params.toString()}`);
   };
 
   const handleStartChat = (userId: Id<"users">) => {
@@ -199,7 +211,7 @@ export default function ChatsPage() {
               ? selectedConversationDetails
                 ? "hidden"
                 : "w-full"
-              : "w-1/4 lg:w-1/5"
+              : "flex-1 md:w-1/3"
           )}
         >
           <ConversationList
@@ -217,8 +229,8 @@ export default function ChatsPage() {
                 ? "w-full"
                 : "hidden"
               : selectedConversationDetails
-                ? "flex-1"
-                : "flex-1"
+                ? "flex-1 md:w-1/3"
+                : "flex-1 md:w-1/3"
           )}
         >
           {selectedConversationDetails ? (
@@ -228,6 +240,7 @@ export default function ChatsPage() {
               currentUserId={currentUser._id}
               onBack={handleBackToConversationList}
               isMobile={isMobile}
+              // If you have a handler for profile clicks/photos, pass a callback here to setProfileModalUserId and setProfileModalOpen
             />
           ) : (
             <div className="flex items-center justify-center h-full bg-zinc-900">
@@ -248,9 +261,9 @@ export default function ChatsPage() {
           )}
         </div>
 
-        {/* Profile Modal (right column on desktop) */}
-        {!isMobile && selectedConversationDetails && profileModalUserId && (
-          <div className="w-1/3 lg:w-1/4 h-full bg-zinc-900 border-l border-zinc-800">
+        {/* Profile Preview (right column) */}
+        <div className="h-full bg-zinc-900 border-l border-zinc-800 transition-transform duration-300 flex-1 md:w-1/3 overflow-y-auto">
+          {profileModalOpen && profileModalUserId ? (
             <ProfileModal
               open={profileModalOpen}
               onOpenChange={handleProfileModalOpenChange}
@@ -260,20 +273,8 @@ export default function ChatsPage() {
               currentUserProfileForMap={null}
               columnMode={true}
             />
-          </div>
-        )}
-
-        {/* Mobile Profile Modal - Hidden on mobile */}
-        {/* {isMobile && profileModalUserId && (
-          <ProfileModal
-            open={profileModalOpen}
-            onOpenChange={handleProfileModalOpenChange}
-            userId={profileModalUserId}
-            onBack={() => setProfileModalOpen(false)}
-            onStartChat={handleStartChat}
-            currentUserProfileForMap={null}
-          />
-        )} */}
+          ) : null}
+        </div>
       </div>
     </div>
   );
