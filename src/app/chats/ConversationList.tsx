@@ -34,7 +34,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
     loadMore,
   } = usePaginatedQuery(
     api.messages.listConversations,
-    currentUserId ? { currentUserId } : "skip",
+    {},
     { initialNumItems: 15 }
   );
 

@@ -254,11 +254,30 @@ export const listMessages = query({
 
 export const listConversations = query({
   args: {
-    currentUserId: v.id("users"),
     paginationOpts: paginationOptsValidator,
   },
   handler: async (ctx, args) => {
-    console.log("listConversations called for user:", args.currentUserId);
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const email = identity.email;
+    if (!email) {
+      throw new Error("No email in identity");
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", email))
+      .unique();
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const currentUserId = user._id;
+    console.log("listConversations called for user:", currentUserId);
 
     try {
       // Get all conversations and filter by participant
@@ -269,7 +288,7 @@ export const listConversations = query({
 
       // Filter conversations where the current user is a participant
       const userConversations = allConversations.filter((conversation) =>
-        conversation.participantIds.includes(args.currentUserId)
+        conversation.participantIds.includes(currentUserId)
       );
 
       // Apply pagination manually
@@ -285,7 +304,7 @@ export const listConversations = query({
         paginatedConversations.map(async (conversation) => {
           // Find the other participant (not the current user)
           const otherParticipantId = conversation.participantIds.find(
-            (id) => id !== args.currentUserId
+            (id) => id !== currentUserId
           );
 
           if (!otherParticipantId) {

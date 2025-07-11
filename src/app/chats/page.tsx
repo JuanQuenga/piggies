@@ -43,7 +43,7 @@ export default function ChatsPage() {
   // Get conversations to find the one from URL parameter
   const { results: conversations } = usePaginatedQuery(
     api.messages.listConversations,
-    currentUser?._id ? { currentUserId: currentUser._id } : "skip",
+    {},
     { initialNumItems: 50 }
   );
 

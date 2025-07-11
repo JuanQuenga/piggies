@@ -24,7 +24,7 @@ export function ConvexUserBootstrapper() {
   }, [loading, user, getOrCreateUser]);
 
   useEffect(() => {
-    if (!loading && user && profile === null) {
+    if (!loading && user && profile === null && user.email) {
       updateMyProfile({});
     }
   }, [loading, user, profile, updateMyProfile]);
