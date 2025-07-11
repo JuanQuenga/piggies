@@ -95,12 +95,13 @@ export function StatusControls({ variant = "desktop" }: StatusControlsProps) {
     }
   }, []);
 
-  // Get current city from weather API
+  // Get current city from weather API - only when location is enabled
   useEffect(() => {
-    if (!navigator.geolocation) {
+    if (!isLocationEnabled || !navigator.geolocation) {
       setCurrentCity("Unknown");
       return;
     }
+
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         try {
@@ -125,7 +126,7 @@ export function StatusControls({ variant = "desktop" }: StatusControlsProps) {
         setCurrentCity("Unknown");
       }
     );
-  }, []);
+  }, [isLocationEnabled]); // Only run when location is enabled
 
   const isMobile = variant === "mobile";
   const buttonSize = isMobile ? "sm" : "sm";
