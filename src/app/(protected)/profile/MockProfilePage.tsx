@@ -213,6 +213,14 @@ export const MockProfilePage: React.FC<MockProfilePageProps> = ({
           </div>
           {/* Actions */}
           <div className="flex gap-2 ml-4">
+            {modalMode && (
+              <button
+                onClick={onBack}
+                className="bg-black/60 hover:bg-black/80 text-white rounded-full p-2 shadow-lg"
+              >
+                <X size={20} />
+              </button>
+            )}
             <button className="bg-black/60 hover:bg-black/80 text-white rounded-full p-2 shadow-lg">
               <ShieldCheck size={20} />
             </button>

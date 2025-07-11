@@ -39,6 +39,17 @@ import { ProfileModal } from "./ProfileModal";
 import { MockProfileModal } from "./MockProfileModal";
 import { mockUsers } from "./mockUsers";
 
+function useIsMobile() {
+  const [isMobile, setIsMobile] = React.useState(false);
+  React.useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+  return isMobile;
+}
+
 interface UserMarkerDisplayData {
   _id: Id<"profiles">;
   userId: Id<"users">;
@@ -159,6 +170,7 @@ export const TileView: React.FC<TileViewProps> = ({
 }) => {
   const [selectedUserId, setSelectedUserId] =
     React.useState<Id<"users"> | null>(null);
+  const isMobile = useIsMobile();
 
   // Check if selected user is a mock user
   const isSelectedUserMock = selectedUserId
@@ -465,7 +477,7 @@ export const TileView: React.FC<TileViewProps> = ({
       </div>
 
       {/* Mobile Modal Overlay */}
-      {selectedUserId && (
+      {isMobile && selectedUserId && (
         <>
           {isSelectedUserMock ? (
             <MockProfileModal
