@@ -10,8 +10,11 @@ export const metadata: Metadata = {
   title: "Piggies",
   description: "Connect with people nearby and start chatting",
   icons: {
-    icon: "/pig-snout.svg",
-    shortcut: "/pig-snout.svg",
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/pig-snout.svg", type: "image/svg+xml" },
+    ],
+    shortcut: "/favicon.ico",
     apple: "/pig-snout.svg",
   },
 };

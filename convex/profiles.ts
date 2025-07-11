@@ -110,9 +110,7 @@ function deg2rad(deg: number): number {
 
 // Get the current user's profile, or null if not created
 export const getMyProfile = query({
-  args: {
-    userId: v.id("users"),
-  },
+  args: {},
   returns: v.union(
     v.object({
       _id: v.id("profiles"),
@@ -158,7 +156,11 @@ export const getMyProfile = query({
   ),
   handler: async (ctx, args) => {
     try {
-      const { userId } = args;
+      const userId = await getCurrentUserId(ctx);
+      if (!userId) {
+        console.log("[getMyProfile] No authenticated user found");
+        return null;
+      }
       console.log("[getMyProfile] userId:", userId);
 
       const profile = await ctx.db

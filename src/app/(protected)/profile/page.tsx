@@ -17,10 +17,7 @@ export default function ProfilePage() {
     api.users.currentLoggedInUser,
     user?.email ? { email: user.email } : "skip"
   );
-  const profile = useQuery(
-    api.profiles.getMyProfile,
-    convexUser ? { userId: convexUser._id } : "skip"
-  );
+  const profile = useQuery(api.profiles.getMyProfile, convexUser ? {} : "skip");
   const status = useQuery(
     api.status.getMyStatus,
     convexUser ? { userId: convexUser._id } : "skip"

@@ -14,7 +14,7 @@ export function ConvexUserBootstrapper() {
   );
   const profile = useQuery(
     api.profiles.getMyProfile,
-    currentUser ? { userId: currentUser._id } : "skip"
+    currentUser ? {} : "skip"
   );
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const retryCountRef = useRef(0);
