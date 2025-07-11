@@ -25,10 +25,14 @@ export default function PeoplePage() {
   }, []);
 
   // Now useQuery is called within ConvexProvider context
-  const currentUserProfile = useQuery(api.profiles.getMyProfileWithAvatarUrl);
-  const currentUserId = useQuery(api.users.getMyId, {
-    email: user?.email || "",
-  });
+  const currentUserProfile = useQuery(
+    api.profiles.getMyProfileWithAvatarUrl,
+    user?.email ? {} : "skip"
+  );
+  const currentUserId = useQuery(
+    api.users.getMyId,
+    user?.email ? { email: user.email } : "skip"
+  );
   const getOrCreateConversationMutation = useMutation(
     api.messages.getOrCreateConversationWithParticipant
   );

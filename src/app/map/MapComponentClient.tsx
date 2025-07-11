@@ -147,7 +147,10 @@ export default function MapComponentClient({
   const [mounted, setMounted] = useState(false);
 
   // Fetch visible users from Convex
-  const visibleUsers = useQuery(api.profiles.listVisibleUsers);
+  const visibleUsers = useQuery(
+    api.profiles.listVisibleUsers,
+    user?.email ? {} : "skip"
+  );
   const setupMapStatus = useMutation(api.profiles.setupMapStatus);
 
   useEffect(() => {

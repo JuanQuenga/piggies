@@ -13,11 +13,15 @@ export const dynamic = "force-dynamic";
 export default function ProfilePage() {
   const [mounted, setMounted] = useState(false);
   const { user } = useAuth();
-  const profile = useQuery(api.profiles.getMyProfile);
-  const status = useQuery(api.status.getMyStatus);
-  const convexUser = useQuery(api.users.currentLoggedInUser, {
-    email: user?.email || "",
-  });
+  const profile = useQuery(
+    api.profiles.getMyProfile,
+    user?.email ? {} : "skip"
+  );
+  const status = useQuery(api.status.getMyStatus, user?.email ? {} : "skip");
+  const convexUser = useQuery(
+    api.users.currentLoggedInUser,
+    user?.email ? { email: user.email } : "skip"
+  );
   const updateStatus = useMutation(api.status.updateMyStatus);
 
   useEffect(() => {
