@@ -30,6 +30,46 @@ async function getCurrentUserId(ctx: {
 // Get the current user's status (no userId required)
 export const getCurrentUserStatus = query({
   args: {},
+  returns: v.union(
+    v.null(),
+    v.object({
+      _id: v.id("status"),
+      _creationTime: v.number(),
+      userId: v.id("users"),
+      isVisible: v.boolean(),
+      isLocationEnabled: v.boolean(),
+      hostingStatus: v.union(
+        v.literal("not-hosting"),
+        v.literal("hosting"),
+        v.literal("hosting-group"),
+        v.literal("gloryhole"),
+        v.literal("hotel"),
+        v.literal("car"),
+        v.literal("cruising")
+      ),
+      locationRandomization: v.optional(v.number()),
+      latitude: v.optional(v.number()),
+      longitude: v.optional(v.number()),
+      lastSeen: v.number(),
+    }),
+    v.object({
+      _id: v.null(),
+      userId: v.id("users"),
+      isVisible: v.boolean(),
+      isLocationEnabled: v.boolean(),
+      hostingStatus: v.union(
+        v.literal("not-hosting"),
+        v.literal("hosting"),
+        v.literal("hosting-group"),
+        v.literal("gloryhole"),
+        v.literal("hotel"),
+        v.literal("car"),
+        v.literal("cruising")
+      ),
+      locationRandomization: v.number(),
+      lastSeen: v.number(),
+    })
+  ),
   handler: async (ctx) => {
     const userId = await getCurrentUserId(ctx);
     if (!userId) {
@@ -44,7 +84,7 @@ export const getCurrentUserStatus = query({
     if (!status) {
       // Return default status if none exists
       return {
-        _id: null as any,
+        _id: null,
         userId,
         isVisible: false,
         isLocationEnabled: false,
@@ -63,6 +103,29 @@ export const getMyStatus = query({
   args: {
     userId: v.id("users"),
   },
+  returns: v.union(
+    v.null(),
+    v.object({
+      _id: v.id("status"),
+      _creationTime: v.number(),
+      userId: v.id("users"),
+      isVisible: v.boolean(),
+      isLocationEnabled: v.boolean(),
+      hostingStatus: v.union(
+        v.literal("not-hosting"),
+        v.literal("hosting"),
+        v.literal("hosting-group"),
+        v.literal("gloryhole"),
+        v.literal("hotel"),
+        v.literal("car"),
+        v.literal("cruising")
+      ),
+      locationRandomization: v.optional(v.number()),
+      latitude: v.optional(v.number()),
+      longitude: v.optional(v.number()),
+      lastSeen: v.number(),
+    })
+  ),
   handler: async (ctx, args) => {
     const { userId } = args;
 
@@ -101,6 +164,7 @@ export const updateMyStatus = mutation({
       )
     ),
   },
+  returns: v.id("status"),
   handler: async (ctx, args) => {
     const { userId, ...statusData } = args;
 
@@ -130,10 +194,11 @@ export const updateMyStatus = mutation({
     }
 
     // Update existing status
-    return await ctx.db.patch(status._id, {
+    await ctx.db.patch(status._id, {
       ...statusData,
       lastSeen: Date.now(),
     });
+    return status._id;
   },
 });
 
@@ -157,6 +222,7 @@ export const updateCurrentUserStatus = mutation({
       )
     ),
   },
+  returns: v.id("status"),
   handler: async (ctx, args) => {
     const userId = await getCurrentUserId(ctx);
     if (!userId) {
@@ -183,9 +249,10 @@ export const updateCurrentUserStatus = mutation({
     }
 
     // Update existing status
-    return await ctx.db.patch(status._id, {
+    await ctx.db.patch(status._id, {
       ...args,
       lastSeen: Date.now(),
     });
+    return status._id;
   },
 });
