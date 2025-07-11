@@ -28,6 +28,8 @@ import {
   ChevronRight,
   X,
 } from "lucide-react";
+import { PigAvatar } from "../../../components/ui/pig-avatar";
+import { getUserBackgroundColor } from "../../../lib/utils";
 
 interface ProfilePageProps {
   userId: Id<"users">;
@@ -135,7 +137,23 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
     );
   }
 
-  const finalAvatarUrl = profile.avatarUrl || "/default-avatar.png";
+  // Check if user has any photos
+  const hasPhotos =
+    profile.photos &&
+    Array.isArray(profile.photos) &&
+    profile.photos.length > 0;
+  const hasAvatarUrl =
+    profile.avatarUrl && profile.avatarUrl !== "/default-avatar.png";
+
+  // Generate background color for pig avatar
+  const backgroundColor = getUserBackgroundColor(
+    userId,
+    profile.displayName || user?.name
+  );
+
+  const finalAvatarUrl = hasAvatarUrl
+    ? profile.avatarUrl
+    : "/default-avatar.png";
 
   const lastSeenText = profile.lastSeen
     ? new Date(profile.lastSeen).toLocaleString()
@@ -222,11 +240,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
 
   // Determine main and additional photos
   let photos: string[] = [];
-  if (
-    profile.photos &&
-    Array.isArray(profile.photos) &&
-    profile.photos.length > 0
-  ) {
+  if (hasPhotos) {
     const firstPhoto = profile.photos[0];
     if (typeof firstPhoto === "string") {
       photos = profile.photos as unknown as string[];
@@ -241,7 +255,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
         )
         .filter(Boolean);
     }
-  } else if (profile.avatarUrl) {
+  } else if (hasAvatarUrl) {
     photos = [profile.avatarUrl];
   }
   const mainPhotoIdx = profile.mainPhotoIndex ?? 0;
@@ -308,16 +322,29 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
         </div>
       </div>
       {/* Profile Photo with overlays */}
-      <div className="relative w-full aspect-[6/9] bg-black overflow-hidden">
-        <img
-          src={mainPhoto}
-          alt="Profile cover"
-          className="w-full h-full object-cover object-center cursor-pointer"
-          onClick={() => {
-            setCurrentPhotoIndex(0);
-            setIsGalleryOpen(true);
-          }}
-        />
+      <div
+        className={`relative w-full aspect-[6/9] overflow-hidden ${!hasPhotos && !hasAvatarUrl ? backgroundColor : "bg-black"}`}
+      >
+        {!hasPhotos && !hasAvatarUrl ? (
+          // Show pig avatar when no photos
+          <div className="w-full h-full flex items-center justify-center p-16">
+            <PigAvatar
+              size="xl"
+              backgroundColor={backgroundColor}
+              className="w-48 h-48"
+            />
+          </div>
+        ) : (
+          <img
+            src={mainPhoto}
+            alt="Profile cover"
+            className="w-full h-full object-cover object-center cursor-pointer"
+            onClick={() => {
+              setCurrentPhotoIndex(0);
+              setIsGalleryOpen(true);
+            }}
+          />
+        )}
         {/* Overlay additional photos */}
         {additionalPhotos.length > 0 && (
           <div className="absolute top-4 right-4 flex flex-col gap-2 z-10">
@@ -333,6 +360,28 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                   setIsGalleryOpen(true);
                 }}
               />
+            ))}
+          </div>
+        )}
+        {/* Show pig avatar thumbnails when no additional photos */}
+        {!hasPhotos && !hasAvatarUrl && (
+          <div className="absolute top-4 right-4 flex flex-col gap-2 z-10">
+            {[1, 2, 3].map((idx) => (
+              <div
+                key={idx}
+                className="w-14 h-14 rounded-lg border-2 border-white shadow-lg cursor-pointer"
+                style={{ marginTop: idx === 1 ? 0 : -12 }}
+                onClick={() => {
+                  setCurrentPhotoIndex(idx);
+                  setIsGalleryOpen(true);
+                }}
+              >
+                <PigAvatar
+                  size="lg"
+                  backgroundColor={backgroundColor}
+                  className="w-full h-full rounded-lg"
+                />
+              </div>
             ))}
           </div>
         )}

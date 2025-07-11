@@ -7,6 +7,16 @@ import { useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { useAuth } from "@workos-inc/authkit-nextjs/components";
 
+// Import the HostingStatus type
+type HostingStatus =
+  | "not-hosting"
+  | "hosting"
+  | "hosting-group"
+  | "gloryhole"
+  | "hotel"
+  | "car"
+  | "cruising";
+
 // Force dynamic rendering to prevent static generation issues
 export const dynamic = "force-dynamic";
 
@@ -21,11 +31,8 @@ export default function ProfilePage() {
     api.profiles.getMyProfile,
     convexUser ? { userId: convexUser._id } : "skip"
   );
-  const status = useQuery(
-    api.status.getMyStatus,
-    convexUser ? { userId: convexUser._id } : "skip"
-  );
-  const updateStatus = useMutation(api.status.updateMyStatus);
+  const status = useQuery(api.status.getCurrentUserStatus, {});
+  const updateStatus = useMutation(api.status.updateCurrentUserStatus);
   const updateProfile = useMutation(api.profiles.updateMyProfile);
 
   // Debug logging
@@ -167,7 +174,7 @@ export default function ProfilePage() {
     latitude?: number;
     longitude?: number;
     locationRandomization?: number;
-    hostingStatus?: string;
+    hostingStatus?: HostingStatus;
   }) => {
     // Ensure user is authenticated before proceeding
     if (!user || !convexUser) {
@@ -177,10 +184,7 @@ export default function ProfilePage() {
 
     try {
       console.log("[ProfilePage] Updating status for user:", convexUser._id);
-      await updateStatus({
-        userId: convexUser._id,
-        ...data,
-      });
+      await updateStatus(data);
       console.log("[ProfilePage] Status updated successfully");
     } catch (error) {
       console.error("Error updating status:", error);

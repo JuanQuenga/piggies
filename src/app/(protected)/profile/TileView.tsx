@@ -29,10 +29,15 @@ import {
   Search,
   Filter,
   Eye,
+  Home,
+  Car,
+  Hotel,
 } from "lucide-react";
 import { cn } from "../../../lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { ProfileModal } from "./ProfileModal";
+import { MockProfileModal } from "./MockProfileModal";
+import { mockUsers } from "./mockUsers";
 
 interface UserMarkerDisplayData {
   _id: Id<"profiles">;
@@ -155,11 +160,16 @@ export const TileView: React.FC<TileViewProps> = ({
   const [selectedUserId, setSelectedUserId] =
     React.useState<Id<"users"> | null>(null);
 
-  const visibleUsers = useQuery(api.profiles.listVisibleUsers) || [];
+  // Check if selected user is a mock user
+  const isSelectedUserMock = selectedUserId
+    ? mockUsers.some((user) => user.userId === selectedUserId)
+    : false;
+
+  const realUsers = useQuery(api.profiles.listAllUsersForTiles) || [];
 
   // For debugging: show current user too
-  let filteredUsers = visibleUsers;
-  // let filteredUsers = visibleUsers.filter(
+  let filteredUsers = realUsers;
+  // let filteredUsers = realUsers.filter(
   //   (user) => user.userId !== currentUserId
   // );
 
@@ -241,7 +251,10 @@ export const TileView: React.FC<TileViewProps> = ({
     return a._distance - b._distance;
   });
 
-  if (visibleUsers.length === 0) {
+  // Combine real users with mock users to fill the screen
+  const allUsers = [...usersWithDistance, ...mockUsers];
+
+  if (realUsers.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="text-center">
@@ -274,148 +287,225 @@ export const TileView: React.FC<TileViewProps> = ({
   }
 
   return (
-    <div className="flex h-full">
-      {/* Left: Tiles */}
-      <div className="flex-1 overflow-hidden">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {usersWithDistance.map((user: any) => {
-            const finalAvatarUrl =
-              user.avatarUrl ||
-              `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                user.displayName || user.userName || user.userEmail || "U"
-              )}&background=8b5cf6&color=fff&size=512`;
+    <>
+      <div className="flex h-full">
+        {/* Left: Tiles */}
+        <div className="flex-1 overflow-hidden m-0.5">
+          <div className="grid grid-cols-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {allUsers.map((user: any) => {
+              const finalAvatarUrl =
+                user.avatarUrl ||
+                `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                  user.displayName || user.userName || user.userEmail || "U"
+                )}&background=8b5cf6&color=fff&size=512`;
 
-            const isOnline =
-              user.lastSeen && user.lastSeen > Date.now() - 5 * 60 * 1000;
+              const isOnline =
+                user.lastSeen && user.lastSeen > Date.now() - 5 * 60 * 1000;
 
-            // Hosting status configuration (matching StatusControls.tsx)
-            const hostingStatusConfig = {
-              "not-hosting": {
-                label: "Not hosting",
-                color: "text-zinc-400",
-              },
-              hosting: {
-                label: "I'm hosting",
-                color: "text-green-400",
-              },
-              "hosting-group": {
-                label: "I'm hosting a group",
-                color: "text-purple-400",
-              },
-              gloryhole: {
-                label: "I have a gloryhole set up",
-                color: "text-pink-400",
-              },
-              hotel: {
-                label: "I'm hosting in my hotel room",
-                color: "text-blue-400",
-              },
-              car: {
-                label: "I'm hosting in my car",
-                color: "text-yellow-400",
-              },
-              cruising: {
-                label: "I'm at a cruising spot.",
-                color: "text-red-400",
-              },
-            };
+              // Hosting status configuration (matching StatusControls.tsx)
+              const hostingStatusConfig = {
+                "not-hosting": {
+                  label: "Can't Host",
+                  icon: Home,
+                  color: "text-zinc-400",
+                },
+                hosting: {
+                  label: "Hosting",
+                  icon: Home,
+                  color: "text-green-400",
+                },
+                "hosting-group": {
+                  label: "Group Host",
+                  icon: Users,
+                  color: "text-purple-400",
+                },
+                gloryhole: {
+                  label: "Gloryhole",
+                  icon: Home,
+                  color: "text-pink-400",
+                },
+                hotel: {
+                  label: "Hotel",
+                  icon: Hotel,
+                  color: "text-blue-400",
+                },
+                car: {
+                  label: "Car",
+                  icon: Car,
+                  color: "text-yellow-400",
+                },
+                cruising: {
+                  label: "Cruising",
+                  icon: MapPin,
+                  color: "text-red-400",
+                },
+              };
 
-            const statusConfig =
-              hostingStatusConfig[
-                user.hostingStatus as keyof typeof hostingStatusConfig
-              ] || hostingStatusConfig["not-hosting"];
+              const statusConfig =
+                hostingStatusConfig[
+                  user.hostingStatus as keyof typeof hostingStatusConfig
+                ] || hostingStatusConfig["not-hosting"];
 
-            return (
-              <div
-                key={user._id}
-                className="group relative cursor-pointer hover:bg-zinc-800/20 transition-all duration-200"
-                onClick={() => setSelectedUserId(user.userId)}
-              >
-                {/* Avatar Section - Edge to edge */}
-                <div className="relative aspect-square">
-                  <img
-                    src={finalAvatarUrl}
-                    alt={user.displayName || user.userName || "User"}
-                    className="w-full h-full object-cover"
-                  />
-
-                  {/* Overlay gradient */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-
-                  {/* Status indicators */}
-                  <div className="absolute top-3 right-3 flex items-center gap-2">
-                    {/* Online indicator */}
-                    {isOnline && (
-                      <div className="w-3 h-3 bg-green-500 rounded-full ring-2 ring-white/20 animate-pulse" />
-                    )}
-
-                    {/* Distance badge */}
-                    {user._distance !== undefined && (
-                      <div className="px-2 py-1 bg-black/70 backdrop-blur-sm rounded-md">
-                        <span className="text-xs font-medium text-white">
-                          {user._distance.toFixed(1)} mi
-                        </span>
+              return (
+                <div
+                  key={user._id}
+                  className="group relative cursor-pointer hover:bg-zinc-800/20 transition-all duration-200"
+                  onClick={() => setSelectedUserId(user.userId)}
+                >
+                  {/* Avatar Section - Edge to edge */}
+                  <div
+                    className={`relative aspect-square ${user.backgroundColor || ""}`}
+                  >
+                    {/* For mock users with SVG, show background color and centered SVG */}
+                    {user.avatarUrl === "/pig-snout.svg" ? (
+                      <div className="w-full h-full flex items-center justify-center p-8">
+                        <img
+                          src={finalAvatarUrl}
+                          alt={user.displayName || user.userName || "User"}
+                          className="w-26 h-26 opacity-70"
+                          style={{ filter: "brightness(0) saturate(100%)" }}
+                        />
                       </div>
+                    ) : (
+                      <img
+                        src={finalAvatarUrl}
+                        alt={user.displayName || user.userName || "User"}
+                        className="w-full h-full object-cover"
+                      />
                     )}
-                  </div>
 
-                  {/* Content Section - Overlaid on image */}
-                  <div className="absolute bottom-0 left-0 right-0 p-4">
-                    {/* Name with looking indicator */}
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-semibold text-white text-lg truncate">
-                        {user.displayName || user.userName || "Anonymous User"}
-                      </h3>
-                      {isOnline && (
-                        <Eye className="w-4 h-4 text-green-400 flex-shrink-0" />
+                    {/* Overlay gradient */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+
+                    {/* Hosting status indicator - only show if user is looking */}
+                    <div className="absolute top-3 right-3">
+                      {user.hostingStatus && user.isVisible && (
+                        <div className="px-2 py-1 bg-black/70 backdrop-blur-sm rounded-md flex items-center gap-1">
+                          {(() => {
+                            const IconComponent = statusConfig.icon;
+                            return (
+                              <IconComponent
+                                className={`w-3 h-3 ${statusConfig.color}`}
+                              />
+                            );
+                          })()}
+                          <span
+                            className={`text-xs font-medium ${statusConfig.color}`}
+                          >
+                            {statusConfig.label}
+                          </span>
+                        </div>
                       )}
                     </div>
 
-                    {/* Description */}
-                    {user.description && (
-                      <p className="text-white/90 text-sm mb-2 line-clamp-2">
-                        {user.description}
-                      </p>
-                    )}
+                    {/* Content Section - Overlaid on image */}
+                    <div className="absolute bottom-0 left-0 right-0 p-4">
+                      {/* Name and distance/online indicator */}
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-semibold text-white text-lg truncate flex-1">
+                          {user.displayName ||
+                            user.userName ||
+                            "Anonymous User"}
+                        </h3>
 
-                    {/* Hosting status */}
-                    {user.hostingStatus && (
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`text-sm font-medium ${statusConfig.color}`}
-                        >
-                          {statusConfig.label}
-                        </span>
+                        {/* Online indicator */}
+                        <div className="flex items-center gap-2 ml-2">
+                          {isOnline && (
+                            <div className="w-3 h-3 bg-green-500 rounded-full ring-2 ring-white/20 animate-pulse" />
+                          )}
+                        </div>
                       </div>
-                    )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
+        </div>
+        {/* Right: Profile Panel */}
+        <div className="w-full max-w-lg h-full border-l border-zinc-800/50 bg-zinc-900/95 backdrop-blur hidden md:block">
+          {selectedUserId && isSelectedUserMock ? (
+            <MockProfileModal
+              open={true}
+              onOpenChange={() => setSelectedUserId(null)}
+              userId={selectedUserId as Id<"users">}
+              onBack={() => setSelectedUserId(null)}
+              onStartChat={onStartChat}
+              currentUserProfileForMap={
+                currentUserProfileForMap?.status?.latitude !== undefined &&
+                currentUserProfileForMap?.status?.longitude !== undefined
+                  ? {
+                      latitude: currentUserProfileForMap.status!.latitude,
+                      longitude: currentUserProfileForMap.status!.longitude,
+                    }
+                  : null
+              }
+              columnMode={true}
+            />
+          ) : selectedUserId ? (
+            <ProfileModal
+              open={true}
+              onOpenChange={() => setSelectedUserId(null)}
+              userId={selectedUserId as Id<"users">}
+              onBack={() => setSelectedUserId(null)}
+              onStartChat={onStartChat}
+              currentUserProfileForMap={
+                currentUserProfileForMap?.status?.latitude !== undefined &&
+                currentUserProfileForMap?.status?.longitude !== undefined
+                  ? {
+                      latitude: currentUserProfileForMap.status!.latitude,
+                      longitude: currentUserProfileForMap.status!.longitude,
+                    }
+                  : null
+              }
+              columnMode={true}
+            />
+          ) : null}
         </div>
       </div>
-      {/* Right: Profile Panel */}
-      <div className="w-full max-w-lg h-full border-l border-zinc-800/50 bg-zinc-900/95 backdrop-blur hidden md:block">
-        {selectedUserId && (
-          <ProfileModal
-            open={true}
-            onOpenChange={() => setSelectedUserId(null)}
-            userId={selectedUserId}
-            onBack={() => setSelectedUserId(null)}
-            onStartChat={onStartChat}
-            currentUserProfileForMap={
-              currentUserProfileForMap?.status
-                ? {
-                    latitude: currentUserProfileForMap.status.latitude,
-                    longitude: currentUserProfileForMap.status.longitude,
-                  }
-                : null
-            }
-            columnMode={true}
-          />
-        )}
-      </div>
-    </div>
+
+      {/* Mobile Modal Overlay */}
+      {selectedUserId && (
+        <>
+          {isSelectedUserMock ? (
+            <MockProfileModal
+              open={true}
+              onOpenChange={() => setSelectedUserId(null)}
+              userId={selectedUserId as Id<"users">}
+              onBack={() => setSelectedUserId(null)}
+              onStartChat={onStartChat}
+              currentUserProfileForMap={
+                currentUserProfileForMap?.status?.latitude !== undefined &&
+                currentUserProfileForMap?.status?.longitude !== undefined
+                  ? {
+                      latitude: currentUserProfileForMap.status!.latitude,
+                      longitude: currentUserProfileForMap.status!.longitude,
+                    }
+                  : null
+              }
+              columnMode={false}
+            />
+          ) : (
+            <ProfileModal
+              open={true}
+              onOpenChange={() => setSelectedUserId(null)}
+              userId={selectedUserId as Id<"users">}
+              onBack={() => setSelectedUserId(null)}
+              onStartChat={onStartChat}
+              currentUserProfileForMap={
+                currentUserProfileForMap?.status?.latitude !== undefined &&
+                currentUserProfileForMap?.status?.longitude !== undefined
+                  ? {
+                      latitude: currentUserProfileForMap.status!.latitude,
+                      longitude: currentUserProfileForMap.status!.longitude,
+                    }
+                  : null
+              }
+              columnMode={false}
+            />
+          )}
+        </>
+      )}
+    </>
   );
 };

@@ -86,12 +86,9 @@ export function StatusControls({ variant = "desktop" }: StatusControlsProps) {
     user?.email ? { email: user.email } : "skip"
   );
 
-  // Get current user's status from Convex (using Convex userId)
-  const userStatus = useQuery(
-    api.status.getMyStatus,
-    convexUser?._id ? { userId: convexUser._id } : "skip"
-  );
-  const updateStatus = useMutation(api.status.updateMyStatus);
+  // Get current user's status from Convex (no userId required)
+  const userStatus = useQuery(api.status.getCurrentUserStatus, {});
+  const updateStatus = useMutation(api.status.updateCurrentUserStatus);
 
   // Local state (will be initialized from Convex data)
   const [isLookingNow, setIsLookingNow] = useState(false);
@@ -155,16 +152,8 @@ export function StatusControls({ variant = "desktop" }: StatusControlsProps) {
     hostingStatus?: HostingStatus;
     locationRandomization?: number;
   }) => {
-    if (!convexUser?._id) {
-      console.error("No Convex user ID available");
-      return;
-    }
-
     try {
-      await updateStatus({
-        userId: convexUser._id,
-        ...updates,
-      });
+      await updateStatus(updates);
     } catch (error) {
       console.error("Failed to save status:", error);
     }
@@ -253,7 +242,7 @@ export function StatusControls({ variant = "desktop" }: StatusControlsProps) {
           <EyeOff className={iconSize} />
         )}
         <span className={textSize}>
-          {isLookingNow ? "Looking" : "Not Looking"}
+          {isLookingNow ? "Looking Now" : "Not Looking"}
         </span>
       </Button>
 

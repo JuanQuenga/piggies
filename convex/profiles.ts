@@ -601,6 +601,95 @@ export const listVisibleUsers = query({
   },
 });
 
+// List all users for the tile view (regardless of looking status)
+export const listAllUsersForTiles = query({
+  args: {},
+  returns: v.array(
+    v.object({
+      _id: v.id("profiles"),
+      userId: v.id("users"),
+      displayName: v.optional(v.string()),
+      latitude: v.optional(v.number()),
+      longitude: v.optional(v.number()),
+      avatarUrl: v.optional(v.string()),
+      distance: v.optional(v.number()),
+      hostingStatus: v.optional(v.string()),
+      isVisible: v.optional(v.boolean()),
+      lastSeen: v.optional(v.number()),
+    })
+  ),
+  handler: async (ctx, args) => {
+    try {
+      console.log("[listAllUsersForTiles] Starting query...");
+
+      // Get all profiles
+      const profiles = await ctx.db.query("profiles").collect();
+      console.log("[listAllUsersForTiles] Found profiles:", profiles.length);
+
+      const result = [];
+
+      for (const profile of profiles) {
+        // Get the user's status
+        const status = await ctx.db
+          .query("status")
+          .withIndex("by_userId", (q) => q.eq("userId", profile.userId))
+          .unique();
+
+        // Include all users, regardless of visibility or location status
+        // Get the main profile photo (first photo in the array)
+        let avatarUrl: string | undefined = undefined;
+
+        if (profile.profilePhotos && profile.profilePhotos.length > 0) {
+          const mainPhotoId = profile.profilePhotos[0];
+          try {
+            // Try to resolve the storage ID to a URL
+            if (
+              mainPhotoId &&
+              !mainPhotoId.startsWith("data:") &&
+              !mainPhotoId.startsWith("blob:")
+            ) {
+              const resolvedUrl = await ctx.storage.getUrl(
+                mainPhotoId as Id<"_storage">
+              );
+              avatarUrl = resolvedUrl || undefined;
+            }
+          } catch (error) {
+            console.log(
+              `[listAllUsersForTiles] Could not resolve photo URL for ${mainPhotoId}:`,
+              error
+            );
+          }
+        }
+
+        // Fallback to AuthKit avatar if no profile photo
+        if (!avatarUrl) {
+          const user = await ctx.db.get(profile.userId);
+          avatarUrl = user?.imageUrl;
+        }
+
+        result.push({
+          _id: profile._id,
+          userId: profile.userId,
+          displayName: profile.displayName,
+          latitude: status?.latitude,
+          longitude: status?.longitude,
+          avatarUrl,
+          distance: undefined, // Will be calculated on client side
+          hostingStatus: status?.hostingStatus,
+          isVisible: status?.isVisible,
+          lastSeen: status?.lastSeen,
+        });
+      }
+
+      console.log("[listAllUsersForTiles] Returning all users:", result.length);
+      return result;
+    } catch (error) {
+      console.error("[listAllUsersForTiles] Error:", error);
+      return [];
+    }
+  },
+});
+
 // Get a specific user's profile with avatar URL resolved
 export const getProfileWithAvatarUrl = query({
   args: { userId: v.id("users") },

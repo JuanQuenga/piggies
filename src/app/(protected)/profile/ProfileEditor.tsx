@@ -78,6 +78,16 @@ const PROFILE_OPTIONS = {
   },
 };
 
+// Define the HostingStatus type to match Convex
+type HostingStatus =
+  | "not-hosting"
+  | "hosting"
+  | "hosting-group"
+  | "gloryhole"
+  | "hotel"
+  | "car"
+  | "cruising";
+
 interface ProfileEditorProps {
   profile: any;
   status: any;
@@ -88,7 +98,7 @@ interface ProfileEditorProps {
     latitude?: number;
     longitude?: number;
     locationRandomization?: number;
-    hostingStatus?: string;
+    hostingStatus?: HostingStatus;
   }) => Promise<void>;
   convexUser: any;
 }

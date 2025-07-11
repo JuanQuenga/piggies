@@ -384,7 +384,7 @@ export default function MapComponentClient({
       </MapContainer>
 
       {/* Location Controls */}
-      <div className="absolute top-4 left-4 z-[1000]">
+      <div className="absolute top-4 right-4 z-[1000]">
         <Button
           onClick={requestLocation}
           variant="secondary"
