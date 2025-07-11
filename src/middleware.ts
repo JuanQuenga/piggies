@@ -6,7 +6,8 @@ export default authkitMiddleware({
     unauthenticatedPaths: ["/"],
   },
   redirectUri:
-    process.env.WORKOS_REDIRECT_URI || "http://localhost:3000/callback",
+    process.env.NEXT_PUBLIC_WORKOS_REDIRECT_URI ||
+    "http://localhost:3000/callback",
 });
 
 // Match all app routes except static assets and API
