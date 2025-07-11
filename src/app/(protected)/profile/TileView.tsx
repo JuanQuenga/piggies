@@ -422,9 +422,11 @@ export const TileView: React.FC<TileViewProps> = ({
 
                         {/* Online indicator */}
                         <div className="flex items-center gap-2 ml-2">
-                          {isOnline && (
+                          {user.isVisible ? (
+                            <Eye className="w-3 h-3 text-green-400" />
+                          ) : isOnline ? (
                             <div className="w-3 h-3 bg-green-500 rounded-full ring-2 ring-white/20 animate-pulse" />
-                          )}
+                          ) : null}
                         </div>
                       </div>
                     </div>
@@ -435,7 +437,7 @@ export const TileView: React.FC<TileViewProps> = ({
           </div>
         </div>
         {/* Right: Profile Panel */}
-        <div className="w-full max-w-lg h-full border-l border-zinc-800/50 bg-zinc-900/95 backdrop-blur hidden md:block">
+        <div className="w-full max-w-lg h-full border-l border-zinc-800/50 bg-zinc-900/95 backdrop-blur hidden md:block sticky top-8">
           {selectedUserId && isSelectedUserMock ? (
             <MockProfileModal
               open={true}

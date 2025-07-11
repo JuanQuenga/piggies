@@ -29,7 +29,9 @@ async function getCurrentUserId(ctx: {
 
 // Get the current user's status (no userId required)
 export const getCurrentUserStatus = query({
-  args: {},
+  args: {
+    userId: v.id("users"),
+  },
   returns: v.union(
     v.null(),
     v.object({
@@ -70,11 +72,8 @@ export const getCurrentUserStatus = query({
       lastSeen: v.number(),
     })
   ),
-  handler: async (ctx) => {
-    const userId = await getCurrentUserId(ctx);
-    if (!userId) {
-      return null;
-    }
+  handler: async (ctx, args) => {
+    const { userId } = args;
 
     const status = await ctx.db
       .query("status")
@@ -205,6 +204,7 @@ export const updateMyStatus = mutation({
 // Update the current user's status (no userId required)
 export const updateCurrentUserStatus = mutation({
   args: {
+    userId: v.id("users"),
     isVisible: v.optional(v.boolean()),
     isLocationEnabled: v.optional(v.boolean()),
     latitude: v.optional(v.number()),
@@ -224,9 +224,12 @@ export const updateCurrentUserStatus = mutation({
   },
   returns: v.id("status"),
   handler: async (ctx, args) => {
-    const userId = await getCurrentUserId(ctx);
-    if (!userId) {
-      throw new ConvexError("Not authenticated");
+    const { userId, ...statusData } = args;
+
+    // Verify the user exists
+    const user = await ctx.db.get(userId);
+    if (!user) {
+      throw new ConvexError("User not found");
     }
 
     const status = await ctx.db
@@ -238,19 +241,19 @@ export const updateCurrentUserStatus = mutation({
       // Create new status
       return await ctx.db.insert("status", {
         userId,
-        isVisible: args.isVisible ?? false,
-        isLocationEnabled: args.isLocationEnabled ?? false,
-        latitude: args.latitude,
-        longitude: args.longitude,
-        locationRandomization: args.locationRandomization ?? 0,
-        hostingStatus: args.hostingStatus ?? "not-hosting",
+        isVisible: statusData.isVisible ?? false,
+        isLocationEnabled: statusData.isLocationEnabled ?? false,
+        latitude: statusData.latitude,
+        longitude: statusData.longitude,
+        locationRandomization: statusData.locationRandomization ?? 0,
+        hostingStatus: statusData.hostingStatus ?? "not-hosting",
         lastSeen: Date.now(),
       });
     }
 
     // Update existing status
     await ctx.db.patch(status._id, {
-      ...args,
+      ...statusData,
       lastSeen: Date.now(),
     });
     return status._id;

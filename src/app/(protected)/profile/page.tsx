@@ -31,7 +31,10 @@ export default function ProfilePage() {
     api.profiles.getMyProfile,
     convexUser ? { userId: convexUser._id } : "skip"
   );
-  const status = useQuery(api.status.getCurrentUserStatus, {});
+  const status = useQuery(
+    api.status.getCurrentUserStatus,
+    convexUser ? { userId: convexUser._id } : "skip"
+  );
   const updateStatus = useMutation(api.status.updateCurrentUserStatus);
   const updateProfile = useMutation(api.profiles.updateMyProfile);
 
@@ -184,7 +187,7 @@ export default function ProfilePage() {
 
     try {
       console.log("[ProfilePage] Updating status for user:", convexUser._id);
-      await updateStatus(data);
+      await updateStatus({ ...data, userId: convexUser._id });
       console.log("[ProfilePage] Status updated successfully");
     } catch (error) {
       console.error("Error updating status:", error);

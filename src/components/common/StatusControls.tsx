@@ -87,7 +87,10 @@ export function StatusControls({ variant = "desktop" }: StatusControlsProps) {
   );
 
   // Get current user's status from Convex (no userId required)
-  const userStatus = useQuery(api.status.getCurrentUserStatus, {});
+  const userStatus = useQuery(
+    api.status.getCurrentUserStatus,
+    convexUser ? { userId: convexUser._id } : "skip"
+  );
   const updateStatus = useMutation(api.status.updateCurrentUserStatus);
 
   // Local state (will be initialized from Convex data)
@@ -153,7 +156,11 @@ export function StatusControls({ variant = "desktop" }: StatusControlsProps) {
     locationRandomization?: number;
   }) => {
     try {
-      await updateStatus(updates);
+      if (!convexUser) {
+        console.error("No convex user available");
+        return;
+      }
+      await updateStatus({ ...updates, userId: convexUser._id });
     } catch (error) {
       console.error("Failed to save status:", error);
     }

@@ -54,6 +54,7 @@ interface ProfileModalProps {
   onStartChat: (userId: Id<"users">) => void;
   currentUserProfileForMap?: { latitude?: number; longitude?: number } | null;
   columnMode?: boolean;
+  profile?: any; // Optional profile prop for preview
 }
 
 export const ProfileModal: React.FC<ProfileModalProps> = ({
@@ -64,6 +65,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   onStartChat,
   currentUserProfileForMap,
   columnMode = false,
+  profile,
 }) => {
   const isMobile = useIsMobile();
 
@@ -86,6 +88,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
           onStartChat={onStartChat}
           currentUserProfileForMap={currentUserProfileForMap}
           modalMode={true}
+          profile={profile}
         />
       </div>
     );
@@ -135,6 +138,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
             onStartChat={onStartChat}
             currentUserProfileForMap={currentUserProfileForMap}
             modalMode={true}
+            profile={profile}
           />
         </div>
       </div>
@@ -155,6 +159,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
             onStartChat={onStartChat}
             currentUserProfileForMap={currentUserProfileForMap}
             modalMode={true}
+            profile={profile}
           />
         </div>
       </div>

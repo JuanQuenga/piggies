@@ -244,7 +244,11 @@ export function ProfileEditor({
   // Helper function to get image URL for display
   const getImageUrlForDisplay = (storageId: string) => {
     // If it's already a URL (for backward compatibility), return it
-    if (storageId.startsWith("http") || storageId.startsWith("blob:")) {
+    if (
+      storageId.startsWith("http") ||
+      storageId.startsWith("blob:") ||
+      storageId.startsWith("data:")
+    ) {
       return storageId;
     }
     // For storage IDs, use the Convex function to get the URL
@@ -2248,14 +2252,19 @@ export function ProfileEditor({
       {/* Live Profile Preview (1/3, desktop only) */}
       {profile !== undefined && isInitialized && convexUser?._id && (
         <div className="hidden lg:block lg:w-1/3">
-          <div className="h-[80vh] overflow-y-auto  sticky top-8">
-            <ProfilePage
+          <div className="h-[80vh] overflow-y-auto sticky top-8">
+            <ProfileModal
+              open={true}
+              onOpenChange={() => {}}
               userId={convexUser._id}
               onBack={() => {}}
               onStartChat={() => {}}
               currentUserProfileForMap={null}
-              modalMode={false}
-              profile={formData}
+              columnMode={true}
+              profile={{
+                ...formData,
+                photos: formData.profilePhotos.map(getImageUrlForDisplay),
+              }}
             />
           </div>
         </div>
@@ -2321,6 +2330,7 @@ export function ProfileEditor({
           onBack={() => setIsPreviewOpen(false)}
           onStartChat={() => {}}
           currentUserProfileForMap={null}
+          profile={formData}
         />
       )}
     </div>

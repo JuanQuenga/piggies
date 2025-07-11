@@ -41,6 +41,7 @@ interface ProfilePageProps {
   } | null;
   modalMode?: boolean;
   profile?: any; // Optional profile prop for preview
+  user?: any; // Optional user prop for mock users
 }
 
 function haversineDistance(
@@ -71,10 +72,11 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   currentUserProfileForMap,
   modalMode = false,
   profile: profileProp,
+  user: userProp,
 }) => {
   const profile =
     profileProp ?? useQuery(api.profiles.getProfileWithAvatarUrl, { userId });
-  const user = useQuery(api.profiles.getUser, { userId });
+  const user = userProp ?? useQuery(api.profiles.getUser, { userId });
 
   // Photo gallery state
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
@@ -255,6 +257,13 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
         )
         .filter(Boolean);
     }
+  } else if (
+    profile.profilePhotos &&
+    Array.isArray(profile.profilePhotos) &&
+    profile.profilePhotos.length > 0
+  ) {
+    // Use profilePhotos from formData if present and photos is empty
+    photos = profile.profilePhotos;
   } else if (hasAvatarUrl) {
     photos = [profile.avatarUrl];
   }
