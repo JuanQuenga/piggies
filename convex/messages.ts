@@ -254,29 +254,11 @@ export const listMessages = query({
 
 export const listConversations = query({
   args: {
+    userId: v.id("users"),
     paginationOpts: paginationOptsValidator,
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
-
-    const email = identity.email;
-    if (!email) {
-      throw new Error("No email in identity");
-    }
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_email", (q) => q.eq("email", email))
-      .unique();
-
-    if (!user) {
-      throw new Error("User not found");
-    }
-
-    const currentUserId = user._id;
+    const { userId: currentUserId } = args;
     console.log("listConversations called for user:", currentUserId);
 
     try {

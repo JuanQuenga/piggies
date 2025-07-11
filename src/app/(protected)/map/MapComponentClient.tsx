@@ -1,33 +1,28 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation } from "convex/react";
-import { api } from "../../../convex/_generated/api";
-import { useAuth } from "@workos-inc/authkit-nextjs/components";
-import { Button } from "../../components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../../components/ui/card";
-import { Badge } from "../../components/ui/badge";
-import { Separator } from "../../components/ui/separator";
+import { api } from "../../../../convex/_generated/api";
+import { Id } from "../../../../convex/_generated/dataModel";
+import { Button } from "../../../components/ui/button";
+import { Card, CardContent } from "../../../components/ui/card";
+import { Badge } from "../../../components/ui/badge";
+import { Separator } from "../../../components/ui/separator";
+import { Input } from "../../../components/ui/input";
 import {
   MapPin,
+  Users,
   MessageCircle,
-  User,
   Settings,
+  X,
   Navigation,
-  Shield,
-  Eye,
-  EyeOff,
 } from "lucide-react";
+import { cn } from "../../../lib/utils";
+import { useAuth } from "@workos-inc/authkit-nextjs/components";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { ProfileModal } from "../profile/ProfileModal";
-import { Id } from "../../../convex/_generated/dataModel";
-import { Home, Users, Car, Hotel } from "lucide-react";
+import { Home, Car, Hotel } from "lucide-react";
 
 // Hosting status configuration (matching StatusControls.tsx)
 const hostingStatusConfig = {
@@ -145,6 +140,11 @@ export default function MapComponentClient({
   } | null>(null);
   const [isLocationEnabled, setIsLocationEnabled] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const convexUser = useQuery(
+    api.users.currentLoggedInUser,
+    user?.email ? { email: user.email } : "skip"
+  );
+  const loading = !convexUser;
 
   // Fetch visible users from Convex
   const visibleUsers = useQuery(
@@ -152,42 +152,64 @@ export default function MapComponentClient({
     user?.email ? {} : "skip"
   );
   const setupMapStatus = useMutation(api.profiles.setupMapStatus);
+  const getOrCreateUser = useMutation(api.auth.getOrCreateUser); // or whatever your function is called
+
+  const ensureConvexUser = useCallback(async () => {
+    if (!user?.email) return;
+    await getOrCreateUser({
+      email: user.email,
+      name: user.firstName || user.email,
+    });
+  }, [user, getOrCreateUser]);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Get user's location - only when user explicitly requests it
-  const requestLocation = useCallback(async () => {
-    if (navigator.geolocation && user?.email) {
-      console.log("Geolocation supported. Requesting location...");
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const { latitude, longitude } = position.coords;
-          console.log("Got user location:", { latitude, longitude });
-          setUserLocation({ lat: latitude, lng: longitude });
-          setIsLocationEnabled(true);
+  const canRequestLocation = user && convexUser && !loading;
 
-          // Set up user status for map visibility
-          try {
-            await setupMapStatus({
-              latitude,
-              longitude,
-            });
-            console.log("Status set up for map visibility");
-          } catch (error) {
-            console.error("Error setting up map status:", error);
-          }
-        },
-        (error) => {
-          console.error("Error getting location:", error);
-          setIsLocationEnabled(false);
-        }
-      );
-    } else {
-      console.warn("Geolocation not supported or user not logged in.");
+  const requestLocation = useCallback(async () => {
+    if (!canRequestLocation) {
+      alert("Please wait until you are fully signed in.");
+      return;
     }
-  }, [user?.email, setupMapStatus]);
+    if (!navigator.geolocation) {
+      alert("Geolocation not supported by your browser.");
+      return;
+    }
+
+    // First ensure the user exists in Convex
+    try {
+      await ensureConvexUser();
+      console.log("User ensured in Convex");
+    } catch (error) {
+      console.error("Error ensuring user in Convex:", error);
+      alert("Could not verify your account. Please try again.");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        setUserLocation({ lat: latitude, lng: longitude });
+        setIsLocationEnabled(true);
+        try {
+          await setupMapStatus({ latitude, longitude });
+          console.log("Status set up for map visibility");
+        } catch (error) {
+          console.error("Error setting up map status:", error);
+          alert("Could not update your map status. Please try again.");
+        }
+      },
+      (error) => {
+        console.error("Error getting location:", error);
+        setIsLocationEnabled(false);
+        alert(
+          "Could not get your location. Please check your browser permissions."
+        );
+      }
+    );
+  }, [canRequestLocation, setupMapStatus, ensureConvexUser]);
 
   // Don't automatically request location on mount
   // User will need to click the "My Location" button
@@ -203,12 +225,14 @@ export default function MapComponentClient({
   };
 
   if (!user) {
+    // Redirect to sign in page
+    router.push("/auth");
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Please sign in</h1>
-          <p className="text-muted-foreground">
-            You need to be signed in to view the map.
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
+          <p className="mt-2 text-muted-foreground">
+            Redirecting to sign in...
           </p>
         </div>
       </div>
@@ -300,6 +324,7 @@ export default function MapComponentClient({
           variant="secondary"
           size="sm"
           className="bg-white/90 backdrop-blur-sm"
+          disabled={!canRequestLocation}
         >
           <Navigation className="w-4 h-4 mr-2" />
           My Location

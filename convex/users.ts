@@ -11,11 +11,38 @@ import { ConvexError } from "convex/values";
 
 // Query to get the currently logged-in user's full document from the "users" table.
 export const currentLoggedInUser = query({
-  args: { email: v.string() },
+  args: {
+    email: v.string(),
+  },
   handler: async (ctx, args) => {
+    const { email } = args;
+    if (!email) {
+      return null;
+    }
+
     const user = await ctx.db
       .query("users")
-      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .withIndex("by_email", (q) => q.eq("email", email))
+      .unique();
+
+    return user;
+  },
+});
+
+// Query to get a user by email
+export const getUserByEmail = query({
+  args: {
+    email: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const { email } = args;
+    if (!email) {
+      return null;
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", email))
       .unique();
 
     return user;
@@ -23,11 +50,18 @@ export const currentLoggedInUser = query({
 });
 
 export const getMyId = query({
-  args: { email: v.string() },
+  args: {
+    email: v.string(),
+  },
   handler: async (ctx, args) => {
+    const { email } = args;
+    if (!email) {
+      return null;
+    }
+
     const user = await ctx.db
       .query("users")
-      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .withIndex("by_email", (q) => q.eq("email", email))
       .unique();
 
     return user?._id || null;

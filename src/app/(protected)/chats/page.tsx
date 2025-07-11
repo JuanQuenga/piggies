@@ -3,16 +3,16 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@workos-inc/authkit-nextjs/components";
 import { useQuery, usePaginatedQuery } from "convex/react";
-import { api } from "../../../convex/_generated/api";
-import { Id } from "../../../convex/_generated/dataModel";
+import { api } from "../../../../convex/_generated/api";
+import { Id } from "../../../../convex/_generated/dataModel";
 import { ConversationList } from "./ConversationList";
 import { MessagingArea } from "./MessagingArea";
 import { ProfileModal } from "../profile/ProfileModal";
-import { Card, CardContent } from "../../components/ui/card";
-import { Badge } from "../../components/ui/badge";
-import { Separator } from "../../components/ui/separator";
+import { Card, CardContent } from "../../../components/ui/card";
+import { Badge } from "../../../components/ui/badge";
+import { Separator } from "../../../components/ui/separator";
 import { MessageCircle, Users, ArrowLeft, Pin } from "lucide-react";
-import { cn } from "../../lib/utils";
+import { cn } from "../../../lib/utils";
 import { useSearchParams } from "next/navigation";
 
 interface SelectedConversationDetails {
@@ -43,7 +43,7 @@ export default function ChatsPage() {
   // Get conversations to find the one from URL parameter
   const { results: conversations } = usePaginatedQuery(
     api.messages.listConversations,
-    currentUser?._id ? {} : "skip", // Only call when user is authenticated
+    currentUser?._id ? { userId: currentUser._id } : "skip", // Only call when user is authenticated
     { initialNumItems: 50 }
   );
 
@@ -121,10 +121,8 @@ export default function ChatsPage() {
     return (
       <div className="flex items-center justify-center h-full bg-zinc-900">
         <div className="text-center">
-          <h3 className="text-xl font-semibold text-white mb-2">
-            Sign in required
-          </h3>
-          <p className="text-zinc-400">Please sign in to use messaging.</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
+          <p className="mt-2 text-zinc-400">Loading user...</p>
         </div>
       </div>
     );

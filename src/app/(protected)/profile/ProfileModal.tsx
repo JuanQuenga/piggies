@@ -1,10 +1,39 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../../../convex/_generated/api";
+import { Id } from "../../../../convex/_generated/dataModel";
+import { Button } from "../../../components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../../../components/ui/card";
+import { Badge } from "../../../components/ui/badge";
+import { Separator } from "../../../components/ui/separator";
+import { Input } from "../../../components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "../../../components/ui/dialog";
+import {
+  MessageCircle,
+  MapPin,
+  Users,
+  X,
+  User,
+  Mail,
+  Phone,
+  Globe,
+  Calendar,
+  Map,
+} from "lucide-react";
+import { cn } from "../../../lib/utils";
 import { ProfilePage } from "./ProfilePage";
-import { Id } from "../../../convex/_generated/dataModel";
-import { Button } from "../../components/ui/button";
-import { X } from "lucide-react";
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = React.useState(false);

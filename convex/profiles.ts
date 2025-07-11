@@ -57,8 +57,20 @@ async function resolvePhotoUrlsWithIds(
       if (photo.startsWith("http")) {
         resolvedPhotos.push({ id: photo, url: photo });
       } else {
+        // Handle JSON strings that contain storage IDs
+        let storageId = photo;
         try {
-          const url = await ctx.storage.getUrl(photo as Id<"_storage">);
+          const parsed = JSON.parse(photo);
+          if (parsed.storageId) {
+            storageId = parsed.storageId;
+          }
+        } catch {
+          // If it's not JSON, use as is
+          storageId = photo;
+        }
+
+        try {
+          const url = await ctx.storage.getUrl(storageId as Id<"_storage">);
           if (url) resolvedPhotos.push({ id: photo, url });
         } catch (e) {
           console.log("Invalid storage ID for photo:", photo, e);
@@ -98,7 +110,9 @@ function deg2rad(deg: number): number {
 
 // Get the current user's profile, or null if not created
 export const getMyProfile = query({
-  args: {},
+  args: {
+    userId: v.id("users"),
+  },
   returns: v.union(
     v.object({
       _id: v.id("profiles"),
@@ -131,34 +145,20 @@ export const getMyProfile = query({
       showIdentity: v.optional(v.boolean()),
       showHealth: v.optional(v.boolean()),
       showScene: v.optional(v.boolean()),
+      photos: v.optional(
+        v.array(
+          v.object({
+            id: v.string(),
+            url: v.string(),
+          })
+        )
+      ),
     }),
     v.null()
   ),
   handler: async (ctx, args) => {
     try {
-      const identity = await ctx.auth.getUserIdentity();
-      if (!identity) {
-        console.log("[getMyProfile] no authenticated user");
-        return null;
-      }
-
-      const email = identity.email;
-      if (!email) {
-        console.log("[getMyProfile] no email in identity");
-        return null;
-      }
-
-      const user = await ctx.db
-        .query("users")
-        .withIndex("by_email", (q) => q.eq("email", email))
-        .unique();
-
-      if (!user) {
-        console.log("[getMyProfile] user not found for email:", email);
-        return null;
-      }
-
-      const userId = user._id;
+      const { userId } = args;
       console.log("[getMyProfile] userId:", userId);
 
       const profile = await ctx.db
@@ -210,6 +210,8 @@ export const getMyProfile = query({
         showHealth,
         showScene,
       } = profile;
+      // Resolve photo storage IDs to URLs
+      const photos = await resolvePhotoUrlsWithIds(ctx, profilePhotos);
       const result = {
         _id,
         _creationTime,
@@ -218,6 +220,7 @@ export const getMyProfile = query({
         headliner,
         hometown,
         profilePhotos,
+        photos, // <-- add resolved URLs here
         age,
         heightInInches,
         weightInLbs,
@@ -253,7 +256,9 @@ export const getMyProfile = query({
 
 // Get the current user's profile with avatarUrl resolved to a real URL
 export const getMyProfileWithAvatarUrl = query({
-  args: {},
+  args: {
+    userId: v.id("users"),
+  },
   returns: v.union(
     v.object({
       _id: v.id("profiles"),
@@ -299,33 +304,9 @@ export const getMyProfileWithAvatarUrl = query({
     v.null()
   ),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      console.log("[getMyProfileWithAvatarUrl] no authenticated user");
-      return null;
-    }
-
-    const email = identity.email;
-    if (!email) {
-      console.log("[getMyProfileWithAvatarUrl] no email in identity");
-      return null;
-    }
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_email", (q) => q.eq("email", email))
-      .unique();
-
-    if (!user) {
-      console.log(
-        "[DEBUG] getMyProfileWithAvatarUrl user not found for email:",
-        email
-      );
-      return null;
-    }
-
-    const userId = user._id;
+    const { userId } = args;
     console.log("[DEBUG] getMyProfileWithAvatarUrl userId:", userId);
+
     const profile = await ctx.db
       .query("profiles")
       .withIndex("by_userId", (q) => q.eq("userId", userId))
@@ -348,6 +329,32 @@ export const getMyProfileWithAvatarUrl = query({
   },
 });
 
+// Get image URL from storage ID
+export const getImageUrl = query({
+  args: {
+    storageId: v.id("_storage"),
+  },
+  returns: v.union(v.string(), v.null()),
+  handler: async (ctx, args) => {
+    try {
+      const url = await ctx.storage.getUrl(args.storageId);
+      return url;
+    } catch (error) {
+      console.error("Error getting image URL:", error);
+      return null;
+    }
+  },
+});
+
+// Generate a short-lived upload URL for profile photos
+export const generateProfilePhotoUploadUrl = mutation({
+  args: {},
+  returns: v.string(),
+  handler: async (ctx) => {
+    return await ctx.storage.generateUploadUrl();
+  },
+});
+
 // Generate a short-lived upload URL for avatar
 export const generateAvatarUploadUrl = mutation({
   args: {},
@@ -360,6 +367,7 @@ export const generateAvatarUploadUrl = mutation({
 // Create or update the current user's profile
 export const updateMyProfile = mutation({
   args: {
+    userId: v.id("users"),
     // Basic Info
     displayName: v.optional(v.string()),
     headliner: v.optional(v.string()),
@@ -395,26 +403,13 @@ export const updateMyProfile = mutation({
     showScene: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
+    const { userId, ...profileData } = args;
 
-    const email = identity.email;
-    if (!email) {
-      throw new Error("No email in identity");
-    }
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_email", (q) => q.eq("email", email))
-      .unique();
-
+    // Verify the user exists
+    const user = await ctx.db.get(userId);
     if (!user) {
       throw new Error("User not found");
     }
-
-    const userId = user._id;
 
     const existingProfile = await ctx.db
       .query("profiles")
@@ -423,14 +418,14 @@ export const updateMyProfile = mutation({
 
     if (existingProfile) {
       // Update existing profile
-      await ctx.db.patch(existingProfile._id, args);
+      await ctx.db.patch(existingProfile._id, profileData);
       return existingProfile._id;
     }
 
     // Create new profile
     const newProfileData = {
       userId,
-      ...args,
+      ...profileData,
     };
 
     return await ctx.db.insert("profiles", newProfileData);
@@ -665,13 +660,17 @@ export const setupMapStatus = mutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     try {
+      console.log("[setupMapStatus] Starting with args:", args);
+
       const identity = await ctx.auth.getUserIdentity();
       if (!identity) {
+        console.error("[setupMapStatus] Not authenticated");
         throw new Error("Not authenticated");
       }
 
       const email = identity.email;
       if (!email) {
+        console.error("[setupMapStatus] No email in identity");
         throw new Error("No email in identity");
       }
 
@@ -684,8 +683,11 @@ export const setupMapStatus = mutation({
         .unique();
 
       if (!user) {
+        console.error("[setupMapStatus] User not found for email:", email);
         throw new Error("User not found");
       }
+
+      console.log("[setupMapStatus] Found user:", user._id);
 
       const userId = user._id;
 

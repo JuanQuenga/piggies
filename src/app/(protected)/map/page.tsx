@@ -1,70 +1,38 @@
 "use client";
 
-import { useQuery, useMutation } from "convex/react";
 import { useAuth } from "@workos-inc/authkit-nextjs/components";
-import { api } from "../../../../convex/_generated/api";
-import { ProfilePage } from "../../../app/profile/ProfilePage";
-import { Id } from "../../../../convex/_generated/dataModel";
-import { useRouter, useParams } from "next/navigation";
-import Providers from "../../Providers";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../../../convex/_generated/api";
+import { Id } from "../../../../convex/_generated/dataModel";
+import { MapComponent } from "./MapComponent";
 
-// Force dynamic rendering to prevent static generation issues
-export const dynamic = "force-dynamic";
-
-// Separate component that uses Convex hooks - will be wrapped in ConvexProvider
-function UserProfilePageContent() {
+export default function MapPage() {
   const { user, loading } = useAuth();
+  console.log("MapPage user:", user, "loading:", loading);
   const router = useRouter();
-  const params = useParams();
   const [mounted, setMounted] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<Id<"users"> | null>(
+    null
+  );
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  const userId = params.userId as Id<"users">;
-
   // Now useQuery is called within ConvexProvider context
-  const currentUserProfile = useQuery(
-    api.profiles.getMyProfileWithAvatarUrl,
-    user?.email ? {} : "skip"
-  );
   const currentUserId = useQuery(
     api.users.getMyId,
     user?.email ? { email: user.email } : "skip"
   );
+  const currentUserProfile = useQuery(
+    api.profiles.getMyProfileWithAvatarUrl,
+    currentUserId ? { userId: currentUserId } : "skip"
+  );
   const getOrCreateConversationMutation = useMutation(
     api.messages.getOrCreateConversationWithParticipant
   );
-
-  // Show loading state while authentication is being determined
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
-          <p className="mt-2 text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Redirect to sign in if not authenticated
-  if (!user) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center">
-          <h2 className="text-xl font-semibold text-primary mb-2">
-            Sign in required
-          </h2>
-          <p className="text-muted-foreground">
-            Please sign in to view profiles.
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   // Show loading state while user data is being fetched
   if (
@@ -76,15 +44,11 @@ function UserProfilePageContent() {
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
-          <p className="mt-2 text-muted-foreground">Loading profile data...</p>
+          <p className="mt-2 text-muted-foreground">Loading map data...</p>
         </div>
       </div>
     );
   }
-
-  const handleBack = () => {
-    router.back();
-  };
 
   const handleStartChat = async (otherParticipantUserId: Id<"users">) => {
     try {
@@ -107,29 +71,37 @@ function UserProfilePageContent() {
     }
   };
 
+  const handleProfileClick = (userId: Id<"users">) => {
+    // Open the ProfileModal instead of navigating
+    setSelectedUserId(userId);
+  };
+
   // Transform the profile data to match the expected interface
   const transformedProfile = currentUserProfile
     ? {
+        _id: currentUserProfile._id,
         latitude: undefined, // This should come from status data
         longitude: undefined, // This should come from status data
+        status: undefined, // This should come from status data
+        avatarUrl: currentUserProfile.avatarUrl,
+        displayName: currentUserProfile.displayName,
+        description: undefined, // This should come from profile data
+        userName: undefined, // This should come from user data
+        userEmail: undefined, // This should come from user data
+        lastSeen: undefined, // This should come from status data
+        isVisible: undefined, // This should come from status data
+        userId: currentUserProfile.userId,
       }
     : null;
 
   return (
-    <ProfilePage
-      userId={userId}
-      onBack={handleBack}
-      onStartChat={handleStartChat}
-      currentUserProfileForMap={transformedProfile}
-    />
-  );
-}
-
-// Main page component that provides the ConvexProvider context
-export default function UserProfilePage() {
-  return (
-    <Providers>
-      <UserProfilePageContent />
-    </Providers>
+    <div className="h-full w-full flex-1 relative overflow-hidden">
+      <MapComponent
+        currentUserProfileForMap={transformedProfile}
+        currentUserId={currentUserId}
+        onStartChat={handleStartChat}
+        onProfileClick={handleProfileClick}
+      />
+    </div>
   );
 }

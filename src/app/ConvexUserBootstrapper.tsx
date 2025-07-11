@@ -8,10 +8,13 @@ export function ConvexUserBootstrapper() {
   const { user, loading } = useAuth();
   const getOrCreateUser = useMutation(api.auth.getOrCreateUser);
   const updateMyProfile = useMutation(api.profiles.updateMyProfile);
-  const profile = useQuery(api.profiles.getMyProfile);
   const currentUser = useQuery(
     api.users.currentLoggedInUser,
     user?.email ? { email: user.email } : "skip"
+  );
+  const profile = useQuery(
+    api.profiles.getMyProfile,
+    currentUser ? { userId: currentUser._id } : "skip"
   );
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const retryCountRef = useRef(0);
@@ -50,7 +53,10 @@ export function ConvexUserBootstrapper() {
 
       retryTimeoutRef.current = setTimeout(async () => {
         try {
-          await updateMyProfile({});
+          await updateMyProfile({
+            userId: currentUser._id,
+            // Add some default profile data if needed
+          });
           console.log("Profile updated successfully");
           retryCountRef.current = 0; // Reset retry count on success
         } catch (error) {

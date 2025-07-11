@@ -54,14 +54,14 @@ export default function FullScreenAuth() {
             onClick={handleSignIn}
             className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
           >
-            Sign In with WorkOS
+            Sign In
           </Button>
           <Button
             onClick={handleSignUp}
             variant="outline"
             className="w-full border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800 font-semibold py-3 px-4 rounded-lg transition-colors"
           >
-            Sign Up with WorkOS
+            Sign Up
           </Button>
         </div>
       </div>

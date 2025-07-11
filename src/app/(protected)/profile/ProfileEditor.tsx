@@ -1,6 +1,6 @@
 "use client";
 
-import { Id } from "../../../convex/_generated/dataModel";
+import { Id } from "../../../../convex/_generated/dataModel";
 import { ProfilePage } from "./ProfilePage";
 import { useUnitPreference } from "@/components/common/UnitPreferenceContext";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,13 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { useMutation, useQuery } from "convex/react";
+import { api } from "../../../../convex/_generated/api";
+import {
+  compressImage,
+  uploadImageToConvex,
+  cleanupImageUrl,
+} from "@/lib/imageUtils";
 
 // Unit conversion utilities
 const inchesToCm = (inches: number) => Math.round(inches * 2.54);
@@ -98,6 +105,26 @@ export function ProfileEditor({
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
+  // Add mutation for generating upload URLs
+  const generateUploadUrl = useMutation(
+    api.profiles.generateProfilePhotoUploadUrl
+  );
+
+  // Helper function to get image URL for display
+  const getImageUrlForDisplay = (storageId: string) => {
+    // If it's already a URL (for backward compatibility), return it
+    if (storageId.startsWith("http") || storageId.startsWith("blob:")) {
+      return storageId;
+    }
+    // For storage IDs, use the Convex function to get the URL
+    // For now, return a placeholder until we implement proper URL fetching
+    return `/api/images/${storageId}`;
+  };
+
+  // Component to display an image from storage ID
+  // Remove StorageImage component and per-photo useQuery
 
   const [formData, setFormData] = useState({
     displayName: "",
@@ -1428,6 +1455,18 @@ export function ProfileEditor({
   );
 
   // --- Section: Photos ---
+  // Helper to robustly resolve photo URLs
+  const getPhotoUrl = (photo: string) => {
+    if (!photo) return undefined;
+    // If it's a data URL or blob, use as is
+    if (photo.startsWith("data:") || photo.startsWith("blob:")) return photo;
+    // Try to find a resolved URL from profile.photos
+    const resolved = profile.photos?.find((p: any) => p.id === photo)?.url;
+    if (resolved) return resolved;
+    // Show a default placeholder if not available
+    return "/default-avatar.png";
+  };
+
   const renderPhotosSection = () => (
     <div className="mb-8">
       <div className="pb-4">
@@ -1445,6 +1484,8 @@ export function ProfileEditor({
               const isMainPhoto = index === 0;
               const isDragging = draggedIndex === index;
               const isDragOver = dragOverIndex === index;
+
+              const resolvedUrl = getPhotoUrl(photo);
 
               return (
                 <div
@@ -1466,7 +1507,7 @@ export function ProfileEditor({
                   {photo ? (
                     <>
                       <img
-                        src={photo}
+                        src={resolvedUrl}
                         alt={`Profile photo ${index + 1}`}
                         className="w-full h-full object-cover"
                       />
@@ -1648,6 +1689,8 @@ export function ProfileEditor({
                 const isDragging = draggedIndex === index;
                 const isDragOver = dragOverIndex === index;
 
+                const resolvedUrl = getPhotoUrl(photo);
+
                 return (
                   <div
                     key={index}
@@ -1668,7 +1711,7 @@ export function ProfileEditor({
                     {photo ? (
                       <>
                         <img
-                          src={photo}
+                          src={resolvedUrl}
                           alt={`Profile photo ${index + 1}`}
                           className="w-full h-full object-cover"
                         />
@@ -1715,40 +1758,59 @@ export function ProfileEditor({
                 variant="outline"
                 size="sm"
                 className="flex items-center gap-2 bg-transparent px-3 py-1.5 text-xs text-zinc-300 border-zinc-600 hover:bg-zinc-800"
-                onClick={() => {
+                onClick={async () => {
                   const input = document.createElement("input");
                   input.type = "file";
                   input.accept = "image/*";
                   input.multiple = true;
-                  input.onchange = (e) => {
+                  input.onchange = async (e) => {
                     const files = (e.target as HTMLInputElement).files;
-                    if (files) {
-                      const newPhotos = [...formData.profilePhotos];
-                      const maxPhotos = 5;
+                    if (files && !isUploading) {
+                      setIsUploading(true);
+                      try {
+                        const newPhotos = [...formData.profilePhotos];
+                        const maxPhotos = 5;
 
-                      Array.from(files).forEach((file) => {
-                        if (newPhotos.length < maxPhotos) {
-                          const reader = new FileReader();
-                          reader.onload = (e) => {
-                            const photoUrl = e.target?.result as string;
-                            newPhotos.push(photoUrl);
-                            if (newPhotos.length <= maxPhotos) {
-                              handleInputChange("profilePhotos", [
-                                ...newPhotos,
-                              ]);
-                            }
-                          };
-                          reader.readAsDataURL(file);
+                        for (const file of Array.from(files)) {
+                          if (newPhotos.length >= maxPhotos) break;
+
+                          try {
+                            // Compress the image
+                            const compressedImage = await compressImage(file);
+
+                            // Upload to Convex storage
+                            const storageId = await uploadImageToConvex(
+                              compressedImage.file,
+                              () => generateUploadUrl()
+                            );
+
+                            // Add the storage ID to the photos array
+                            newPhotos.push(storageId);
+
+                            // Clean up the temporary URL
+                            cleanupImageUrl(compressedImage.url);
+                          } catch (error) {
+                            console.error("Error processing image:", error);
+                            // Continue with other images even if one fails
+                          }
                         }
-                      });
+
+                        handleInputChange("profilePhotos", newPhotos);
+                      } catch (error) {
+                        console.error("Error uploading photos:", error);
+                      } finally {
+                        setIsUploading(false);
+                      }
                     }
                   };
                   input.click();
                 }}
-                disabled={formData.profilePhotos.length >= 5}
+                disabled={formData.profilePhotos.length >= 5 || isUploading}
               >
                 <Upload className="w-3 h-3" />
-                Add Photos ({formData.profilePhotos.length}/5)
+                {isUploading
+                  ? "Uploading..."
+                  : `Add Photos (${formData.profilePhotos.length}/5)`}
               </Button>
 
               {formData.profilePhotos.length > 0 && (

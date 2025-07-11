@@ -4,16 +4,16 @@ import React from "react";
 import { useAuth } from "@workos-inc/authkit-nextjs/components";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "../../components/ui/button";
-import { useUnitPreference } from "../../components/common/UnitPreferenceContext";
+import { Button } from "../../../components/ui/button";
+import { useUnitPreference } from "../../../components/common/UnitPreferenceContext";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-} from "../../components/ui/card";
-import { Label } from "../../components/ui/label";
-import { Separator } from "../../components/ui/separator";
+} from "../../../components/ui/card";
+import { Label } from "../../../components/ui/label";
+import { Separator } from "../../../components/ui/separator";
 import {
   User,
   Bell,
@@ -27,13 +27,13 @@ import {
   LockOpen,
   MapPin,
 } from "lucide-react";
-import { cn } from "../../lib/utils";
+import { cn } from "../../../lib/utils";
 
 // Force dynamic rendering to prevent static generation issues
 export const dynamic = "force-dynamic";
 
 export default function SettingsPage() {
-  const { user, loading } = useAuth();
+  const { user, loading, signOut } = useAuth();
   const router = useRouter();
   const { isUSUnits, setIsUSUnits } = useUnitPreference();
   const [mounted, setMounted] = useState(false);
@@ -42,6 +42,18 @@ export default function SettingsPage() {
     setMounted(true);
   }, []);
 
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      // Redirect to home page after sign out
+      router.push("/");
+    } catch (error) {
+      console.error("Error signing out:", error);
+      // Fallback to manual redirect
+      window.location.href = "/api/logout";
+    }
+  };
+
   // Show loading state while authentication is being determined
   if (loading || !mounted) {
     return (
@@ -49,29 +61,6 @@ export default function SettingsPage() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-400 mx-auto"></div>
           <p className="mt-2 text-zinc-400">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Redirect to sign in if not authenticated
-  if (!user) {
-    return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-5rem)] bg-gradient-to-br from-purple-900/20 via-zinc-900/20 to-black/20">
-        <div className="text-center max-w-md mx-auto p-8 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10">
-          <User className="w-12 h-12 text-purple-400 mx-auto mb-4" />
-          <h2 className="text-2xl font-semibold text-white mb-4">
-            Sign in required
-          </h2>
-          <p className="text-zinc-400 mb-6">
-            Please sign in to access your settings.
-          </p>
-          <Button
-            onClick={() => (window.location.href = "/login")}
-            className="bg-purple-600 hover:bg-purple-700 text-white"
-          >
-            Sign In
-          </Button>
         </div>
       </div>
     );
@@ -98,12 +87,12 @@ export default function SettingsPage() {
           <CardContent className="space-y-4">
             <div>
               <Label className="text-zinc-300">Email</Label>
-              <p className="text-white">{user.email}</p>
+              <p className="text-white">{user?.email}</p>
             </div>
             <div>
               <Label className="text-zinc-300">Name</Label>
               <p className="text-white">
-                {user.firstName} {user.lastName}
+                {user?.firstName} {user?.lastName}
               </p>
             </div>
             <Button
@@ -246,6 +235,7 @@ export default function SettingsPage() {
             <Button
               variant="destructive"
               className="bg-red-600 hover:bg-red-700"
+              onClick={handleSignOut}
             >
               <LogOut className="w-4 h-4 mr-2" />
               Sign Out

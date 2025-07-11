@@ -1,16 +1,22 @@
 "use client";
 
-import React from "react";
-import { useQuery } from "convex/react";
-import { api } from "../../../convex/_generated/api";
-import { Id } from "../../../convex/_generated/dataModel";
-import { usePaginatedQuery } from "convex/react";
-import { Button } from "../../components/ui/button";
-import { Card, CardContent } from "../../components/ui/card";
-import { Badge } from "../../components/ui/badge";
-import { Separator } from "../../components/ui/separator";
-import { Pin, Users, Clock, ChevronRight } from "lucide-react";
-import { cn } from "../../lib/utils";
+import React, { useState } from "react";
+import { useQuery, usePaginatedQuery } from "convex/react";
+import { api } from "../../../../convex/_generated/api";
+import { Id } from "../../../../convex/_generated/dataModel";
+import { Button } from "../../../components/ui/button";
+import { Card, CardContent } from "../../../components/ui/card";
+import { Badge } from "../../../components/ui/badge";
+import { Separator } from "../../../components/ui/separator";
+import {
+  MessageCircle,
+  Users,
+  ArrowLeft,
+  Pin,
+  ChevronRight,
+} from "lucide-react";
+import { cn } from "../../../lib/utils";
+import { useSearchParams } from "next/navigation";
 
 interface ConversationListProps {
   onSelectConversation: (
@@ -34,7 +40,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
     loadMore,
   } = usePaginatedQuery(
     api.messages.listConversations,
-    currentUserId ? {} : "skip", // Only call when user is authenticated
+    currentUserId ? { userId: currentUserId } : "skip",
     { initialNumItems: 15 }
   );
 

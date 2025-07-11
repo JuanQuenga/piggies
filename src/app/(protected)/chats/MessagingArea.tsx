@@ -1,16 +1,16 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
-import { useMutation, usePaginatedQuery } from "convex/react";
-import { api } from "../../../convex/_generated/api";
-import { Id } from "../../../convex/_generated/dataModel";
-import { Button } from "../../components/ui/button";
-import { Card, CardContent } from "../../components/ui/card";
-import { Input } from "../../components/ui/input";
-import { Badge } from "../../components/ui/badge";
-import { Separator } from "../../components/ui/separator";
-import { Send, ArrowLeft, MessageCircle, Clock, User } from "lucide-react";
-import { cn } from "../../lib/utils";
+import React, { useState, useEffect, useRef } from "react";
+import { useQuery, useMutation, usePaginatedQuery } from "convex/react";
+import { api } from "../../../../convex/_generated/api";
+import { Id } from "../../../../convex/_generated/dataModel";
+import { Button } from "../../../components/ui/button";
+import { Card, CardContent } from "../../../components/ui/card";
+import { Badge } from "../../../components/ui/badge";
+import { Separator } from "../../../components/ui/separator";
+import { Input } from "../../../components/ui/input";
+import { MessageCircle, Send, ArrowLeft, Users } from "lucide-react";
+import { cn } from "../../../lib/utils";
 
 interface MessagingAreaProps {
   conversationId: Id<"conversations"> | null;
@@ -40,10 +40,7 @@ export const MessagingArea: React.FC<MessagingAreaProps> = ({
   const { results: messages, status } = usePaginatedQuery(
     api.messages.listMessages,
     conversationId && currentUserId
-      ? {
-          conversationId,
-          currentUserId,
-        }
+      ? { conversationId, currentUserId }
       : "skip",
     { initialNumItems: 50 }
   );
@@ -162,7 +159,7 @@ export const MessagingArea: React.FC<MessagingAreaProps> = ({
           messages
             .slice()
             .reverse()
-            .map((msg) => {
+            .map((msg: any) => {
               const isOwnMessage = msg.senderId === currentUserId;
               const senderAvatar =
                 msg.author?.avatarUrl ||

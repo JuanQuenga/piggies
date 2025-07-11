@@ -4,8 +4,8 @@ import { useAuth } from "@workos-inc/authkit-nextjs/components";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
-import { api } from "../../../convex/_generated/api";
-import { Id } from "../../../convex/_generated/dataModel";
+import { api } from "../../../../convex/_generated/api";
+import { Id } from "../../../../convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { Users, LogIn, Search, Filter } from "lucide-react";
 import { TileView } from "../profile/TileView";
@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 
 export default function PeoplePage() {
-  const { user, loading } = useAuth();
+  const { user } = useAuth();
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -25,54 +25,17 @@ export default function PeoplePage() {
   }, []);
 
   // Now useQuery is called within ConvexProvider context
-  const currentUserProfile = useQuery(
-    api.profiles.getMyProfileWithAvatarUrl,
-    user?.email ? {} : "skip"
-  );
   const currentUserId = useQuery(
     api.users.getMyId,
     user?.email ? { email: user.email } : "skip"
   );
+  const currentUserProfile = useQuery(
+    api.profiles.getMyProfileWithAvatarUrl,
+    currentUserId ? { userId: currentUserId } : "skip"
+  );
   const getOrCreateConversationMutation = useMutation(
     api.messages.getOrCreateConversationWithParticipant
   );
-
-  // Show loading state while authentication is being determined
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-5rem)] bg-gradient-to-br from-purple-900/20 via-zinc-900/20 to-black/20">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-400 mx-auto"></div>
-          <p className="mt-2 text-zinc-400">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Redirect to sign in if not authenticated
-  if (!user) {
-    return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-5rem)] bg-gradient-to-br from-purple-900/20 via-zinc-900/20 to-black/20">
-        <div className="text-center max-w-md mx-auto p-8 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10">
-          <Users className="w-12 h-12 text-purple-400 mx-auto mb-4" />
-          <h2 className="text-2xl font-semibold text-white mb-4">
-            Sign in required
-          </h2>
-          <p className="text-zinc-400 mb-6">
-            Please sign in to discover and connect with people nearby.
-          </p>
-          <Button
-            onClick={() => (window.location.href = "/login")}
-            className="bg-purple-600 hover:bg-purple-700 text-white gap-2"
-            size="lg"
-          >
-            <LogIn className="w-4 h-4" />
-            Sign In
-          </Button>
-        </div>
-      </div>
-    );
-  }
 
   // Show loading state while user data is being fetched
   if (

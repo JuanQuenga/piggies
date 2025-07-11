@@ -1,25 +1,35 @@
 "use client";
 
-import React from "react";
-import { useQuery } from "convex/react";
-import { api } from "../../../convex/_generated/api";
-import { Id } from "../../../convex/_generated/dataModel";
-import { Button } from "../../components/ui/button";
+import React, { useState, useEffect } from "react";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../../../convex/_generated/api";
+import { Id } from "../../../../convex/_generated/dataModel";
+import { Button } from "../../../components/ui/button";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-} from "../../components/ui/card";
-import { Badge } from "../../components/ui/badge";
-import { Separator } from "../../components/ui/separator";
+} from "../../../components/ui/card";
+import { Badge } from "../../../components/ui/badge";
+import { Separator } from "../../../components/ui/separator";
+import { Input } from "../../../components/ui/input";
 import {
   MapPin,
-  Clock,
+  Users,
   MessageCircle,
-  MoreVertical,
-  ShieldCheck,
+  Settings,
+  X,
+  User,
+  Mail,
+  Phone,
+  Globe,
+  Calendar,
+  Map,
+  Search,
+  Filter,
 } from "lucide-react";
+import { cn } from "../../../lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { ProfileModal } from "./ProfileModal";
 

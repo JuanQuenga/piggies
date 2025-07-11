@@ -29,28 +29,11 @@ async function getCurrentUserId(ctx: {
 
 // Get the current user's status
 export const getMyStatus = query({
-  args: {},
+  args: {
+    userId: v.id("users"),
+  },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      return null;
-    }
-
-    const email = identity.email;
-    if (!email) {
-      return null;
-    }
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_email", (q) => q.eq("email", email))
-      .unique();
-
-    if (!user) {
-      return null;
-    }
-
-    const userId = user._id;
+    const { userId } = args;
 
     const status = await ctx.db
       .query("status")
@@ -69,6 +52,7 @@ export const getMyStatus = query({
 // Update the current user's status
 export const updateMyStatus = mutation({
   args: {
+    userId: v.id("users"),
     isVisible: v.optional(v.boolean()),
     isLocationEnabled: v.optional(v.boolean()),
     latitude: v.optional(v.number()),
@@ -77,26 +61,13 @@ export const updateMyStatus = mutation({
     hostingStatus: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new ConvexError("Not authenticated");
-    }
+    const { userId, ...statusData } = args;
 
-    const email = identity.email;
-    if (!email) {
-      throw new ConvexError("No email in identity");
-    }
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_email", (q) => q.eq("email", email))
-      .unique();
-
+    // Verify the user exists
+    const user = await ctx.db.get(userId);
     if (!user) {
       throw new ConvexError("User not found");
     }
-
-    const userId = user._id;
 
     const status = await ctx.db
       .query("status")
@@ -110,18 +81,18 @@ export const updateMyStatus = mutation({
         "cannot-host",
       ] as const;
       const safeHostingStatus = allowedHostingStatuses.includes(
-        args.hostingStatus as any
+        statusData.hostingStatus as any
       )
-        ? (args.hostingStatus as (typeof allowedHostingStatuses)[number])
+        ? (statusData.hostingStatus as (typeof allowedHostingStatuses)[number])
         : "not-hosting";
       // Create new status
       return await ctx.db.insert("status", {
         userId,
-        isVisible: args.isVisible ?? true,
-        isLocationEnabled: args.isLocationEnabled ?? false,
-        latitude: args.latitude,
-        longitude: args.longitude,
-        locationRandomization: args.locationRandomization,
+        isVisible: statusData.isVisible ?? true,
+        isLocationEnabled: statusData.isLocationEnabled ?? false,
+        latitude: statusData.latitude,
+        longitude: statusData.longitude,
+        locationRandomization: statusData.locationRandomization,
         hostingStatus: safeHostingStatus,
         lastSeen: Date.now(),
       });
@@ -133,13 +104,13 @@ export const updateMyStatus = mutation({
       "cannot-host",
     ] as const;
     const safeHostingStatus = allowedHostingStatuses.includes(
-      args.hostingStatus as any
+      statusData.hostingStatus as any
     )
-      ? (args.hostingStatus as (typeof allowedHostingStatuses)[number])
+      ? (statusData.hostingStatus as (typeof allowedHostingStatuses)[number])
       : undefined;
     // Update existing status
     return await ctx.db.patch(status._id, {
-      ...args,
+      ...statusData,
       hostingStatus: safeHostingStatus,
       lastSeen: Date.now(),
     });
