@@ -19,54 +19,9 @@ export default function Header() {
   const [weatherError, setWeatherError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Only request geolocation if the user has already granted permission
-    if (!navigator.geolocation || navigator.permissions?.query) {
-      navigator.permissions.query({ name: "geolocation" }).then((result) => {
-        if (result.state === "granted") {
-          // User has already granted permission, safe to request location
-          navigator.geolocation.getCurrentPosition(
-            async (position) => {
-              try {
-                const lat = position.coords.latitude;
-                const lon = position.coords.longitude;
-                const apiKey = process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY;
-                if (!apiKey) {
-                  setWeatherError("No weather API key");
-                  setWeatherLoading(false);
-                  return;
-                }
-                const units = isUSUnits ? "imperial" : "metric";
-                const res = await fetch(
-                  `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=${units}&appid=${apiKey}`
-                );
-                if (!res.ok) throw new Error("Weather fetch failed");
-                const data = await res.json();
-                setWeather({
-                  temp: Math.round(data.main.temp),
-                  condition: data.weather?.[0]?.main || "Unknown",
-                });
-              } catch (e) {
-                setWeatherError("Could not fetch weather");
-              } finally {
-                setWeatherLoading(false);
-              }
-            },
-            (err) => {
-              setWeatherError("Location permission denied");
-              setWeatherLoading(false);
-            }
-          );
-        } else {
-          // User hasn't granted permission yet, don't request location
-          setWeatherError("Location permission required");
-          setWeatherLoading(false);
-        }
-      });
-    } else {
-      // Fallback for browsers that don't support permissions API
-      setWeatherError("Geolocation not supported");
-      setWeatherLoading(false);
-    }
+    // Don't automatically request geolocation - wait for user interaction
+    setWeatherError("Click to enable weather");
+    setWeatherLoading(false);
   }, [isUSUnits]);
 
   const handleSignOut = () => {

@@ -9,6 +9,11 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Piggies",
   description: "Connect with people nearby and start chatting",
+  icons: {
+    icon: "/pig-snout.svg",
+    shortcut: "/pig-snout.svg",
+    apple: "/pig-snout.svg",
+  },
 };
 
 export default function RootLayout({
