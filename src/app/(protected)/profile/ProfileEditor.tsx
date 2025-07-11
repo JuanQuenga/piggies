@@ -2272,7 +2272,7 @@ export function ProfileEditor({
 
       {/* Floating Sticky Save Button */}
       {profile !== undefined && isInitialized && (
-        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-4xl px-4">
+        <div className="fixed bottom-20 md:bottom-6 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-4xl px-4">
           <div className="bg-zinc-900/95 backdrop-blur-sm border border-zinc-700 rounded-lg p-4 shadow-xl">
             <Button
               type="submit"

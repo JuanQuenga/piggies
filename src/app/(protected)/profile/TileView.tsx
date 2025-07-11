@@ -320,36 +320,43 @@ export const TileView: React.FC<TileViewProps> = ({
                   label: "Can't Host",
                   icon: Home,
                   color: "text-zinc-400",
+                  borderColor: "border-zinc-400",
                 },
                 hosting: {
                   label: "Hosting",
                   icon: Home,
                   color: "text-green-400",
+                  borderColor: "border-green-400",
                 },
                 "hosting-group": {
                   label: "Group Host",
                   icon: Users,
                   color: "text-purple-400",
+                  borderColor: "border-purple-400",
                 },
                 gloryhole: {
                   label: "Gloryhole",
                   icon: Home,
                   color: "text-pink-400",
+                  borderColor: "border-pink-400",
                 },
                 hotel: {
                   label: "Hotel",
                   icon: Hotel,
                   color: "text-blue-400",
+                  borderColor: "border-blue-400",
                 },
                 car: {
                   label: "Car",
                   icon: Car,
                   color: "text-yellow-400",
+                  borderColor: "border-yellow-400",
                 },
                 cruising: {
                   label: "Cruising",
                   icon: MapPin,
                   color: "text-red-400",
+                  borderColor: "border-red-400",
                 },
               };
 
@@ -392,7 +399,9 @@ export const TileView: React.FC<TileViewProps> = ({
                     {/* Hosting status indicator - only show if user is looking */}
                     <div className="absolute top-3 right-3">
                       {user.hostingStatus && user.isVisible && (
-                        <div className="px-2 py-1 bg-black/70 backdrop-blur-sm rounded-md flex items-center gap-1">
+                        <div
+                          className={`px-2 py-1 bg-black/70 backdrop-blur-sm rounded-md flex items-center gap-1 border ${statusConfig.borderColor}`}
+                        >
                           {(() => {
                             const IconComponent = statusConfig.icon;
                             return (
@@ -423,7 +432,7 @@ export const TileView: React.FC<TileViewProps> = ({
                         {/* Online indicator */}
                         <div className="flex items-center gap-2 ml-2">
                           {user.isVisible ? (
-                            <Eye className="w-3 h-3 text-green-400" />
+                            <Eye className="w-4 h-4 text-green-400" />
                           ) : isOnline ? (
                             <div className="w-3 h-3 bg-green-500 rounded-full ring-2 ring-white/20 animate-pulse" />
                           ) : null}

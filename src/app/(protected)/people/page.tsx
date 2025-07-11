@@ -78,7 +78,7 @@ export default function PeoplePage() {
     <div className="flex-1 flex flex-col h-full">
       {/* Header */}
       <div className="p-6 border-b border-zinc-800">
-        <div className="mb-6">
+        <div className="mb-6 hidden md:block">
           <h1 className="text-3xl font-bold text-white mb-2">People Nearby</h1>
           <p className="text-zinc-400">
             Discover and connect with people in your area.

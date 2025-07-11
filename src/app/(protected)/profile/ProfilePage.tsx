@@ -221,7 +221,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   };
 
   const renderMultiField = (label: string, values: string[] | undefined) => {
-    if (!values || values.length === 0) return null;
+    if (!values || !Array.isArray(values) || values.length === 0) return null;
     return (
       <div className="space-y-2">
         <span className="text-muted-foreground">{label}</span>
