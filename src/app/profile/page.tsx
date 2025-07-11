@@ -14,9 +14,7 @@ export default function ProfilePage() {
   const [mounted, setMounted] = useState(false);
   const { user } = useAuth();
   const profile = useQuery(api.profiles.getMyProfile);
-  const status = useQuery(api.status.getMyStatus, {
-    email: user?.email || "",
-  });
+  const status = useQuery(api.status.getMyStatus);
   const convexUser = useQuery(api.users.currentLoggedInUser, {
     email: user?.email || "",
   });
@@ -51,10 +49,7 @@ export default function ProfilePage() {
     hostingStatus?: string;
   }) => {
     // Handle status update
-    await updateStatus({
-      email: user?.email || "",
-      ...data,
-    });
+    await updateStatus(data);
   };
 
   return (

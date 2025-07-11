@@ -168,7 +168,6 @@ export default function MapComponentClient({
           // Set up user status for map visibility
           try {
             await setupMapStatus({
-              email: user.email,
               latitude,
               longitude,
             });

@@ -25,9 +25,7 @@ export function ConvexUserBootstrapper() {
 
   useEffect(() => {
     if (!loading && user && profile === null) {
-      updateMyProfile({
-        email: user.email,
-      });
+      updateMyProfile({});
     }
   }, [loading, user, profile, updateMyProfile]);
 

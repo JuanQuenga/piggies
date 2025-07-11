@@ -29,11 +29,21 @@ async function getCurrentUserId(ctx: {
 
 // Get the current user's status
 export const getMyStatus = query({
-  args: { email: v.string() },
+  args: {},
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      return null;
+    }
+
+    const email = identity.email;
+    if (!email) {
+      return null;
+    }
+
     const user = await ctx.db
       .query("users")
-      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .withIndex("by_email", (q) => q.eq("email", email))
       .unique();
 
     if (!user) {
@@ -59,7 +69,6 @@ export const getMyStatus = query({
 // Update the current user's status
 export const updateMyStatus = mutation({
   args: {
-    email: v.string(),
     isVisible: v.optional(v.boolean()),
     isLocationEnabled: v.optional(v.boolean()),
     latitude: v.optional(v.number()),
@@ -68,7 +77,15 @@ export const updateMyStatus = mutation({
     hostingStatus: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { email, ...statusData } = args;
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new ConvexError("Not authenticated");
+    }
+
+    const email = identity.email;
+    if (!email) {
+      throw new ConvexError("No email in identity");
+    }
 
     const user = await ctx.db
       .query("users")

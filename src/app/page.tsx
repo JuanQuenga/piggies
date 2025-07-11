@@ -41,9 +41,14 @@ export default function LandingPage() {
             height={20}
             className="w-5 h-5 md:w-7 md:h-7"
           />
-          <span className="text-xl md:text-3xl font-bold text-white">
-            Piggies
-          </span>
+          <div className="relative">
+            <span className="text-xl md:text-3xl font-bold text-white">
+              Piggies
+            </span>
+            <span className="absolute -top-2 -right-8 inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg">
+              BETA
+            </span>
+          </div>
         </div>
         <div className="flex space-x-4 md:space-x-6">
           <Button
@@ -77,9 +82,14 @@ export default function LandingPage() {
           </div>
           <h1 className="text-5xl md:text-7xl font-bold text-white mb-6">
             Welcome To{" "}
-            <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-              Piggies
-            </span>
+            <div className="relative inline-block">
+              <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                Piggies
+              </span>
+              <span className="absolute -top-3 -right-12 inline-flex items-center px-3 py-1 rounded-lg text-sm font-bold bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg border border-purple-300/20">
+                BETA
+              </span>
+            </div>
           </h1>
           <p className="text-xl md:text-2xl text-zinc-300 mb-8 max-w-2xl mx-auto">
             Discover and chat with people in your area. Build meaningful

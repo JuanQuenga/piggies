@@ -360,7 +360,6 @@ export const generateAvatarUploadUrl = mutation({
 // Create or update the current user's profile
 export const updateMyProfile = mutation({
   args: {
-    email: v.string(),
     // Basic Info
     displayName: v.optional(v.string()),
     headliner: v.optional(v.string()),
@@ -396,7 +395,15 @@ export const updateMyProfile = mutation({
     showScene: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const { email, ...profileData } = args;
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const email = identity.email;
+    if (!email) {
+      throw new Error("No email in identity");
+    }
 
     const user = await ctx.db
       .query("users")
@@ -416,14 +423,14 @@ export const updateMyProfile = mutation({
 
     if (existingProfile) {
       // Update existing profile
-      await ctx.db.patch(existingProfile._id, profileData);
+      await ctx.db.patch(existingProfile._id, args);
       return existingProfile._id;
     }
 
     // Create new profile
     const newProfileData = {
       userId,
-      ...profileData,
+      ...args,
     };
 
     return await ctx.db.insert("profiles", newProfileData);
@@ -652,19 +659,28 @@ export const minimalTest = query({
 // Set up user status for map visibility
 export const setupMapStatus = mutation({
   args: {
-    email: v.string(),
     latitude: v.number(),
     longitude: v.number(),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
     try {
-      console.log("[setupMapStatus] Setting up status for:", args.email);
+      const identity = await ctx.auth.getUserIdentity();
+      if (!identity) {
+        throw new Error("Not authenticated");
+      }
+
+      const email = identity.email;
+      if (!email) {
+        throw new Error("No email in identity");
+      }
+
+      console.log("[setupMapStatus] Setting up status for:", email);
 
       // Get user by email
       const user = await ctx.db
         .query("users")
-        .withIndex("by_email", (q) => q.eq("email", args.email))
+        .withIndex("by_email", (q) => q.eq("email", email))
         .unique();
 
       if (!user) {
