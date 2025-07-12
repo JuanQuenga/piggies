@@ -77,7 +77,7 @@ export default function PeoplePage() {
   return (
     <div className="flex-1 flex flex-col h-full">
       {/* Header */}
-      <div className="p-6 border-b border-zinc-800">
+      <div className="p-2 pt-10 md:p-6 border-b border-zinc-800">
         <div className="mb-6 hidden md:block">
           <h1 className="text-3xl font-bold text-white mb-2">People Nearby</h1>
           <p className="text-zinc-400">
@@ -86,7 +86,7 @@ export default function PeoplePage() {
         </div>
 
         {/* Search and Filters */}
-        <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex flex-col sm:flex-row gap-2 md:gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-zinc-400 w-4 h-4" />
             <Input

@@ -38,7 +38,14 @@ export const getCurrentUserStatus = query({
       _id: v.id("status"),
       _creationTime: v.number(),
       userId: v.id("users"),
-      isVisible: v.boolean(),
+      activityStatus: v.optional(
+        v.union(
+          v.literal("online"),
+          v.literal("looking"),
+          v.literal("traveling"),
+          v.literal("invisible")
+        )
+      ),
       isLocationEnabled: v.boolean(),
       hostingStatus: v.union(
         v.literal("not-hosting"),
@@ -57,7 +64,14 @@ export const getCurrentUserStatus = query({
     v.object({
       _id: v.null(),
       userId: v.id("users"),
-      isVisible: v.boolean(),
+      activityStatus: v.optional(
+        v.union(
+          v.literal("online"),
+          v.literal("looking"),
+          v.literal("traveling"),
+          v.literal("invisible")
+        )
+      ),
       isLocationEnabled: v.boolean(),
       hostingStatus: v.union(
         v.literal("not-hosting"),
@@ -85,7 +99,7 @@ export const getCurrentUserStatus = query({
       return {
         _id: null,
         userId,
-        isVisible: false,
+        activityStatus: "online" as const,
         isLocationEnabled: false,
         hostingStatus: "not-hosting" as const,
         locationRandomization: 0,
@@ -108,7 +122,14 @@ export const getMyStatus = query({
       _id: v.id("status"),
       _creationTime: v.number(),
       userId: v.id("users"),
-      isVisible: v.boolean(),
+      activityStatus: v.optional(
+        v.union(
+          v.literal("online"),
+          v.literal("looking"),
+          v.literal("traveling"),
+          v.literal("invisible")
+        )
+      ),
       isLocationEnabled: v.boolean(),
       hostingStatus: v.union(
         v.literal("not-hosting"),
@@ -146,7 +167,14 @@ export const getMyStatus = query({
 export const updateMyStatus = mutation({
   args: {
     userId: v.id("users"),
-    isVisible: v.optional(v.boolean()),
+    activityStatus: v.optional(
+      v.union(
+        v.literal("online"),
+        v.literal("looking"),
+        v.literal("traveling"),
+        v.literal("invisible")
+      )
+    ),
     isLocationEnabled: v.optional(v.boolean()),
     latitude: v.optional(v.number()),
     longitude: v.optional(v.number()),
@@ -182,7 +210,7 @@ export const updateMyStatus = mutation({
       // Create new status
       return await ctx.db.insert("status", {
         userId,
-        isVisible: statusData.isVisible ?? false,
+        activityStatus: statusData.activityStatus ?? "online",
         isLocationEnabled: statusData.isLocationEnabled ?? false,
         latitude: statusData.latitude,
         longitude: statusData.longitude,
@@ -205,7 +233,14 @@ export const updateMyStatus = mutation({
 export const updateCurrentUserStatus = mutation({
   args: {
     userId: v.id("users"),
-    isVisible: v.optional(v.boolean()),
+    activityStatus: v.optional(
+      v.union(
+        v.literal("online"),
+        v.literal("looking"),
+        v.literal("traveling"),
+        v.literal("invisible")
+      )
+    ),
     isLocationEnabled: v.optional(v.boolean()),
     latitude: v.optional(v.number()),
     longitude: v.optional(v.number()),
@@ -241,7 +276,7 @@ export const updateCurrentUserStatus = mutation({
       // Create new status
       return await ctx.db.insert("status", {
         userId,
-        isVisible: statusData.isVisible ?? false,
+        activityStatus: statusData.activityStatus ?? "online",
         isLocationEnabled: statusData.isLocationEnabled ?? false,
         latitude: statusData.latitude,
         longitude: statusData.longitude,

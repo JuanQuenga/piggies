@@ -120,14 +120,32 @@ body {
   border: none !important;
 }
 
-.custom-marker img {
-  transition: transform 0.2s ease-in-out;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+.custom-marker > div {
+  transition: all 0.2s ease-in-out;
 }
 
-.custom-marker:hover img {
-  transform: scale(1.15);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+.custom-marker:hover > div {
+  transform: scale(1.1);
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.4));
+}
+
+.custom-marker img {
+  transition: transform 0.2s ease-in-out;
+}
+
+.custom-marker .group:hover img {
+  transform: scale(1.05);
+}
+
+/* Ensure map markers are properly positioned and styled */
+.leaflet-marker-icon.custom-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+/* Custom border width utility for map markers */
+.border-3 {
+  border-width: 3px;
 }
 
 /* Line clamp utilities */

@@ -15,7 +15,8 @@ interface UserMarkerDisplayData {
   userName?: string | null;
   userEmail?: string | null;
   lastSeen?: number | null;
-  isVisible?: boolean;
+  isGhost?: boolean;
+  isLooking?: boolean;
   userId: Id<"users">;
 }
 

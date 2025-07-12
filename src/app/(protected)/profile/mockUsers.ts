@@ -10,7 +10,8 @@ export const mockUsers = [
     lastSeen: Date.now() - 2 * 60 * 1000, // 2 minutes ago - ONLINE
     _distance: 0.5,
     backgroundColor: "bg-red-500/20",
-    isVisible: true, // ONLINE & LOOKING
+    isLooking: true,
+    isGhost: false,
   },
   {
     _id: "mock2" as any,
@@ -22,7 +23,8 @@ export const mockUsers = [
     lastSeen: Date.now() - 1 * 60 * 1000, // 1 minute ago - ONLINE
     _distance: 1.2,
     backgroundColor: "bg-blue-500/20",
-    isVisible: false, // ONLINE but NOT LOOKING
+    isLooking: false,
+    isGhost: false,
   },
   {
     _id: "mock3" as any,
@@ -34,7 +36,8 @@ export const mockUsers = [
     lastSeen: Date.now() - 30 * 1000, // 30 seconds ago - ONLINE
     _distance: 2.1,
     backgroundColor: "bg-green-500/20",
-    isVisible: true, // ONLINE & LOOKING
+    isLooking: true,
+    isGhost: false,
   },
   {
     _id: "mock4" as any,
@@ -46,7 +49,8 @@ export const mockUsers = [
     lastSeen: Date.now() - 3 * 60 * 1000, // 3 minutes ago - ONLINE
     _distance: 0.8,
     backgroundColor: "bg-purple-500/20",
-    isVisible: true, // ONLINE & LOOKING
+    isLooking: true,
+    isGhost: false,
   },
   {
     _id: "mock5" as any,
@@ -58,7 +62,8 @@ export const mockUsers = [
     lastSeen: Date.now() - 45 * 1000, // 45 seconds ago - ONLINE
     _distance: 1.5,
     backgroundColor: "bg-pink-500/20",
-    isVisible: false, // ONLINE but NOT LOOKING
+    isLooking: false,
+    isGhost: false,
   },
   {
     _id: "mock6" as any,
@@ -70,7 +75,8 @@ export const mockUsers = [
     lastSeen: Date.now() - 90 * 1000, // 1.5 minutes ago - ONLINE
     _distance: 3.2,
     backgroundColor: "bg-yellow-500/20",
-    isVisible: true, // ONLINE & LOOKING
+    isLooking: true,
+    isGhost: false,
   },
   {
     _id: "mock7" as any,
@@ -82,7 +88,8 @@ export const mockUsers = [
     lastSeen: Date.now() - 15 * 1000, // 15 seconds ago - ONLINE
     _distance: 0.3,
     backgroundColor: "bg-indigo-500/20",
-    isVisible: true, // ONLINE & LOOKING
+    isLooking: true,
+    isGhost: false,
   },
   {
     _id: "mock8" as any,
@@ -94,7 +101,8 @@ export const mockUsers = [
     lastSeen: Date.now() - 4 * 60 * 1000, // 4 minutes ago - ONLINE
     _distance: 2.8,
     backgroundColor: "bg-orange-500/20",
-    isVisible: false, // ONLINE but NOT LOOKING
+    isLooking: false,
+    isGhost: false,
   },
   {
     _id: "mock9" as any,
@@ -106,7 +114,8 @@ export const mockUsers = [
     lastSeen: Date.now() - 2 * 60 * 1000, // 2 minutes ago - ONLINE
     _distance: 1.7,
     backgroundColor: "bg-teal-500/20",
-    isVisible: true, // ONLINE & LOOKING
+    isLooking: true,
+    isGhost: false,
   },
   {
     _id: "mock10" as any,
@@ -118,7 +127,8 @@ export const mockUsers = [
     lastSeen: Date.now() - 1 * 60 * 1000, // 1 minute ago - ONLINE
     _distance: 0.9,
     backgroundColor: "bg-cyan-500/20",
-    isVisible: false, // ONLINE but NOT LOOKING
+    isLooking: false,
+    isGhost: false,
   },
   {
     _id: "mock11" as any,
@@ -130,7 +140,8 @@ export const mockUsers = [
     lastSeen: Date.now() - 10 * 60 * 1000, // 10 minutes ago - OFFLINE
     _distance: 4.1,
     backgroundColor: "bg-emerald-500/20",
-    isVisible: false, // OFFLINE
+    isLooking: false,
+    isGhost: false,
   },
   {
     _id: "mock12" as any,
@@ -142,7 +153,8 @@ export const mockUsers = [
     lastSeen: Date.now() - 20 * 1000, // 20 seconds ago - ONLINE
     _distance: 1.1,
     backgroundColor: "bg-violet-500/20",
-    isVisible: true, // ONLINE & LOOKING
+    isLooking: true,
+    isGhost: false,
   },
   {
     _id: "mock13" as any,
@@ -154,7 +166,8 @@ export const mockUsers = [
     lastSeen: Date.now() - 8 * 60 * 1000, // 8 minutes ago - OFFLINE
     _distance: 2.3,
     backgroundColor: "bg-red-600/20",
-    isVisible: false, // OFFLINE
+    isLooking: false,
+    isGhost: false,
   },
   {
     _id: "mock14" as any,
@@ -166,7 +179,8 @@ export const mockUsers = [
     lastSeen: Date.now() - 45 * 1000, // 45 seconds ago - ONLINE
     _distance: 0.7,
     backgroundColor: "bg-blue-600/20",
-    isVisible: true, // ONLINE & LOOKING
+    isLooking: true,
+    isGhost: false,
   },
   {
     _id: "mock15" as any,
@@ -178,7 +192,8 @@ export const mockUsers = [
     lastSeen: Date.now() - 2 * 60 * 1000, // 2 minutes ago - ONLINE
     _distance: 1.8,
     backgroundColor: "bg-green-600/20",
-    isVisible: false, // ONLINE but NOT LOOKING
+    isLooking: false,
+    isGhost: false,
   },
   {
     _id: "mock16" as any,
@@ -190,7 +205,8 @@ export const mockUsers = [
     lastSeen: Date.now() - 30 * 1000, // 30 seconds ago - ONLINE
     _distance: 3.4,
     backgroundColor: "bg-purple-600/20",
-    isVisible: true, // ONLINE & LOOKING
+    isLooking: true,
+    isGhost: false,
   },
   {
     _id: "mock17" as any,
@@ -202,7 +218,8 @@ export const mockUsers = [
     lastSeen: Date.now() - 1 * 60 * 1000, // 1 minute ago - ONLINE
     _distance: 0.4,
     backgroundColor: "bg-pink-600/20",
-    isVisible: true, // ONLINE & LOOKING
+    isLooking: true,
+    isGhost: false,
   },
   {
     _id: "mock18" as any,
@@ -214,7 +231,8 @@ export const mockUsers = [
     lastSeen: Date.now() - 15 * 1000, // 15 seconds ago - ONLINE
     _distance: 2.7,
     backgroundColor: "bg-yellow-600/20",
-    isVisible: false, // ONLINE but NOT LOOKING
+    isLooking: false,
+    isGhost: false,
   },
   {
     _id: "mock19" as any,
@@ -226,6 +244,7 @@ export const mockUsers = [
     lastSeen: Date.now() - 12 * 60 * 1000, // 12 minutes ago - OFFLINE
     _distance: 1.3,
     backgroundColor: "bg-indigo-600/20",
-    isVisible: false, // OFFLINE
+    isLooking: false,
+    isGhost: false,
   },
 ];

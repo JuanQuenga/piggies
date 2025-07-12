@@ -10,21 +10,25 @@ export function BottomNav() {
       label: "Profile",
       icon: User,
       href: "/profile",
+      color: "text-blue-400",
     },
     {
       label: "Chats",
       icon: MessageCircle,
       href: "/chats",
+      color: "text-green-400",
     },
     {
       label: "People",
       icon: Users,
       href: "/people",
+      color: "text-purple-400",
     },
     {
       label: "Map",
       icon: MapPin,
       href: "/map",
+      color: "text-orange-400",
     },
   ];
   return (
@@ -35,10 +39,15 @@ export function BottomNav() {
           href={route.href}
           className={cn(
             "flex flex-col items-center gap-1 px-2 py-1 text-xs font-medium transition-colors",
-            pathname === route.href ? "text-white" : "text-zinc-400"
+            pathname === route.href ? route.color : "text-zinc-400"
           )}
         >
-          <route.icon className="w-6 h-6 mb-0.5" />
+          <route.icon
+            className={cn(
+              "w-6 h-6 mb-0.5",
+              pathname === route.href ? route.color : "text-zinc-400"
+            )}
+          />
           {route.label}
         </Link>
       ))}

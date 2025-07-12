@@ -102,8 +102,16 @@ export default defineSchema({
     // Reference to user
     userId: v.id("users"),
 
-    // Looking/Visibility Status (from StatusControls)
-    isVisible: v.boolean(), // Whether user is "looking now"
+    // Activity Status (Online, Looking, Traveling, Invisible)
+    // Temporarily optional to allow migration of existing documents
+    activityStatus: v.optional(
+      v.union(
+        v.literal("online"),
+        v.literal("looking"),
+        v.literal("traveling"),
+        v.literal("invisible")
+      )
+    ),
 
     // Hosting Status (from StatusControls)
     hostingStatus: v.union(
@@ -124,9 +132,11 @@ export default defineSchema({
 
     // Timestamps
     lastSeen: v.number(), // When status was last updated
-  })
-    .index("by_userId", ["userId"])
-    .index("by_visibility_and_lastSeen", ["isVisible", "lastSeen"]),
+
+    // Temporary: allow old fields during migration
+    isVisible: v.optional(v.any()),
+    isLooking: v.optional(v.any()),
+  }).index("by_userId", ["userId"]),
 
   // ============================================================================
   // CONVERSATIONS TABLE

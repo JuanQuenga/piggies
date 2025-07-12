@@ -4,9 +4,8 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { useAuth } from "@workos-inc/authkit-nextjs/components";
 import { api } from "../../../convex/_generated/api";
+import { useLocation } from "./LocationContext";
 import {
-  Eye,
-  EyeOff,
   ChevronDown,
   MapPin,
   MapPinOff,
@@ -15,6 +14,9 @@ import {
   Users,
   Car,
   Hotel,
+  Eye,
+  Plane,
+  EyeOff,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,6 +27,31 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
+
+type UserStatus = "online" | "looking" | "traveling" | "invisible";
+
+const userStatusConfig = {
+  online: {
+    label: "Online",
+    icon: null, // Custom green circle
+    color: "text-green-400",
+  },
+  looking: {
+    label: "Looking",
+    icon: Eye,
+    color: "text-blue-400",
+  },
+  traveling: {
+    label: "Traveling",
+    icon: Plane,
+    color: "text-orange-400",
+  },
+  invisible: {
+    label: "Invisible",
+    icon: EyeOff,
+    color: "text-zinc-400",
+  },
+} as const;
 
 type HostingStatus =
   | "not-hosting"
@@ -79,6 +106,12 @@ interface StatusControlsProps {
 
 export function StatusControls({ variant = "desktop" }: StatusControlsProps) {
   const { user } = useAuth();
+  const {
+    locationState,
+    enableLocation,
+    disableLocation,
+    requestLocationPermission,
+  } = useLocation();
 
   // Get current user's Convex ID using email
   const convexUser = useQuery(
@@ -94,89 +127,31 @@ export function StatusControls({ variant = "desktop" }: StatusControlsProps) {
   const updateStatus = useMutation(api.status.updateCurrentUserStatus);
 
   // Local state (will be initialized from Convex data)
-  const [isLookingNow, setIsLookingNow] = useState(false);
+  const [currentUserStatus, setCurrentUserStatus] =
+    useState<UserStatus>("online");
   const [hostingStatus, setHostingStatus] =
     useState<HostingStatus>("not-hosting");
   const [locationRandomization, setLocationRandomization] = useState([0]);
 
-  // Location enabled is stored in localStorage for privacy
-  const [isLocationEnabled, setIsLocationEnabled] = useState(false);
-  const [currentCity, setCurrentCity] = useState<string>("Unknown");
-  const [geoPermission, setGeoPermission] = useState<
-    "prompt" | "granted" | "denied"
-  >("prompt");
-
   // Initialize state from Convex data
   useEffect(() => {
     if (userStatus) {
-      setIsLookingNow(userStatus.isVisible);
+      // Convert old isVisible/isLooking to new status system
+      if (userStatus.isVisible === false) {
+        setCurrentUserStatus("invisible");
+      } else if (userStatus.isLooking) {
+        setCurrentUserStatus("looking");
+      } else {
+        setCurrentUserStatus("online");
+      }
       setHostingStatus(userStatus.hostingStatus as HostingStatus);
       setLocationRandomization([userStatus.locationRandomization || 0]);
     }
   }, [userStatus]);
 
-  // Initialize location enabled from localStorage
-  useEffect(() => {
-    const savedLocationEnabled = localStorage.getItem("locationEnabled");
-    if (savedLocationEnabled !== null) {
-      setIsLocationEnabled(savedLocationEnabled === "true");
-    }
-  }, []);
-
-  // Track geolocation permission
-  useEffect(() => {
-    if (navigator.permissions && navigator.permissions.query) {
-      navigator.permissions.query({ name: "geolocation" }).then((result) => {
-        setGeoPermission(result.state);
-        result.onchange = () => setGeoPermission(result.state);
-      });
-    }
-  }, []);
-
-  // Get current city from weather API - automatically when location is enabled and user has granted permission
-  useEffect(() => {
-    if (
-      !isLocationEnabled ||
-      !navigator.geolocation ||
-      geoPermission !== "granted"
-    ) {
-      setCurrentCity("Unknown");
-      return;
-    }
-
-    // Automatically get location if permission is already granted
-    setCurrentCity("Loading...");
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        try {
-          const lat = position.coords.latitude;
-          const lon = position.coords.longitude;
-          const apiKey = process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY;
-          if (!apiKey) {
-            setCurrentCity("Unknown");
-            return;
-          }
-          const res = await fetch(
-            `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${apiKey}`
-          );
-          if (!res.ok) throw new Error("Weather fetch failed");
-          const data = await res.json();
-          setCurrentCity(data.name);
-        } catch (e) {
-          console.error("Error fetching weather:", e);
-          setCurrentCity("Unknown");
-        }
-      },
-      (err) => {
-        console.error("Error getting location for weather:", err);
-        setCurrentCity("Unknown");
-      }
-    );
-  }, [isLocationEnabled, geoPermission]); // Run when location is enabled or permission changes
-
   // Save status to Convex when it changes
   const saveStatus = async (updates: {
-    isVisible?: boolean;
+    userStatus?: UserStatus;
     hostingStatus?: HostingStatus;
     locationRandomization?: number;
   }) => {
@@ -185,17 +160,22 @@ export function StatusControls({ variant = "desktop" }: StatusControlsProps) {
         console.error("No convex user available");
         return;
       }
-      await updateStatus({ ...updates, userId: convexUser._id });
+      // Convert new status to old format for backend compatibility
+      const backendUpdates: any = { ...updates };
+      if (updates.userStatus) {
+        backendUpdates.isVisible = updates.userStatus !== "invisible";
+        backendUpdates.isLooking = updates.userStatus === "looking";
+      }
+      await updateStatus({ ...backendUpdates, userId: convexUser._id });
     } catch (error) {
       console.error("Failed to save status:", error);
     }
   };
 
-  // Handle looking now toggle
-  const handleLookingNowToggle = async () => {
-    const newValue = !isLookingNow;
-    setIsLookingNow(newValue);
-    await saveStatus({ isVisible: newValue });
+  // Handle user status change
+  const handleUserStatusChange = async (newStatus: UserStatus) => {
+    setCurrentUserStatus(newStatus);
+    await saveStatus({ userStatus: newStatus });
   };
 
   // Handle hosting status change
@@ -212,38 +192,10 @@ export function StatusControls({ variant = "desktop" }: StatusControlsProps) {
 
   // Handle location enabled toggle
   const handleLocationToggle = async () => {
-    const newLocationEnabled = !isLocationEnabled;
-    setIsLocationEnabled(newLocationEnabled);
-
-    // Save to localStorage
-    localStorage.setItem("locationEnabled", newLocationEnabled.toString());
-
-    // If enabling location and permission is granted, get current city
-    if (newLocationEnabled && geoPermission === "granted") {
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          try {
-            const lat = position.coords.latitude;
-            const lon = position.coords.longitude;
-            const apiKey = process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY;
-            if (!apiKey) {
-              setCurrentCity("Unknown");
-              return;
-            }
-            const res = await fetch(
-              `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${apiKey}`
-            );
-            if (!res.ok) throw new Error("Weather fetch failed");
-            const data = await res.json();
-            setCurrentCity(data.name);
-          } catch (e) {
-            setCurrentCity("Unknown");
-          }
-        },
-        (err) => {
-          setCurrentCity("Unknown");
-        }
-      );
+    if (locationState.isLocationEnabled) {
+      disableLocation();
+    } else {
+      await enableLocation();
     }
   };
 
@@ -255,29 +207,82 @@ export function StatusControls({ variant = "desktop" }: StatusControlsProps) {
 
   return (
     <div className={cn("flex items-center gap-3", isMobile && "gap-2")}>
-      {/* Looking Now Toggle */}
-      <Button
-        variant="outline"
-        size={buttonSize}
-        className={cn(
-          "flex items-center gap-2 bg-transparent cursor-pointer",
-          padding,
-          isLookingNow
-            ? "text-green-400 border-green-400"
-            : "text-zinc-400 border-zinc-600"
-        )}
-        onClick={handleLookingNowToggle}
-      >
-        {isLookingNow ? (
-          <Eye className={iconSize} />
-        ) : (
-          <EyeOff className={iconSize} />
-        )}
-        <span className={textSize}>
-          {isLookingNow ? "Looking Now" : "Not Looking"}
-        </span>
-      </Button>
-
+      {/* User Status Dropdown */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="outline"
+            size={buttonSize}
+            className={cn(
+              "flex items-center gap-2 bg-transparent cursor-pointer",
+              padding,
+              userStatusConfig[currentUserStatus].color
+            )}
+          >
+            {(() => {
+              const IconComponent = userStatusConfig[currentUserStatus].icon;
+              if (currentUserStatus === "online") {
+                return (
+                  <div
+                    className={cn(
+                      "w-3 h-3 rounded-full bg-green-400",
+                      iconSize
+                    )}
+                  />
+                );
+              }
+              return IconComponent ? (
+                <IconComponent
+                  className={cn(
+                    iconSize,
+                    userStatusConfig[currentUserStatus].color
+                  )}
+                />
+              ) : null;
+            })()}
+            <span className={textSize}>
+              {userStatusConfig[currentUserStatus].label}
+            </span>
+            <ChevronDown
+              className={cn(
+                iconSize,
+                "ml-1",
+                userStatusConfig[currentUserStatus].color
+              )}
+            />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          align="end"
+          className={cn("z-[9999]", isMobile ? "w-[180px]" : "w-[200px]")}
+        >
+          {(
+            Object.entries(userStatusConfig) as [
+              UserStatus,
+              (typeof userStatusConfig)[keyof typeof userStatusConfig],
+            ][]
+          ).map(([key, config]) => {
+            const IconComponent = config.icon;
+            return (
+              <DropdownMenuItem
+                key={key}
+                className={cn(
+                  "flex items-center gap-2 cursor-pointer",
+                  currentUserStatus === key && "bg-zinc-800"
+                )}
+                onClick={() => handleUserStatusChange(key)}
+              >
+                {key === "online" ? (
+                  <div className="w-4 h-4 rounded-full bg-green-400" />
+                ) : IconComponent ? (
+                  <IconComponent className={cn("w-4 h-4", config.color)} />
+                ) : null}
+                <span className={cn(config.color)}>{config.label}</span>
+              </DropdownMenuItem>
+            );
+          })}
+        </DropdownMenuContent>
+      </DropdownMenu>
       {/* Hosting Status Dropdown */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -287,10 +292,11 @@ export function StatusControls({ variant = "desktop" }: StatusControlsProps) {
             className={cn(
               "flex items-center gap-2 bg-transparent cursor-pointer",
               padding,
-              !isLookingNow && "opacity-50 cursor-not-allowed",
+              currentUserStatus !== "looking" &&
+                "opacity-50 cursor-not-allowed",
               hostingStatusConfig[hostingStatus].color
             )}
-            disabled={!isLookingNow}
+            disabled={currentUserStatus !== "looking"}
           >
             {(() => {
               const IconComponent = hostingStatusConfig[hostingStatus].icon;
@@ -342,9 +348,8 @@ export function StatusControls({ variant = "desktop" }: StatusControlsProps) {
           })}
         </DropdownMenuContent>
       </DropdownMenu>
-
       {/* Location Status Control */}
-      {geoPermission !== "granted" ? (
+      {locationState.geoPermission !== "granted" ? (
         <Button
           variant="outline"
           size={buttonSize}
@@ -353,12 +358,7 @@ export function StatusControls({ variant = "desktop" }: StatusControlsProps) {
             padding,
             "text-blue-400 border-blue-400"
           )}
-          onClick={() => {
-            navigator.geolocation.getCurrentPosition(
-              () => setGeoPermission("granted"),
-              () => setGeoPermission("denied")
-            );
-          }}
+          onClick={requestLocationPermission}
         >
           <MapPin className={iconSize} />
           <span className={textSize}>Share My Location</span>
@@ -370,19 +370,21 @@ export function StatusControls({ variant = "desktop" }: StatusControlsProps) {
           className={cn(
             "flex items-center gap-2 bg-transparent cursor-pointer",
             padding,
-            isLocationEnabled
+            locationState.isLocationEnabled
               ? "text-blue-400 border-blue-400"
               : "text-zinc-400 border-zinc-600"
           )}
           onClick={handleLocationToggle}
         >
-          {isLocationEnabled ? (
+          {locationState.isLocationEnabled ? (
             <MapPin className={iconSize} />
           ) : (
             <MapPinOff className={iconSize} />
           )}
           <span className={textSize}>
-            {isLocationEnabled ? currentCity : "Location Off"}
+            {locationState.isLocationEnabled
+              ? locationState.currentCity
+              : "Location Off"}
           </span>
         </Button>
       )}
@@ -398,7 +400,7 @@ export function StatusControls({ variant = "desktop" }: StatusControlsProps) {
             ? "text-purple-400 border-purple-400"
             : "text-zinc-400 border-zinc-600"
         )}
-        disabled={!isLocationEnabled}
+        disabled={!locationState.isLocationEnabled}
       >
         <Shuffle className={iconSize} />
         <span className={textSize}>
@@ -411,10 +413,10 @@ export function StatusControls({ variant = "desktop" }: StatusControlsProps) {
           <Slider
             value={locationRandomization}
             onValueChange={handleLocationRandomizationChange}
-            max={5280} // 1 mile in feet
+            max={10560} // 2 miles in feet
             step={100} // 100 feet increments
             className={isMobile ? "w-12" : "w-16"}
-            disabled={!isLocationEnabled}
+            disabled={!locationState.isLocationEnabled}
           />
           <span className="text-xs text-zinc-400">More</span>
         </div>

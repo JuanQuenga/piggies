@@ -540,10 +540,10 @@ export const listVisibleUsers = query({
           .withIndex("by_userId", (q) => q.eq("userId", profile.userId))
           .unique();
 
-        // Only include users who are visible and have location enabled
+        // Only include users who are looking and have location enabled
         if (
           status &&
-          status.isVisible &&
+          status.activityStatus === "looking" &&
           status.isLocationEnabled &&
           status.latitude &&
           status.longitude
@@ -676,7 +676,7 @@ export const listAllUsersForTiles = query({
           avatarUrl,
           distance: undefined, // Will be calculated on client side
           hostingStatus: status?.hostingStatus,
-          isVisible: status?.isVisible,
+          // Remove isVisible field as it's been replaced by activityStatus
           lastSeen: status?.lastSeen,
         });
       }
@@ -792,7 +792,7 @@ export const testStatusTable = query({
     try {
       const allStatuses = await ctx.db.query("status").collect();
       const visibleStatuses = allStatuses.filter(
-        (status) => status.isVisible === true
+        (status) => status.activityStatus === "looking"
       );
 
       return {
@@ -867,7 +867,7 @@ export const setupMapStatus = mutation({
       if (existingStatus) {
         // Update existing status
         await ctx.db.patch(existingStatus._id, {
-          isVisible: true,
+          activityStatus: "looking",
           isLocationEnabled: true,
           latitude: args.latitude,
           longitude: args.longitude,
@@ -879,7 +879,7 @@ export const setupMapStatus = mutation({
         // Create new status
         await ctx.db.insert("status", {
           userId,
-          isVisible: true,
+          activityStatus: "looking",
           isLocationEnabled: true,
           latitude: args.latitude,
           longitude: args.longitude,

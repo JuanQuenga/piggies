@@ -4,13 +4,14 @@ import { useAuth } from "@workos-inc/authkit-nextjs/components";
 import { Button } from "@/components/ui/button";
 import { WeatherGreeting } from "./WeatherGreeting";
 import { StatusControls } from "./StatusControls";
-import { useState } from "react";
+import { useLocation } from "./LocationContext";
+import { useState, useEffect } from "react";
 import { useUnitPreference } from "./UnitPreferenceContext";
-import { useEffect } from "react";
 
 export default function Header() {
   const { user } = useAuth();
   const { isUSUnits } = useUnitPreference();
+  const { locationState } = useLocation();
   const [weather, setWeather] = useState<{
     temp: number;
     condition: string;
@@ -20,67 +21,40 @@ export default function Header() {
 
   useEffect(() => {
     const getWeather = async () => {
-      // Check if geolocation permission is already granted
-      if (navigator.permissions && navigator.permissions.query) {
-        try {
-          const permission = await navigator.permissions.query({
-            name: "geolocation",
-          });
-          if (permission.state === "granted") {
-            // Permission granted, get weather automatically
-            setWeatherLoading(true);
-            navigator.geolocation.getCurrentPosition(
-              async (position) => {
-                try {
-                  const lat = position.coords.latitude;
-                  const lon = position.coords.longitude;
-                  const apiKey = process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY;
-                  if (!apiKey) {
-                    setWeatherError("Weather API key not configured");
-                    setWeatherLoading(false);
-                    return;
-                  }
-                  const res = await fetch(
-                    `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${apiKey}`
-                  );
-                  if (!res.ok) throw new Error("Weather fetch failed");
-                  const data = await res.json();
-                  setWeather({
-                    temp: data.main.temp,
-                    condition: data.weather[0].main,
-                  });
-                  setWeatherLoading(false);
-                } catch (e) {
-                  console.error("Error fetching weather:", e);
-                  setWeatherError("Failed to load weather");
-                  setWeatherLoading(false);
-                }
-              },
-              (err) => {
-                console.error("Error getting location for weather:", err);
-                setWeatherError("Location unavailable");
-                setWeatherLoading(false);
-              }
-            );
-          } else {
-            // No permission granted
-            setWeatherError("Click to enable weather");
-            setWeatherLoading(false);
-          }
-        } catch (error) {
-          console.log("Permission query not supported:", error);
-          setWeatherError("Click to enable weather");
+      if (!locationState.isLocationEnabled || !locationState.coordinates) {
+        setWeatherError("Enable location to see weather");
+        setWeatherLoading(false);
+        return;
+      }
+
+      try {
+        setWeatherLoading(true);
+        const apiKey = process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY;
+        if (!apiKey) {
+          setWeatherError("Weather API key not configured");
           setWeatherLoading(false);
+          return;
         }
-      } else {
-        // Permissions API not supported
-        setWeatherError("Click to enable weather");
+
+        const res = await fetch(
+          `https://api.openweathermap.org/data/2.5/weather?lat=${locationState.coordinates.lat}&lon=${locationState.coordinates.lng}&units=metric&appid=${apiKey}`
+        );
+        if (!res.ok) throw new Error("Weather fetch failed");
+        const data = await res.json();
+        setWeather({
+          temp: data.main.temp,
+          condition: data.weather[0].main,
+        });
+        setWeatherLoading(false);
+      } catch (e) {
+        console.error("Error fetching weather:", e);
+        setWeatherError("Failed to load weather");
         setWeatherLoading(false);
       }
     };
 
     getWeather();
-  }, [isUSUnits]);
+  }, [locationState.isLocationEnabled, locationState.coordinates, isUSUnits]);
 
   const handleSignOut = () => {
     window.location.href = "/api/logout";
@@ -96,9 +70,6 @@ export default function Header() {
       <div className="flex items-center gap-6 ml-auto">
         <span className="text-slate-300 text-md flex items-center gap-2">
           {weatherLoading && "fetching weather..."}
-          {weatherError && (
-            <span className="text-red-400">weather unavailable</span>
-          )}
           {weather && (
             <WeatherGreeting
               temp={weather.temp}

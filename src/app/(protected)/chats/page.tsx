@@ -11,6 +11,7 @@ import { ProfileModal } from "../profile/ProfileModal";
 import { Card, CardContent } from "../../../components/ui/card";
 import { Badge } from "../../../components/ui/badge";
 import { Separator } from "../../../components/ui/separator";
+import { Button } from "../../../components/ui/button";
 import { MessageCircle, Users, ArrowLeft, Pin } from "lucide-react";
 import { cn } from "../../../lib/utils";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -273,7 +274,74 @@ export default function ChatsPage() {
               currentUserProfileForMap={null}
               columnMode={true}
             />
-          ) : null}
+          ) : (
+            /* Empty State - Piggies Pro Advertisement */
+            <div className="h-full flex flex-col p-6">
+              {/* Subscription Advertisement */}
+              <div className="bg-gradient-to-br from-purple-500/10 via-pink-500/10 via-orange-500/10 to-yellow-500/10 border border-purple-500/20 rounded-xl p-6 backdrop-blur-sm flex-1 flex flex-col justify-start">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-12 h-12 bg-gradient-to-br from-purple-500 via-pink-500 to-orange-500 rounded-xl flex items-center justify-center">
+                    <span className="text-white font-bold text-xl">★</span>
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-white">
+                      Upgrade to Piggies Pro
+                    </h3>
+                    <p className="text-purple-300 text-sm">
+                      Unlock unlimited possibilities
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-4 mb-8">
+                  <div className="flex items-center gap-3">
+                    <div className="w-3 h-3 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full"></div>
+                    <span className="text-zinc-200 text-sm">
+                      View unlimited profiles
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-3 h-3 bg-gradient-to-r from-pink-400 to-orange-400 rounded-full"></div>
+                    <span className="text-zinc-200 text-sm">
+                      Advanced search filters
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-3 h-3 bg-gradient-to-r from-orange-400 to-yellow-400 rounded-full"></div>
+                    <span className="text-zinc-200 text-sm">
+                      Priority messaging
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-3 h-3 bg-gradient-to-r from-yellow-400 to-green-400 rounded-full"></div>
+                    <span className="text-zinc-200 text-sm">
+                      Enhanced privacy controls
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-3 h-3 bg-gradient-to-r from-green-400 to-blue-400 rounded-full"></div>
+                    <span className="text-zinc-200 text-sm">
+                      Premium support
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-3 h-3 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full"></div>
+                    <span className="text-zinc-200 text-sm">
+                      Early access to new features
+                    </span>
+                  </div>
+                </div>
+
+                <Button className="w-full bg-gradient-to-r from-purple-500 via-pink-500 via-orange-500 to-yellow-500 hover:from-purple-600 hover:via-pink-600 hover:via-orange-600 hover:to-yellow-600 text-white font-semibold py-4 rounded-lg transition-all duration-200 transform hover:scale-105 text-lg">
+                  Upgrade Now - $9.99/month
+                </Button>
+
+                <p className="text-zinc-400 text-xs text-center mt-4">
+                  Cancel anytime • 7-day free trial
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

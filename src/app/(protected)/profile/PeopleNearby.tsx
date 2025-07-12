@@ -1,19 +1,36 @@
 import React, { useState } from "react";
 import { TileView } from "./TileView";
-import { Button } from "../../components/ui/button";
-import { Input } from "../../components/ui/input";
-import { Filter, SlidersHorizontal, MapPin } from "lucide-react";
+import { Button } from "../../../components/ui/button";
+import { Input } from "../../../components/ui/input";
+import {
+  Filter,
+  SlidersHorizontal,
+  MapPin,
+  ChevronDown,
+  Eye,
+  Home,
+  Users,
+  Car,
+  Hotel,
+} from "lucide-react";
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from "../../components/ui/sheet";
-import { Switch } from "../../components/ui/switch";
-import { Label } from "../../components/ui/label";
-import { Id } from "../../../convex/_generated/dataModel";
-import { Separator } from "../../components/ui/separator";
+} from "../../../components/ui/sheet";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../../../components/ui/dropdown-menu";
+import { Switch } from "../../../components/ui/switch";
+import { Label } from "../../../components/ui/label";
+import { Id } from "../../../../convex/_generated/dataModel";
+import { Separator } from "../../../components/ui/separator";
+import { cn } from "../../../lib/utils";
 
 interface UserMarkerDisplayData {
   _id: Id<"profiles">;
@@ -46,7 +63,22 @@ export const PeopleNearby: React.FC<PeopleNearbyProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [showOnlineOnly, setShowOnlineOnly] = useState(false);
-  const [showWithinMiles, setShowWithinMiles] = useState<number | null>(null);
+  const [lookingFilter, setLookingFilter] = useState<
+    "all" | "looking" | "not-looking"
+  >("all");
+  const [hostingFilter, setHostingFilter] = useState<string>("all");
+
+  // Hosting status options for filter
+  const hostingOptions = [
+    { value: "all", label: "All Hosting Status", icon: Home },
+    { value: "not-hosting", label: "Can't Host", icon: Home },
+    { value: "hosting", label: "Hosting", icon: Home },
+    { value: "hosting-group", label: "Group Host", icon: Users },
+    { value: "gloryhole", label: "Gloryhole", icon: Home },
+    { value: "hotel", label: "Hotel", icon: Hotel },
+    { value: "car", label: "Car", icon: Car },
+    { value: "cruising", label: "Cruising", icon: MapPin },
+  ];
 
   const FilterControls = () => (
     <div className="space-y-4">
@@ -54,22 +86,64 @@ export const PeopleNearby: React.FC<PeopleNearbyProps> = ({
         <Label>Show Online Only</Label>
         <Switch checked={showOnlineOnly} onCheckedChange={setShowOnlineOnly} />
       </div>
+
       <div className="space-y-2">
-        <Label>Distance Filter</Label>
-        <div className="flex gap-2">
-          {[5, 10, 25, 50].map((miles) => (
-            <Button
-              key={miles}
-              variant={showWithinMiles === miles ? "default" : "outline"}
-              size="sm"
-              onClick={() =>
-                setShowWithinMiles(showWithinMiles === miles ? null : miles)
-              }
-            >
-              {miles}mi
+        <Label>Looking Status</Label>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="w-full justify-between">
+              <span>
+                {lookingFilter === "all" && "All Users"}
+                {lookingFilter === "looking" && "Looking Only"}
+                {lookingFilter === "not-looking" && "Not Looking"}
+              </span>
+              <ChevronDown className="h-4 w-4" />
             </Button>
-          ))}
-        </div>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="w-full">
+            <DropdownMenuItem onClick={() => setLookingFilter("all")}>
+              <Eye className="w-4 h-4 mr-2" />
+              All Users
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setLookingFilter("looking")}>
+              <Eye className="w-4 h-4 mr-2 text-green-400" />
+              Looking Only
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setLookingFilter("not-looking")}>
+              <Eye className="w-4 h-4 mr-2 text-zinc-400" />
+              Not Looking
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Hosting Status</Label>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="w-full justify-between">
+              <span>
+                {hostingOptions.find((option) => option.value === hostingFilter)
+                  ?.label || "All Hosting Status"}
+              </span>
+              <ChevronDown className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="w-full">
+            {hostingOptions.map((option) => {
+              const IconComponent = option.icon;
+              return (
+                <DropdownMenuItem
+                  key={option.value}
+                  onClick={() => setHostingFilter(option.value)}
+                >
+                  <IconComponent className="w-4 h-4 mr-2" />
+                  {option.label}
+                </DropdownMenuItem>
+              );
+            })}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   );
@@ -133,7 +207,7 @@ export const PeopleNearby: React.FC<PeopleNearbyProps> = ({
             </div>
             <div>
               Your visibility:{" "}
-              {currentUserProfileForMap?.isVisible ? "Visible" : "Hidden"}
+              {currentUserProfileForMap?.isLooking ? "Looking" : "Hidden"}
             </div>
             <div>
               Location Randomization:{" "}
@@ -152,7 +226,8 @@ export const PeopleNearby: React.FC<PeopleNearbyProps> = ({
           currentUserProfileForMap={currentUserProfileForMap}
           searchQuery={searchQuery}
           showOnlineOnly={showOnlineOnly}
-          showWithinMiles={showWithinMiles}
+          lookingFilter={lookingFilter}
+          hostingFilter={hostingFilter}
         />
       </div>
     </div>

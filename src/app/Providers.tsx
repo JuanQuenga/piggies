@@ -6,6 +6,7 @@ import { ConvexReactClient } from "convex/react";
 import { ConvexUserBootstrapper } from "./ConvexUserBootstrapper";
 import AppAuthGate from "./AppAuthGate";
 import { UnitPreferenceProvider } from "../components/common/UnitPreferenceContext";
+import { LocationProvider } from "../components/common/LocationContext";
 import PrivacyConsentDialog from "@/components/common/PrivacyConsentDialog";
 
 // Use NEXT_PUBLIC_CONVEX_URL for the Convex deployment URL
@@ -43,9 +44,11 @@ function LocationService() {
 function ConvexWrapper({ children }: { children: React.ReactNode }) {
   return (
     <ConvexProvider client={convex}>
-      <ConvexUserBootstrapper />
-      <LocationService />
-      <AppAuthGate>{children}</AppAuthGate>
+      <LocationProvider>
+        <ConvexUserBootstrapper />
+        <LocationService />
+        <AppAuthGate>{children}</AppAuthGate>
+      </LocationProvider>
     </ConvexProvider>
   );
 }
