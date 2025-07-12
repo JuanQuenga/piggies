@@ -107,7 +107,38 @@ export const getCurrentUserStatus = query({
       };
     }
 
-    return status;
+    // Transform the status to match the expected return type
+    // Handle migration from old schema (isVisible/isLooking) to new schema (activityStatus)
+    let activityStatus:
+      | "online"
+      | "looking"
+      | "traveling"
+      | "invisible"
+      | undefined = status.activityStatus;
+
+    // If activityStatus is not set, derive it from old fields
+    if (!activityStatus) {
+      if (status.isVisible === false) {
+        activityStatus = "invisible";
+      } else if (status.isLooking === true) {
+        activityStatus = "looking";
+      } else {
+        activityStatus = "online"; // Default
+      }
+    }
+
+    return {
+      _id: status._id,
+      _creationTime: status._creationTime,
+      userId: status.userId,
+      activityStatus,
+      isLocationEnabled: status.isLocationEnabled,
+      hostingStatus: status.hostingStatus,
+      locationRandomization: status.locationRandomization,
+      latitude: status.latitude,
+      longitude: status.longitude,
+      lastSeen: status.lastSeen,
+    };
   },
 });
 
@@ -159,7 +190,38 @@ export const getMyStatus = query({
       return null;
     }
 
-    return status;
+    // Transform the status to match the expected return type
+    // Handle migration from old schema (isVisible/isLooking) to new schema (activityStatus)
+    let activityStatus:
+      | "online"
+      | "looking"
+      | "traveling"
+      | "invisible"
+      | undefined = status.activityStatus;
+
+    // If activityStatus is not set, derive it from old fields
+    if (!activityStatus) {
+      if (status.isVisible === false) {
+        activityStatus = "invisible";
+      } else if (status.isLooking === true) {
+        activityStatus = "looking";
+      } else {
+        activityStatus = "online"; // Default
+      }
+    }
+
+    return {
+      _id: status._id,
+      _creationTime: status._creationTime,
+      userId: status.userId,
+      activityStatus,
+      isLocationEnabled: status.isLocationEnabled,
+      hostingStatus: status.hostingStatus,
+      locationRandomization: status.locationRandomization,
+      latitude: status.latitude,
+      longitude: status.longitude,
+      lastSeen: status.lastSeen,
+    };
   },
 });
 
