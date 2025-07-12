@@ -172,7 +172,7 @@ export default function ProfilePage() {
   };
 
   const handleUpdateStatus = async (data: {
-    isVisible?: boolean;
+    activityStatus?: "online" | "looking" | "traveling" | "invisible";
     isLocationEnabled?: boolean;
     latitude?: number;
     longitude?: number;

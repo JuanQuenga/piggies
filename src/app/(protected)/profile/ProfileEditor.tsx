@@ -93,7 +93,7 @@ interface ProfileEditorProps {
   status: any;
   updateProfile: (data: any) => Promise<void>;
   updateStatus: (data: {
-    isVisible?: boolean;
+    activityStatus?: "online" | "looking" | "traveling" | "invisible";
     isLocationEnabled?: boolean;
     latitude?: number;
     longitude?: number;

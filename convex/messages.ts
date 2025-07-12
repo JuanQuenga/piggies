@@ -430,3 +430,55 @@ export const markMessagesRead = mutation({
     return { updated: updatedCount };
   },
 });
+
+// Get count of unread conversations for a user
+export const getUnreadConversationCount = query({
+  args: {
+    userId: v.id("users"),
+  },
+  returns: v.number(),
+  handler: async (ctx, args) => {
+    const { userId: currentUserId } = args;
+
+    try {
+      // Get all conversations where the current user is a participant
+      const allConversations = await ctx.db
+        .query("conversations")
+        .order("desc")
+        .collect();
+
+      const userConversations = allConversations.filter((conversation) =>
+        conversation.participantIds.includes(currentUserId)
+      );
+
+      let unreadCount = 0;
+
+      // For each conversation, check if there are unread messages
+      for (const conversation of userConversations) {
+        // Get the most recent message in this conversation
+        const lastMessage = await ctx.db
+          .query("messages")
+          .withIndex("by_conversation", (q) =>
+            q.eq("conversationId", conversation._id)
+          )
+          .order("desc")
+          .first();
+
+        if (lastMessage) {
+          // Check if the current user has read this message
+          const hasRead = lastMessage.readBy?.includes(currentUserId) || false;
+
+          // If the message is from someone else and hasn't been read, count as unread
+          if (!hasRead && lastMessage.senderId !== currentUserId) {
+            unreadCount++;
+          }
+        }
+      }
+
+      return unreadCount;
+    } catch (error) {
+      console.error("Error in getUnreadConversationCount:", error);
+      return 0;
+    }
+  },
+});

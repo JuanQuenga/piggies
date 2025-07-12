@@ -28,6 +28,10 @@ import { useUnitPreference } from "./UnitPreferenceContext";
 import { useLocation } from "./LocationContext";
 import { SignOutButton } from "@/app/auth";
 import { StatusControls } from "./StatusControls";
+import { UnreadBadge } from "./UnreadBadge";
+import { useQuery } from "convex/react";
+import { api } from "../../../convex/_generated/api";
+import { useAuth } from "@workos-inc/authkit-nextjs/components";
 
 const navItems = [
   { href: "/profile", icon: User, label: "Profile", color: "text-blue-400" },
@@ -57,7 +61,20 @@ export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
   const { isUSUnits } = useUnitPreference();
   const { locationState } = useLocation();
   const pathname = usePathname();
+  const { user } = useAuth();
   // REMOVE: const { signOut } = useClerk();
+
+  // Get current user's Convex ID for unread count
+  const currentUser = useQuery(
+    api.users.currentLoggedInUser,
+    user?.email ? { email: user.email } : "skip"
+  );
+
+  // Get unread conversation count
+  const unreadCount = useQuery(
+    api.messages.getUnreadConversationCount,
+    currentUser?._id ? { userId: currentUser._id } : "skip"
+  );
 
   // Weather state for mobile header
   const [weather, setWeather] = useState<{
@@ -138,17 +155,29 @@ export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
         <div className="flex flex-col gap-2 flex-1 mt-4 items-stretch w-full">
           {navItems.map(({ href, icon: Icon, label, color }) => {
             const isActive = pathname === href;
+            const showUnreadBadge =
+              href === "/chats" && unreadCount && unreadCount > 0;
+
             return (
               <Link
                 key={href}
                 href={href}
                 className={cn(
-                  "flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-zinc-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 transition-all",
+                  "flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-zinc-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 transition-all relative",
                   collapsed ? "justify-center" : "justify-start"
                 )}
                 aria-label={label}
               >
-                <Icon className={cn("w-6 h-6", color)} aria-hidden="true" />
+                <div className="relative">
+                  <Icon className={cn("w-6 h-6", color)} aria-hidden="true" />
+                  {showUnreadBadge && (
+                    <UnreadBadge
+                      count={unreadCount}
+                      size="sm"
+                      className="absolute -top-2 -right-2"
+                    />
+                  )}
+                </div>
                 {!collapsed && (
                   <span
                     className={cn("text-base font-medium", isActive && color)}
@@ -305,16 +334,28 @@ export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
       <nav className="md:hidden flex items-center justify-around bg-zinc-900 text-white w-full h-14 px-2 border-t border-zinc-800 fixed bottom-0 left-0 z-30">
         {navItems.map(({ href, icon: Icon, label, color }) => {
           const isActive = pathname === href;
+          const showUnreadBadge =
+            href === "/chats" && unreadCount && unreadCount > 0;
+
           return (
             <Link
               key={href}
               href={href}
               className={cn(
-                "flex flex-col items-center justify-center w-10 h-10 rounded-lg hover:bg-zinc-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500"
+                "flex flex-col items-center justify-center w-10 h-10 rounded-lg hover:bg-zinc-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 relative"
               )}
               aria-label={label}
             >
-              <Icon className={cn("w-6 h-6", color)} aria-hidden="true" />
+              <div className="relative">
+                <Icon className={cn("w-6 h-6", color)} aria-hidden="true" />
+                {showUnreadBadge && (
+                  <UnreadBadge
+                    count={unreadCount}
+                    size="sm"
+                    className="absolute -top-1 -right-1"
+                  />
+                )}
+              </div>
               <span className={cn("text-xs mt-1", isActive && color)}>
                 {label}
               </span>

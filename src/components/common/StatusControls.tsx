@@ -136,14 +136,8 @@ export function StatusControls({ variant = "desktop" }: StatusControlsProps) {
   // Initialize state from Convex data
   useEffect(() => {
     if (userStatus) {
-      // Convert old isVisible/isLooking to new status system
-      if (userStatus.isVisible === false) {
-        setCurrentUserStatus("invisible");
-      } else if (userStatus.isLooking) {
-        setCurrentUserStatus("looking");
-      } else {
-        setCurrentUserStatus("online");
-      }
+      // Use the new activityStatus field directly
+      setCurrentUserStatus(userStatus.activityStatus || "online");
       setHostingStatus(userStatus.hostingStatus as HostingStatus);
       setLocationRandomization([userStatus.locationRandomization || 0]);
     }
@@ -160,11 +154,12 @@ export function StatusControls({ variant = "desktop" }: StatusControlsProps) {
         console.error("No convex user available");
         return;
       }
-      // Convert new status to old format for backend compatibility
+      // Convert to new backend format
       const backendUpdates: any = { ...updates };
       if (updates.userStatus) {
-        backendUpdates.isVisible = updates.userStatus !== "invisible";
-        backendUpdates.isLooking = updates.userStatus === "looking";
+        backendUpdates.activityStatus = updates.userStatus;
+        // Remove old fields to avoid validation errors
+        delete backendUpdates.userStatus;
       }
       await updateStatus({ ...backendUpdates, userId: convexUser._id });
     } catch (error) {

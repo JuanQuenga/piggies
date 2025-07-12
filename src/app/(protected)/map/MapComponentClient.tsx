@@ -318,26 +318,25 @@ export default function MapComponentClient({
           );
           console.log(`[DEBUG] error.TIMEOUT =`, error.TIMEOUT);
         }
-        let message =
-          "Could not get your location. Please check your browser permissions.";
-        if (error && typeof error === "object") {
-          switch (error.code) {
-            case 1:
-              message =
-                "Location permission denied. Please allow location access in your browser settings.";
-              break;
-            case 2:
-              message =
-                "Location unavailable. This can happen if you're on a desktop without WiFi, using a VPN, or your device can't determine your location. Try on a phone with GPS, enable WiFi, or enter your location manually if possible.";
-              break;
-            case 3:
-              message = "Location request timed out. Please try again.";
-              break;
-            default:
-              if (error.message) message = error.message;
+
+        // Only show alerts for permission denied (code 1), not for position unavailable (code 2)
+        // This prevents constant alerts when location is unavailable due to device limitations
+        if (error && typeof error === "object" && error.code === 1) {
+          alert(
+            "Location permission denied. Please allow location access in your browser settings."
+          );
+        } else if (error && typeof error === "object" && error.code === 2) {
+          // For position unavailable, just log it without showing an alert
+          console.log(
+            "Location unavailable - this is normal on some devices/browsers"
+          );
+        } else if (error && typeof error === "object" && error.code === 3) {
+          // Only show timeout alert if it's a manual request
+          if (isRequestingLocation) {
+            alert("Location request timed out. Please try again.");
           }
         }
-        alert(message);
+
         setIsRequestingLocation(false);
       }
     );
@@ -368,7 +367,8 @@ export default function MapComponentClient({
         mounted &&
         locationState.geoPermission === "granted" &&
         !hasRequestedLocation &&
-        !isRequestingLocation
+        !isRequestingLocation &&
+        !locationState.coordinates // Only auto-request if we don't already have coordinates
       ) {
         console.log("Permission already granted, auto-requesting location");
         requestLocation();
@@ -380,6 +380,8 @@ export default function MapComponentClient({
         console.log("Location already requested, skipping auto-request");
       } else if (isRequestingLocation) {
         console.log("Location request in progress, skipping auto-request");
+      } else if (locationState.coordinates) {
+        console.log("Already have coordinates, skipping auto-request");
       }
     };
 
@@ -392,6 +394,7 @@ export default function MapComponentClient({
     locationState.geoPermission,
     hasRequestedLocation,
     isRequestingLocation,
+    locationState.coordinates,
   ]);
 
   const handleStartChat = (userId: string) => {
