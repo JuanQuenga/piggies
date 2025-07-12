@@ -420,7 +420,7 @@ export const TileView: React.FC<TileViewProps> = ({
                     </div>
 
                     {/* Content Section - Overlaid on image */}
-                    <div className="absolute bottom-0 left-0 right-0 p-4">
+                    <div className="absolute bottom-0 left-0 right-0 p-2">
                       {/* Name and distance/online indicator */}
                       <div className="flex items-center justify-between">
                         <h3 className="font-semibold text-white text-lg truncate flex-1">

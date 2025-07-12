@@ -168,6 +168,23 @@ export default function MapComponentClient({
 
   const canRequestLocation = user && convexUser && !loading;
 
+  // Check if geolocation permission is already granted
+  const checkGeolocationPermission = useCallback(async (): Promise<boolean> => {
+    if (!navigator.permissions || !navigator.permissions.query) {
+      return false;
+    }
+
+    try {
+      const permission = await navigator.permissions.query({
+        name: "geolocation",
+      });
+      return permission.state === "granted";
+    } catch (error) {
+      console.log("Permission query not supported:", error);
+      return false;
+    }
+  }, []);
+
   const requestLocation = useCallback(async () => {
     if (!canRequestLocation) {
       alert("Please wait until you are fully signed in.");
@@ -272,13 +289,29 @@ export default function MapComponentClient({
     console.log("[DEBUG] visibleUsers:", visibleUsers);
   }, [visibleUsers]);
 
-  // Automatically request location when component is ready
+  // Automatically request location when component is ready and permission is granted
   useEffect(() => {
-    if (canRequestLocation && mounted) {
-      console.log("Auto-requesting location on mount");
-      requestLocation();
-    }
-  }, [canRequestLocation, mounted, requestLocation]);
+    const autoRequestLocation = async () => {
+      if (canRequestLocation && mounted) {
+        const hasPermission = await checkGeolocationPermission();
+        if (hasPermission) {
+          console.log("Permission already granted, auto-requesting location");
+          requestLocation();
+        } else {
+          console.log(
+            "No geolocation permission, waiting for user interaction"
+          );
+        }
+      }
+    };
+
+    autoRequestLocation();
+  }, [
+    canRequestLocation,
+    mounted,
+    requestLocation,
+    checkGeolocationPermission,
+  ]);
 
   const handleStartChat = (userId: string) => {
     // Navigate to chat with this user

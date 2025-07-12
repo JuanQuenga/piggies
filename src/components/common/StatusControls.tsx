@@ -133,7 +133,7 @@ export function StatusControls({ variant = "desktop" }: StatusControlsProps) {
     }
   }, []);
 
-  // Get current city from weather API - only when location is enabled and user has granted permission
+  // Get current city from weather API - automatically when location is enabled and user has granted permission
   useEffect(() => {
     if (
       !isLocationEnabled ||
@@ -144,9 +144,34 @@ export function StatusControls({ variant = "desktop" }: StatusControlsProps) {
       return;
     }
 
-    // Don't automatically request geolocation in useEffect to avoid browser violations
-    // Instead, we'll request it only when the user explicitly enables location
+    // Automatically get location if permission is already granted
     setCurrentCity("Loading...");
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
+          const apiKey = process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY;
+          if (!apiKey) {
+            setCurrentCity("Unknown");
+            return;
+          }
+          const res = await fetch(
+            `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${apiKey}`
+          );
+          if (!res.ok) throw new Error("Weather fetch failed");
+          const data = await res.json();
+          setCurrentCity(data.name);
+        } catch (e) {
+          console.error("Error fetching weather:", e);
+          setCurrentCity("Unknown");
+        }
+      },
+      (err) => {
+        console.error("Error getting location for weather:", err);
+        setCurrentCity("Unknown");
+      }
+    );
   }, [isLocationEnabled, geoPermission]); // Run when location is enabled or permission changes
 
   // Save status to Convex when it changes

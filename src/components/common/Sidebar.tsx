@@ -68,9 +68,68 @@ export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
 
   // Weather effect for mobile
   useEffect(() => {
-    // Don't automatically request geolocation - wait for user interaction
-    setWeatherError("Click to enable weather");
-    setWeatherLoading(false);
+    const getWeather = async () => {
+      // Check if geolocation permission is already granted
+      if (navigator.permissions && navigator.permissions.query) {
+        try {
+          const permission = await navigator.permissions.query({
+            name: "geolocation",
+          });
+          if (permission.state === "granted") {
+            // Permission granted, get weather automatically
+            setWeatherLoading(true);
+            navigator.geolocation.getCurrentPosition(
+              async (position) => {
+                try {
+                  const lat = position.coords.latitude;
+                  const lon = position.coords.longitude;
+                  const apiKey = process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY;
+                  if (!apiKey) {
+                    setWeatherError("Weather API key not configured");
+                    setWeatherLoading(false);
+                    return;
+                  }
+                  const res = await fetch(
+                    `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${apiKey}`
+                  );
+                  if (!res.ok) throw new Error("Weather fetch failed");
+                  const data = await res.json();
+                  setWeather({
+                    temp: data.main.temp,
+                    city: data.name,
+                    condition: data.weather[0].main,
+                  });
+                  setWeatherLoading(false);
+                } catch (e) {
+                  console.error("Error fetching weather:", e);
+                  setWeatherError("Failed to load weather");
+                  setWeatherLoading(false);
+                }
+              },
+              (err) => {
+                console.error("Error getting location for weather:", err);
+                setWeatherError("Location unavailable");
+                setWeatherLoading(false);
+              }
+            );
+          } else {
+            // No permission granted
+            setWeatherError("Click to enable weather");
+            setWeatherLoading(false);
+          }
+        } catch (error) {
+          console.log("Permission query not supported:", error);
+          setWeatherError("Click to enable weather");
+          setWeatherLoading(false);
+        }
+      } else {
+        // Permissions API not supported
+        setWeatherError("Click to enable weather");
+        setWeatherLoading(false);
+      }
+    };
+
+    getWeather();
   }, [isUSUnits]);
 
   return (
